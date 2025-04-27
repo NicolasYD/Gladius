@@ -9,4 +9,5 @@
 	<Include file = "Libs\LibSharedMedia-3.0\lib.xml"/>
 	<Include file = "Libs\AceGUI-3.0-SharedMediaWidgets\widget.xml"/>
 	<Include file = "Libs\DRList-1.0\DRList-1.0.xml"/>
+	<Include file = "Libs\CDList-1.0\CDList-1.0.xml"/>
 </Ui>
