@@ -20,14 +20,14 @@ local RAID_CLASS_COLORS = RAID_CLASS_COLORS
 
 local HealthBar = Gladius:NewModule("HealthBar", true, true, {
 	healthBarAttachTo = "Frame",
-	healthBarHeight = 25,
+	healthBarHeight = 35,
 	healthBarAdjustWidth = true,
-	healthBarWidth = 200,
+	healthBarWidth = 150,
 	healthBarInverse = false,
 	healthBarColor = {r = 1, g = 1, b = 1, a = 1},
 	healthBarClassColor = true,
 	healthBarBackgroundColor = {r = 1, g = 1, b = 1, a = 0.3},
-	healthBarTexture = "Minimalist",
+	healthBarTexture = "Clean",
 	healthBarOffsetX = 0,
 	healthBarOffsetY = 0,
 	healthBarAnchor = "TOPLEFT",

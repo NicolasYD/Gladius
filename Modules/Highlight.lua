@@ -15,7 +15,7 @@ local IsInRaid = IsInRaid
 local UnitGUID = UnitGUID
 
 local Highlight = Gladius:NewModule("Highlight", false, false, {
-	highlightHover = true,
+	highlightHover = false,
 	highlightHoverColor = {r = 1.0, g = 1.0, b = 1.0, a = 1.0},
 	highlightTarget = true,
 	highlightTargetColor = {r = 1, g = .7, b = 0, a = 1},
@@ -51,7 +51,7 @@ local Highlight = Gladius:NewModule("Highlight", false, false, {
 	highlightRaidIcon8Color = {r = 1, g = 1, b = 1, a = 1},
 	highlightRaidIcon8Priority = 1,
 	highlightWidth = 1,
-	highlightInset = false
+	highlightInset = true
 })
 
 function Highlight:OnEnable()
