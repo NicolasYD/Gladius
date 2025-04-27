@@ -20,7 +20,7 @@ local unpack = unpack
 
 local CreateFrame = CreateFrame
 local GetSpecializationInfoByID = GetSpecializationInfoByID
-local GetSpellInfo = GetSpellInfo or function(spellID)
+local GetSpellInfo = C_SpellBook.GetSpellInfo or function(spellID)
   if not spellID then
     return nil;
   end
