@@ -362,7 +362,7 @@ function Gladius:OnEnable()
 	end
 	-- display help message
 	if not self.db.locked and not self.db.x["arena1"] and not self.db.y["arena1"] then
-		SlashCmdList["GLADIUS"]("test 5")
+		SlashCmdList["GLADIUS"]("test 3")
 		self:Print(L["Welcome to Gladius!"])
 		self:Print(L["First run has been detected, displaying test frame."])
 		self:Print(L["Valid slash commands are:"])
