@@ -1,0 +1,3 @@
+[submodule "Libs/CDList-1.0"]
+	path = Libs/CDList-1.0
+	url = https://github.com/NicolasYD/CDList-1.0.git
