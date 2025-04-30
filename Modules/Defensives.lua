@@ -1,0 +1,624 @@
+local Gladius = _G.Gladius
+if not Gladius then
+	DEFAULT_CHAT_FRAME:AddMessage(format("Module %s requires Gladius", "Interrupts"))
+end
+local L = Gladius.L
+local LSM
+
+local CDList = LibStub("CDList-1.0")
+
+-- Localizing commonly used global functions
+local IsInInstance = IsInInstance
+local strfind = string.find
+local GetSpellTexture = C_Spell.GetSpellTexture
+local CreateFrame = CreateFrame
+
+local Defensives = Gladius:NewModule("Defensives", false, true, {
+	DefensivesAttachTo = "ClassIcon",
+	DefensivesAnchor = "TOPLEFT",
+	DefensivesRelativePoint = "BOTTOMLEFT",
+	DefensivesAdjustSize = false,
+	DefensivesMargin = 1,
+	DefensivesSize = 40,
+	DefensivesOffsetX = 0,
+	DefensivesOffsetY = 0,
+	DefensivesFrameLevel = 1,
+	DefensivesGloss = false,
+	DefensivesGlossColor = {r = 1, g = 1, b = 1, a = 0.4},
+	DefensivesCooldown = false,
+	DefensivesCooldownReverse = false,
+	DefensivesFontSize = 10,
+	DefensivesFontColor = {r = 0, g = 1, b = 0, a = 1},
+	DefensivesDetached = false,
+})
+
+
+--@@@@@@@@@@@@@@@@@@@@ Shared Scopes @@@@@@@@@@@@@@@@@@@@@@
+local testSpells = {
+	["firstEvent"] = {
+		arena1 = 45438, -- Ice Block
+		arena2 = 264735, -- Survival of the Fittest
+		arena3 = 1966, -- Feint
+	},
+	["secondEvent"] = {
+		arena1 = 110960, --Greater Invisibilitys
+		arena2 = 53480, -- Roar of Sacrifice
+		arena3 = 1856, -- Vanish
+	}
+}
+--@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+--@@@@@@@@@@@@@@@@@@@@ Helper Functions @@@@@@@@@@@@@@@@@@@
+local function GetDefensiveSpellData(spell)
+    local spellData = CDList.spellList[spell]
+    if spellData and spellData.category == "defensive" then
+        return spellData
+    end
+    return nil
+end
+--@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+
+function Defensives:OnEnable()
+	self:RegisterEvent("UNIT_SPELLCAST_SUCCEEDED")
+	LSM = Gladius.LSM
+	if not self.frame then
+		self.frame = { }
+	end
+end
+
+
+function Defensives:OnDisable()
+	self:UnregisterAllEvents()
+	for _, unitFrame in pairs(self.frame) do
+		unitFrame:Hide()
+	end
+end
+
+
+function Defensives:GetAttachTo()
+	return Gladius.db.DefensivesAttachTo
+end
+
+
+function Defensives:IsDetached()
+	return Gladius.db.DefensivesDetached
+end
+
+
+function Defensives:GetFrame(unit)
+	return self.frame[unit]
+end
+
+
+function Defensives:UpdateColors(unit)
+	for spell, frame in pairs(self.frame[unit].tracker) do
+		local tracked = self.frame[unit].tracker[spell]
+		tracked.normalTexture:SetVertexColor(Gladius.db.DefensivesGlossColor.r, Gladius.db.DefensivesGlossColor.g, Gladius.db.DefensivesGlossColor.b, Gladius.db.DefensivesGloss and Gladius.db.DefensivesGlossColor.a or 0)
+		tracked.text:SetTextColor(Gladius.db.DefensivesColor.r, Gladius.db.DefensivesFontColor.g, Gladius.db.DefensivesFontColor.b, Gladius.db.DefensivesFontColor.a)
+	end
+end
+
+
+function Defensives:UpdateIcon(unit, spell)
+	local tracked = self.frame[unit].tracker[spell]
+	tracked:EnableMouse(false)
+	tracked.reset = 0
+	tracked:SetWidth(self.frame[unit]:GetHeight())
+	tracked:SetHeight(self.frame[unit]:GetHeight())
+	tracked:SetNormalTexture("Interface\\AddOns\\Gladius\\Images\\Gloss")
+	tracked.texture = _G[tracked:GetName().."Icon"]
+	tracked.normalTexture = _G[tracked:GetName().."NormalTexture"]
+
+	tracked.cooldown = _G[tracked:GetName().."Cooldown"]
+	tracked.cooldown.isDisabled = not Gladius.db.DefensivesCooldown
+	tracked.cooldown:SetReverse(Gladius.db.DefensivesCooldownReverse)
+	Gladius:Call(Gladius.modules.Timer, "RegisterTimer", tracked, Gladius.db.DefensivesCooldown)
+
+	if not tracked.text then
+		tracked.text = tracked:CreateFontString(nil, "OVERLAY")
+	end
+
+	tracked.text:SetDrawLayer("OVERLAY")
+	tracked.text:SetJustifyH("RIGHT")
+	tracked.text:SetPoint("BOTTOMRIGHT", tracked, -2, 0)
+	tracked.text:SetFont(LSM:Fetch(LSM.MediaType.FONT, Gladius.db.globalFont), Gladius.db.DefensivesFontSize, "OUTLINE")
+	tracked.text:SetTextColor(Gladius.db.DefensivesFontColor.r, Gladius.db.DefensivesFontColor.g, Gladius.db.DefensivesFontColor.b, Gladius.db.DefensivesFontColor.a)
+	-- style action button
+	tracked.normalTexture:SetHeight(self.frame[unit]:GetHeight() + self.frame[unit]:GetHeight() * 0.4)
+	tracked.normalTexture:SetWidth(self.frame[unit]:GetWidth() + self.frame[unit]:GetWidth() * 0.4)
+	tracked.normalTexture:ClearAllPoints()
+	tracked.normalTexture:SetPoint("CENTER", 0, 0)
+	tracked:SetNormalTexture("Interface\\AddOns\\Gladius\\Images\\Gloss")
+	tracked.texture:ClearAllPoints()
+	tracked.texture:SetPoint("TOPLEFT", tracked, "TOPLEFT")
+	tracked.texture:SetPoint("BOTTOMRIGHT", tracked, "BOTTOMRIGHT")
+	tracked.texture:SetTexCoord(0.07, 0.93, 0.07, 0.93)
+	tracked.normalTexture:SetVertexColor(Gladius.db.DefensivesGlossColor.r, Gladius.db.DefensivesGlossColor.g, Gladius.db.DefensivesGlossColor.b, Gladius.db.DefensivesGloss and Gladius.db.DefensivesGlossColor.a or 0)
+end
+
+
+function Defensives:DefensiveUsed(unit, spell) -- not complete yet
+	local _, instanceType = IsInInstance()
+	if not Gladius.test and (instanceType ~= "arena" or not unit:find("arena") or unit:find("pet")) then
+		return
+	end
+
+	if not self.frame[unit].tracker[spell] then
+		self.frame[unit].tracker[spell] = CreateFrame("CheckButton", "Gladius"..self.name.."FrameCat"..spell..unit, self.frame[unit], "ActionButtonTemplate")
+		self:UpdateIcon(unit, spell)
+	end
+	local tracked = self.frame[unit].tracker[spell]
+	tracked.active = true
+
+    local spellData = GetDefensiveSpellData(spell)
+
+	tracked.timeLeft = spellData.baseCooldown
+
+    if spellData then
+        local icon = GetSpellTexture(spell)
+        tracked.texture:SetTexture(icon)
+		-- Gladius:Call(Gladius.modules.Timer, "RegisterTimer", self.frame[unit], Gladius.db.DefensivesCooldown, Gladius.db.DefensivesCooldown)
+		Gladius:Call(Gladius.modules.Timer, "SetTimer", tracked, spellData.baseCooldown)
+		tracked:SetScript("OnUpdate", function(f, elapsed)
+			f.timeLeft = f.timeLeft - elapsed
+			if f.timeLeft <= 0 then
+				f.active = false
+				Gladius:Call(Gladius.modules.Timer, "HideTimer", f)
+				-- tracked[unit]:Hide()
+				-- position icons
+				self:SortIcons(unit)
+				-- reset script
+				self.frame[unit]:SetScript("OnUpdate", nil)
+			end
+		end)
+		tracked:SetAlpha(1)
+		self:SortIcons(unit)
+    end
+end
+
+
+function Defensives:SortIcons(unit)
+    local anchor = Gladius.db.DefensivesAnchor
+    local relativePoint = Gladius.db.DefensivesRelativePoint
+    local margin = Gladius.db.DefensivesMargin
+    local baseFrame = self.frame[unit]
+    local lastFrame = baseFrame
+
+    for _, frame in pairs(self.frame[unit].tracker) do
+        frame:ClearAllPoints()
+        frame:SetAlpha(0)
+        if frame.active then
+            frame:SetPoint("LEFT", lastFrame, lastFrame == baseFrame and "LEFT" or "RIGHT", margin, 0)
+            lastFrame = frame
+            frame:SetAlpha(1)
+        end
+    end
+end
+
+
+function Defensives:UNIT_SPELLCAST_SUCCEEDED(event)
+	self:CombatLogEvent(event, CombatLogGetCurrentEventInfo())
+end
+
+
+function Defensives:CombatLogEvent(event, timestamp, eventType, hideCaster, sourceGUID, sourceName, sourceFlags, sourceRaidFlags, destGUID, destName, destFlags, destRaidFlags, spellID, spellName, spellSchool, auraType)
+	local unit
+	for u, _ in pairs(Gladius.buttons) do
+		if UnitGUID(u) == destGUID then
+			unit = u
+		end
+	end
+	if not unit then
+		return
+	end
+	if eventType == "UNIT_SPELLCAST_SUCCEEDED" then
+		if auraType == "BUFF" and CDList:GetCategoryBySpellID(spellID) == "defensive" then
+			self:DefensiveUsed(unit, spellID)
+		end
+	end
+end
+
+
+function Defensives:CreateFrame(unit)
+	local button = Gladius.buttons[unit]
+	if not button then
+		return
+	end
+	-- create frame
+	self.frame[unit] = CreateFrame("CheckButton", "Gladius"..self.name.."Frame"..unit, button, "ActionButtonTemplate")
+	self.frame[unit]:EnableMouse(false)
+	self.frame[unit]:SetNormalTexture("Interface\\COMMON\\spacer")
+end
+
+
+function Defensives:Update(unit)
+	-- create frame
+	if not self.frame[unit] then
+		self:CreateFrame(unit)
+	end
+	-- update frame
+	self.frame[unit]:ClearAllPoints()
+	-- anchor point
+	local parent = Gladius:GetParent(unit, Gladius.db.DefensivesAttachTo)
+	self.frame[unit]:SetPoint(Gladius.db.DefensivesAnchor, parent, Gladius.db.DefensivesRelativePoint, Gladius.db.DefensivesOffsetX, Gladius.db.DefensivesOffsetY)
+	-- frame level
+	self.frame[unit]:SetFrameLevel(Gladius.db.DefensivesFrameLevel)
+	-- when the attached module is disabled
+	if not Gladius:GetModule(self:GetAttachTo()) then
+		Gladius.db.DefensivesAttachTo = "Frame"
+	end
+	if Gladius.db.DefensivesAdjustSize then
+		if self:GetAttachTo() == "Frame" then
+			local height = false
+			if height then
+				self.frame[unit]:SetWidth(Gladius.buttons[unit].height)
+				self.frame[unit]:SetHeight(Gladius.buttons[unit].height)
+			else
+				self.frame[unit]:SetWidth(Gladius.buttons[unit].frameHeight)
+				self.frame[unit]:SetHeight(Gladius.buttons[unit].frameHeight)
+			end
+		else
+			self.frame[unit]:SetWidth(Gladius:GetModule(self:GetAttachTo()).frame[unit]:GetHeight() or 1)
+			self.frame[unit]:SetHeight(Gladius:GetModule(self:GetAttachTo()).frame[unit]:GetHeight() or 1)
+		end
+	else
+		self.frame[unit]:SetWidth(Gladius.db.DefensivesSize)
+		self.frame[unit]:SetHeight(Gladius.db.DefensivesSize)
+	end
+	-- update icons
+	if not self.frame[unit].tracker then
+		self.frame[unit].tracker = { }
+	else
+		for spell, frame in pairs(self.frame[unit].tracker) do
+			frame:SetWidth(self.frame[unit]:GetHeight())
+			frame:SetHeight(self.frame[unit]:GetHeight())
+			frame.normalTexture:SetHeight(self.frame[unit]:GetHeight() + self.frame[unit]:GetHeight() * 0.4)
+			frame.normalTexture:SetWidth(self.frame[unit]:GetWidth() + self.frame[unit]:GetWidth() * 0.4)
+			self:UpdateIcon(unit, spell)
+		end
+		self:SortIcons(unit)
+	end
+	-- hide
+	self.frame[unit]:SetAlpha(0)
+end
+
+function Defensives:Show(unit)
+	-- show frame
+	self.frame[unit]:SetAlpha(1)
+end
+
+
+function Defensives:Reset(unit)
+	if not self.frame[unit] then
+		return
+	end
+	-- hide icons
+	for _, frame in pairs(self.frame[unit].tracker) do
+		frame.active = false
+		Gladius:Call(Gladius.modules.Timer, "HideTimer", frame)
+		frame:SetScript("OnUpdate", nil)
+		frame:SetAlpha(0)
+	end
+	-- hide
+	self.frame[unit]:SetAlpha(0)
+end
+
+
+function Defensives:Test(unit)
+	local firstTestSpell = testSpells["firstEvent"][unit]
+	local secondTestSpell = testSpells["secondEvent"][unit]
+	if firstTestSpell then
+		self:DefensiveUsed(unit, firstTestSpell)
+	end
+	if secondTestSpell then
+		self:DefensiveUsed(unit, secondTestSpell)
+	end
+end
+
+
+-- Add the announcement toggle
+function Defensives:OptionsLoad()
+	Gladius.options.args.Announcements.args.general.args.announcements.args.Defensives = {
+		type = "toggle",
+		name = L["Defensives"],
+		desc = L["Announces when an enemy uses an important defensive cooldown."],
+		disabled = function()
+			return not Gladius.db.modules[self.name] or not Gladius.db.modules["Announcements"]
+		end,
+	}
+end
+
+
+function Defensives:GetOptions()
+	local t = {
+		general = {
+			type = "group",
+			name = L["General"],
+			order = 1,
+			args = {
+				widget = {
+					type = "group",
+					name = L["Widget"],
+					desc = L["Widget settings"],
+					inline = true,
+					order = 1,
+					args = {
+						DefensivesMargin = {
+							type = "range",
+							name = L["Defensives Space"],
+							desc = L["Space between the icons"],
+							min = 0,
+							max = 100,
+							step = 1,
+							disabled = function()
+								return not Gladius.dbi.profile.modules[self.name]
+							end,
+							order = 5,
+						},
+						sep = {
+							type = "description",
+							name = "",
+							width = "full",
+							order = 7,
+						},
+						DefensivesCooldown = {
+							type = "toggle",
+							name = L["Defensives Cooldown Spiral"],
+							desc = L["Display the cooldown spiral for important auras"],
+							disabled = function()
+								return not Gladius.dbi.profile.modules[self.name]
+							end,
+							hidden = function()
+								return not Gladius.db.advancedOptions
+							end,
+							order = 10,
+						},
+						DefensivesCooldownReverse = {
+							type = "toggle",
+							name = L["Defensives Cooldown Reverse"],
+							desc = L["Invert the dark/bright part of the cooldown spiral"],
+							disabled = function()
+								return not Gladius.dbi.profile.modules[self.name]
+							end,
+							hidden = function()
+								return not Gladius.db.advancedOptions
+							end,
+							order = 15,
+						},
+						sep2 = {
+							type = "description",
+							name = "",
+							width = "full",
+							order = 17,
+						},
+						DefensivesGloss = {
+							type = "toggle",
+							name = L["Defensives Gloss"],
+							desc = L["Toggle gloss on the Defensives icon"],
+							disabled = function()
+								return not Gladius.dbi.profile.modules[self.name]
+							end,
+							hidden = function()
+								return not Gladius.db.advancedOptions
+							end,
+							order = 25,
+						},
+						DefensivesGlossColor = {
+							type = "color",
+							name = L["Defensives Gloss Color"],
+							desc = L["Color of the Defensives icon gloss"],
+							get = function(info)
+								return Gladius:GetColorOption(info)
+							end,
+							set = function(info, r, g, b, a)
+								return Gladius:SetColorOption(info, r, g, b, a)
+							end,
+							hasAlpha = true,
+							disabled = function()
+								return not Gladius.dbi.profile.modules[self.name]
+							end,
+							hidden = function()
+								return not Gladius.db.advancedOptions
+							end,
+							order = 30,
+						},
+						sep3 = {
+							type = "description",
+							name = "",
+							width = "full",
+							hidden = function()
+								return not Gladius.db.advancedOptions
+							end,
+							order = 33,
+						},
+						DefensivesFrameLevel = {
+							type = "range",
+							name = L["Defensives Frame Level"],
+							desc = L["Frame level of the Defensives"],
+							disabled = function()
+								return not Gladius.dbi.profile.modules[self.name]
+							end,
+							hidden = function()
+								return not Gladius.db.advancedOptions
+							end,
+							min = 1,
+							max = 5,
+							step = 1,
+							width = "double",
+							order = 35,
+						},
+					},
+				},
+				size = {
+					type = "group",
+					name = L["Size"],
+					desc = L["Size settings"],
+					inline = true,
+					order = 2,
+					args = {
+						DefensivesAdjustSize = {
+							type = "toggle",
+							name = L["Defensives Adjust Size"],
+							desc = L["Adjust Defensives size to the frame size"],
+							disabled = function()
+								return not Gladius.dbi.profile.modules[self.name]
+							end,
+							order = 5,
+						},
+						DefensivesSize = {
+							type = "range",
+							name = L["Defensives Size"],
+							desc = L["Size of the Defensives"],
+							min = 10,
+							max = 100,
+							step = 1,
+							disabled = function()
+								return Gladius.dbi.profile.DefensivesAdjustSize or not Gladius.dbi.profile.modules[self.name]
+							end,
+							order = 10,
+						},
+					},
+				},
+				font = {
+					type = "group",
+					name = L["Font"],
+					desc = L["Font settings"],
+					inline = true,
+					hidden = function()
+						return not Gladius.db.advancedOptions
+					end,
+					order = 3,
+					args = {
+						DefensivesFontSize = {
+							type = "range",
+							name = L["Defensives Text Size"],
+							desc = L["Text size of the Defensives text"],
+							min = 1,
+							max = 20,
+							step = 1,
+							disabled = function()
+								return not Gladius.dbi.profile.castText or not Gladius.dbi.profile.modules[self.name]
+							end,
+							order = 15,
+						},
+					},
+				},
+				position = {
+					type = "group",
+					name = L["Position"],
+					desc = L["Position settings"],
+					inline = true,
+					order = 4,
+					args = {
+						DefensivesAttachTo = {
+							type = "select",
+							name = L["Defensives Attach To"],
+							desc = L["Attach Defensives to the given frame"],
+							values = function()
+								return Gladius:GetModules(self.name)
+							end,
+							disabled = function()
+								return not Gladius.dbi.profile.modules[self.name]
+							end,
+							order = 5,
+						},
+						DefensivesPosition = {
+							type = "select",
+							name = L["Defensives Position"],
+							desc = L["Position of the class icon"],
+							values={["LEFT"] = L["Left"], ["RIGHT"] = L["Right"]},
+							get = function()
+								return strfind(Gladius.db.DefensivesAnchor, "RIGHT") and "LEFT" or "RIGHT"
+							end,
+							set = function(info, value)
+								if (value == "LEFT") then
+									Gladius.db.DefensivesAnchor = "TOPRIGHT"
+									Gladius.db.DefensivesRelativePoint = "TOPLEFT"
+								else
+									Gladius.db.DefensivesAnchor = "TOPLEFT"
+									Gladius.db.DefensivesRelativePoint = "TOPRIGHT"
+								end
+								Gladius:UpdateFrame(info[1])
+							end,
+							disabled = function()
+								return not Gladius.dbi.profile.modules[self.name]
+							end,
+							hidden = function()
+								return Gladius.db.advancedOptions
+							end,
+							order = 6,
+						},
+						sep = {
+							type = "description",
+							name = "",
+							width = "full",
+							order = 7,
+						},
+						DefensivesAnchor = {
+							type = "select",
+							name = L["Defensives Anchor"],
+							desc = L["Anchor of the Defensives"],
+							values = function()
+								return Gladius:GetPositions()
+							end,
+							disabled = function()
+								return not Gladius.dbi.profile.modules[self.name]
+							end,
+							hidden = function()
+								return not Gladius.db.advancedOptions
+							end,
+							order = 10,
+						},
+						DefensivesRelativePoint = {
+							type = "select",
+							name = L["Defensives Relative Point"],
+							desc = L["Relative point of the Defensives"],
+							values = function()
+								return Gladius:GetPositions()
+							end,
+							disabled = function()
+								return not Gladius.dbi.profile.modules[self.name]
+							end,
+							hidden = function()
+								return not Gladius.db.advancedOptions
+							end,
+							order = 15,
+						},
+						sep2 = {
+							type = "description",
+							name = "",
+							width = "full",
+							order = 17,
+						},
+						DefensivesOffsetX = {
+							type = "range",
+							name = L["Defensives Offset X"],
+							desc = L["X offset of the Defensives"],
+							min = - 100,
+							max = 100,
+							step = 1,
+							disabled = function()
+								return not Gladius.dbi.profile.modules[self.name]
+							end,
+							order = 20,
+						},
+						DefensivesOffsetY = {
+							type = "range",
+							name = L["Defensives Offset Y"],
+							desc = L["Y offset of the Defensives"],
+							disabled = function()
+								return not Gladius.dbi.profile.modules[self.name]
+							end,
+							min = - 50,
+							max = 50,
+							step = 1,
+							order = 25,
+						},
+					},
+				},
+			},
+		},
+	}
+	return t
+end
