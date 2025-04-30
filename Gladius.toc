@@ -30,3 +30,4 @@ Modules\Timer.lua
 Modules\Layout.lua
 Modules\Dispel.lua
 Modules\Racial.lua
+Modules\Interrupts.lua
