@@ -12,16 +12,53 @@ end
 local L = Gladius.L
 local LSM
 
+local GetSpellInfo = C_Spell.GetSpellInfo
+
 local Interrupts = Gladius:NewModule("Interrupts", false, false, {InterruptsFrameLevel = 5},{
 })
 
+-- @@@@@@@@@@@@@@@@@@@@@ Helper Functions @@@@@@@@@@@@@@@@@@@@@
+-- Functions copied from WeakAuras AddOn by The WeakAuras Team
+local UnitAura = UnitAura
+if UnitAura == nil then
+  --- Deprecated in 10.2.5
+  UnitAura = function(unitToken, index, filter)
+		local auraData = C_UnitAuras.GetAuraDataByIndex(unitToken, index, filter)
+		if not auraData then
+			return nil;
+		end
 
--- @@@@@@@@@@@@@@@@@@@@ Helper Functions @@@@@@@@@@@@@@@@@@@@
--- UnitBuff/Debuff functiion definitions here
+		return AuraUtil.UnpackAuraData(auraData)
+	end
+end
 
 
+-- Unit Aura functions that return info about the first Aura matching the spellName or spellID given on the unit.
+local WA_GetUnitAura = function(unit, spell, filter)
+  if filter and not filter:upper():find("FUL") then
+      filter = filter.."|HELPFUL"
+  end
+  for i = 1, 255 do
+    local name, _, _, _, _, _, _, _, _, spellId = UnitAura(unit, i, filter)
+    if not name then return end
+    if spell == spellId or spell == name then
+      return UnitAura(unit, i, filter)
+    end
+  end
+end
 
--- @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+local WA_GetUnitBuff = function(unit, spell, filter)
+  filter = filter and filter.."|HELPFUL" or "HELPFUL"
+  return WA_GetUnitAura(unit, spell, filter)
+end
+
+
+local WA_GetUnitDebuff = function(unit, spell, filter)
+  filter = filter and filter.."|HARMFUL" or "HARMFUL"
+  return WA_GetUnitAura(unit, spell, filter)
+end
+-- @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
 
 function Interrupts:OnInitialize()
