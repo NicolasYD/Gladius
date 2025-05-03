@@ -80,6 +80,16 @@ local ClassIcon = Gladius:NewModule("ClassIcon", false, true, {
 	classIconAuras = GetDefaultAuraList(),
 })
 
+
+--@@@@@@@@@@@@@@@@@@@@ Testspells for Testmode @@@@@@@@@@@@@@@@@@@@@@
+local testSpells = {
+	arena1 = {spellID = 45438, duration = 10},  -- Ice Block
+	arena2 = {spellID = 53480, duration = 12},  -- Roar of Sacrifice
+	arena3 = {spellID = 1966,  duration = 6},  -- Feint
+}
+--@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+
 function ClassIcon:OnEnable()
 	self:RegisterEvent("UNIT_AURA")
 	self.version = 1
@@ -387,22 +397,22 @@ function ClassIcon:ResetModule()
 	end
 end
 
+
 function ClassIcon:Test(unit)
-	if not Gladius.db.classIconImportantAuras then
-		return
-	end
-	if unit == "arena1" then
-		self:ShowAura(unit, {
-			icon = select(3, GetSpellInfo(45438)),
-			duration = 10
-		})
-	elseif unit == "arena2" then
-		self:ShowAura(unit, {
-			icon = select(3, GetSpellInfo(19263)),
-			duration = 5
-		})
-	end
+    if not Gladius.db.classIconImportantAuras then return end
+
+    local data = testSpells[unit]
+    if not data then return end
+
+    local _, _, icon = GetSpellInfo(data.spellID)
+    if icon then
+        self:ShowAura(unit, { icon = icon, duration = data.duration })
+        C_Timer.After(data.duration, function()
+            ClassIcon:UNIT_AURA("any", unit)
+        end)
+    end
 end
+
 
 function ClassIcon:GetOptions()
 	local options = {
