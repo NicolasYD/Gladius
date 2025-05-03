@@ -12,6 +12,19 @@ end
 local L = Gladius.L
 local LSM
 
+local CDList = LibStub("CDList-1.0")
+local spellList = CDList.spellList
+
+local interruptsList = {}
+local iDurations = {}
+for spellId, spellData in pairs(spellList) do
+    if spellData and spellData.category == "interrupt" then
+        table.insert(interruptsList, spellId)
+        iDurations[spellId] = spellData.duration
+    end
+end
+
+-- Global Functions
 local GetSpellInfo = C_Spell.GetSpellInfo
 
 local Interrupts = Gladius:NewModule("Interrupts", false, false, {InterruptsFrameLevel = 5},{
