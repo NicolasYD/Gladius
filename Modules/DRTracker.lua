@@ -116,6 +116,40 @@ local function BuildSpellDropdownMaps(drCategory)
 
 	return values, nameToID, idToName
 end
+
+
+-- The helper functions below were copied from the AddOn WeakAuras by The WeakAuras Team
+local UnitAura = UnitAura
+if UnitAura == nil then
+  --- Deprecated in 10.2.5
+  UnitAura = function(unitToken, index, filter)
+		local auraData = C_UnitAuras.GetAuraDataByIndex(unitToken, index, filter)
+		if not auraData then
+			return nil;
+		end
+
+		return AuraUtil.UnpackAuraData(auraData)
+	end
+end
+
+-- Unit Aura functions that return info about the first Aura matching the spellName or spellID given on the unit.
+local WA_GetUnitAura = function(unit, spell, filter)
+  if filter and not filter:upper():find("FUL") then
+      filter = filter.."|HELPFUL"
+  end
+  for i = 1, 255 do
+    local name, _, _, _, _, _, _, _, _, spellId = UnitAura(unit, i, filter)
+    if not name then return end
+    if spell == spellId or spell == name then
+      return UnitAura(unit, i, filter)
+    end
+  end
+end
+
+local WA_GetUnitDebuff = function(unit, spell, filter)
+  filter = filter and filter.."|HARMFUL" or "HARMFUL"
+  return WA_GetUnitAura(unit, spell, filter)
+end
 --@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
 
@@ -205,8 +239,10 @@ function DRTracker:UpdateIcon(unit, drCat)
 	tracked.normalTexture:SetVertexColor(Gladius.db.drTrackerGlossColor.r, Gladius.db.drTrackerGlossColor.g, Gladius.db.drTrackerGlossColor.b, Gladius.db.drTrackerGloss and Gladius.db.drTrackerGlossColor.a or 0)
 end
 
-function DRTracker:DRFaded(unit, spellID, force)
+function DRTracker:DRApplied(unit, spellID, force, auraDuration)
 	local drCat = DRList:GetCategoryBySpellID(spellID)
+	local setSpellID = Gladius.dbi.profile.drDropdowns["defaultDRs"][drCat]
+
 	if not force and Gladius.db.drCategories[drCat] == false then
 		return
 	end
@@ -222,20 +258,33 @@ function DRTracker:DRFaded(unit, spellID, force)
 	end
 	local tracked = self.frame[unit].tracker[drCat]
 	tracked.active = true
+
 	if tracked and tracked.reset <= GetTime() then
-		tracked.diminished = 1
+		tracked.diminished = DRList:GetNextDR(1, drCat) * 2
+
+	elseif auraDuration then
+		tracked.diminished = DRList:NextDR(tracked.diminished, drCat)
+	end
+
+	if auraDuration then
+		tracked.timeLeft = DRList:GetResetTime(drCat) + auraDuration
+
 	else
-		tracked.diminished = DRList:NextDR(tracked.diminished)
+		tracked.timeLeft = DRList:GetResetTime(drCat)
 	end
-	if Gladius.test and tracked.diminished == 0 then
-		tracked.diminished = 1
-	end
-	tracked.timeLeft = DRList:GetResetTime()
+
 	tracked.reset = tracked.timeLeft + GetTime()
 	local text, r, g, b = unpack(drTexts[tracked.diminished])
 	tracked.text:SetText(text)
 	tracked.text:SetTextColor(r,g,b)
-	tracked.texture:SetTexture(GetSpellTexture(spellID))
+
+	if setSpellID == 0 then -- dynamic icon for this DR category is selected
+		tracked.texture:SetTexture(GetSpellTexture(spellID))
+
+	else -- a default icon for this DR category is selected
+		tracked.texture:SetTexture(GetSpellTexture(setSpellID))
+	end
+
 	Gladius:Call(Gladius.modules.Timer, "SetTimer", tracked, tracked.timeLeft)
 	tracked:SetScript("OnUpdate", function(f, elapsed)
 		f.timeLeft = f.timeLeft - elapsed
@@ -279,18 +328,26 @@ function DRTracker:CombatLogEvent(event, timestamp, eventType, hideCaster, sourc
 	if not unit then
 		return
 	end
-	-- Enemy had a debuff refreshed before it faded, so fade + gain it quickly
-	if eventType == "SPELL_AURA_REFRESH" then
+
+	local _, _, _, _, auraDuration, _ = WA_GetUnitDebuff(unit, spellID)
+	-- Debuff applied to enemy
+	if eventType == "SPELL_AURA_APPLIED" then
 		if auraType == "DEBUFF" and DRList:GetCategoryBySpellID(spellID) then
-			self:DRFaded(unit, spellID)
+			self:DRApplied(unit, spellID, false, auraDuration)
+		end
+	-- Enemy had a debuff refreshed before it faded, so fade + gain it quickly
+	elseif eventType == "SPELL_AURA_REFRESH" then
+		if auraType == "DEBUFF" and DRList:GetCategoryBySpellID(spellID) then
+			self:DRApplied(unit, spellID)
 		end
 	-- Buff or debuff faded from an enemy
 	elseif eventType == "SPELL_AURA_REMOVED" then
 		if auraType == "DEBUFF" and DRList:GetCategoryBySpellID(spellID) then
-			self:DRFaded(unit, spellID)
+			self:DRApplied(unit, spellID)
 		end
 	end
 end
+
 
 function DRTracker:CreateFrame(unit)
 	local button = Gladius.buttons[unit]
@@ -382,9 +439,9 @@ function DRTracker:Reset(unit)
 end
 
 function DRTracker:Test(unit)
-	self:DRFaded(unit, 33786, true)
-	self:DRFaded(unit, 8122, true)
-	self:DRFaded(unit, 118, true)
+	self:DRApplied(unit, 33786, true)
+	self:DRApplied(unit, 8122, true)
+	self:DRApplied(unit, 118, true)
 end
 
 function DRTracker:GetOptions()
@@ -716,7 +773,8 @@ function DRTracker:GetOptions()
 				args = {
 					enable = {
 						type = "toggle",
-						name = "Enable",
+						name = "Enable Category",
+						order = 1,
 						get = function(info)
 							if Gladius.dbi.profile.drCategories[key] == nil then
 								return true
@@ -730,11 +788,11 @@ function DRTracker:GetOptions()
 						disabled = function()
 							return not Gladius.dbi.profile.modules[self.name]
 						end,
-						order = 1,
 					},
 					dropdown = {
 						type = "select",
 						name = "Default Icon",
+						order = 2,
 						values = function()
 							return BuildSpellDropdownMaps(key)
 						end,
@@ -750,7 +808,32 @@ function DRTracker:GetOptions()
 							Gladius.dbi.profile.drDropdowns["defaultDRs"] = Gladius.dbi.profile.drDropdowns["defaultDRs"] or {}
 							Gladius.dbi.profile.drDropdowns["defaultDRs"][key] = nameToID[value]
 						end,
-						order = 2,
+					},
+					testButton = {
+						type = "execute",
+						name = "Test",
+						order = 3,
+						func = function()
+							local spellID = Gladius.dbi.profile.drDropdowns["defaultDRs"][key]
+
+							if not Gladius.test then SlashCmdList["GLADIUS"]("test") end
+							if spellID == 0 then
+								local candidates = {}
+
+								for id, category in pairs(spellList) do
+									if category == key then table.insert(candidates, id) end
+								end
+
+								if #candidates > 0 then
+									spellID = candidates[math.random(#candidates)]
+								end
+							end
+
+							for i = 1, Gladius.testCount do
+								local unit = "arena" .. i
+								self:DRApplied(unit, spellID, false, 0)
+							end
+						end,
 					},
 				}
 			}
