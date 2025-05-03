@@ -1,3 +1,9 @@
+-- @@@@@@@@@@@@@@@@@@@@@@@@@ DRTracker Module @@@@@@@@@@@@@@@@@@@@@@@@@@@
+-- Originally written by: Resike and Firebunny. Original author: Proditor
+-- Modified by: Pharmac1st
+-- Game Version: 11.1.5
+-- @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
 local Gladius = _G.Gladius
 if not Gladius then
 	DEFAULT_CHAT_FRAME:AddMessage(format("Module %s requires Gladius", "DRTracker"))
@@ -19,11 +25,13 @@ local GetNumClasses = GetNumClasses
 local GetClassInfo = GetClassInfo
 local GetNumSpecializationsForClassID = C_SpecializationInfo.GetNumSpecializationsForClassID
 local GetSpecializationInfoForClassID = GetSpecializationInfoForClassID
+local GetSpecializationInfo = GetSpecializationInfo
 local CreateFrame = CreateFrame
 local GetSpellTexture = C_Spell.GetSpellTexture
 local GetSpellInfo = C_Spell.GetSpellInfo
 local GetTime = GetTime
 local UnitGUID = UnitGUID
+local UnitClass = UnitClass
 
 local DRTracker = Gladius:NewModule("DRTracker", false, true, {
 	drTrackerAttachTo = "ClassIcon",
@@ -43,19 +51,20 @@ local DRTracker = Gladius:NewModule("DRTracker", false, true, {
 	drFontColor = {r = 0, g = 1, b = 0, a = 1},
 	drCategories = { },
 	drDropdowns = { },
+	classSpecEnabled = false,
 })
 
 
---@@@@@@@@@@@@@@@@@@@@@@@@@ Testspells for Testmode @@@@@@@@@@@@@@@@@@@@@@@@@@@@
+-- @@@@@@@@@@@@@@@@@@@@@@@@@ Testspells for Testmode @@@@@@@@@@@@@@@@@@@@@@@@@@@@
 local testSpells = {
 	[8122] = {duration = 6}, -- Psychic Scream
 	[118] = {duration = 6}, -- Polymorph
 	[408] = {duration = 5}, -- Kidney Shot
 }
---@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+-- @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
 
---@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ Helper Functions @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+-- @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ Helper Functions @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 local function InitializeDefaultDrDropdowns()
 	Gladius.dbi.profile.drDropdowns = Gladius.dbi.profile.drDropdowns or {}
 	Gladius.dbi.profile.drDropdowns["defaultDRs"] = Gladius.dbi.profile.drDropdowns["defaultDRs"] or {}
@@ -127,6 +136,31 @@ local function BuildSpellDropdownMaps(drCategory)
 end
 
 
+function UpdateClassAndSpec()
+    local class, _ = UnitClass("player")
+    local specIndex = GetSpecialization()
+    local specName = specIndex and select(2, GetSpecializationInfo(specIndex)) or "Unknown"
+
+    -- Store in profile
+    Gladius.dbi.profile.class = class
+    Gladius.dbi.profile.spec = specName
+	Gladius.dbi.profile.classSpecSelection = class .. "-" .. specName
+end
+
+
+local function GetCurrentProfileKey()
+	if Gladius.dbi.profile.classSpecEnabled then
+		local selected = Gladius.dbi.profile.classSpecSelection
+		if selected and selected ~= "" then
+			local className, specName = selected:match("^%s*(.-)%s*%-%s*(.-)%s*$")
+			if className and specName then
+				return className, specName
+			end
+		end
+	end
+end
+
+
 -- The helper functions below were copied from the AddOn WeakAuras by The WeakAuras Team
 local UnitAura = UnitAura
 if UnitAura == nil then
@@ -159,7 +193,7 @@ local WA_GetUnitDebuff = function(unit, spell, filter)
   filter = filter and filter.."|HARMFUL" or "HARMFUL"
   return WA_GetUnitAura(unit, spell, filter)
 end
---@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+-- @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
 
 function DRTracker:OnInitialize()
@@ -170,11 +204,13 @@ end
 
 function DRTracker:OnEnable()
 	self:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
+	self:RegisterEvent("PLAYER_SPECIALIZATION_CHANGED")
 	LSM = Gladius.LSM
 	if not self.frame then
 		self.frame = { }
 	end
 	InitializeDefaultDrDropdowns()
+	UpdateClassAndSpec()
 end
 
 function DRTracker:OnDisable()
@@ -250,7 +286,20 @@ end
 
 function DRTracker:DRApplied(unit, spellID, force, auraDuration)
 	local drCat = DRList:GetCategoryBySpellID(spellID)
-	local setSpellID = Gladius.dbi.profile.drDropdowns["defaultDRs"][drCat]
+	local setSpellID
+
+	if Gladius.dbi.profile.classSpecEnabled and not Gladius.test then
+		local className = Gladius.dbi.profile.class
+		local specName = Gladius.dbi.profile.spec
+		setSpellID = Gladius.dbi.profile.drDropdowns[className][specName][drCat]
+	elseif Gladius.dbi.profile.classSpecEnabled and Gladius.test then
+		local className, specName = GetCurrentProfileKey()
+		setSpellID = Gladius.dbi.profile.drDropdowns[className][specName][drCat]
+	else
+		if Gladius.dbi.profile.drDropdowns["defaultDRs"][drCat] then
+			setSpellID = Gladius.dbi.profile.drDropdowns["defaultDRs"][drCat]
+		end
+	end
 
 	if not force and Gladius.db.drCategories[drCat] == false then
 		return
@@ -355,6 +404,11 @@ function DRTracker:CombatLogEvent(event, timestamp, eventType, hideCaster, sourc
 			self:DRApplied(unit, spellID)
 		end
 	end
+end
+
+
+function DRTracker:PLAYER_SPECIALIZATION_CHANGED(event)
+    UpdateClassAndSpec()
 end
 
 
@@ -774,6 +828,62 @@ function DRTracker:GetOptions()
 				order = 1,
 				args = { },
 			},
+			classSpecControls = {
+				type = "group",
+				name = "",
+				inline = true,
+				order = 0,
+				args = {
+					classSpecToggle = {
+						type = "toggle",
+						name = "Enable Class/Spec",
+						desc = "Toggle to enable or disable the class-specialization dropdown",
+						order = 1,
+						width = "full",
+						set = function(_, value)
+							Gladius.dbi.profile.classSpecEnabled = value
+						end,
+						get = function()
+							return Gladius.dbi.profile.classSpecEnabled
+						end,
+					},
+					classSpecDropdown = {
+						type = "select",
+						name = "",
+						desc = "Choose a class and specialization",
+						order = 2,
+						width = "double",
+						values = function()
+							local classSpecOptions = {}
+							for classID = 1, GetNumClasses() do
+								local className, _ = GetClassInfo(classID)
+								for specIndex = 1, GetNumSpecializationsForClassID(classID) do
+									local _, specName, _, icon = GetSpecializationInfoForClassID(classID, specIndex)
+									local classKey = className .. "-" .. specName
+									classSpecOptions[classKey] = "|T" .. icon .. ":16:16|t " .. className .. " - " .. specName
+								end
+							end
+							return classSpecOptions
+						end,
+						get = function()
+							local class = Gladius.dbi.profile.class
+							local spec = Gladius.dbi.profile.spec
+							local classKey = class .. "-" .. spec
+							Gladius.dbi.profile.classSpecSelection = Gladius.dbi.profile.classSpecSelection or classKey
+							return Gladius.dbi.profile.classSpecSelection
+						end,
+						set = function(_, value)
+							local class, spec = value:match("^(.-)%-(.+)$")
+							Gladius.dbi.profile.class = class
+							Gladius.dbi.profile.spec = spec
+							Gladius.dbi.profile.classSpecSelection = value
+						end,
+						disabled = function()
+							return not Gladius.dbi.profile.classSpecEnabled
+						end,
+					},
+				},
+			},
 		},
 	}
 	for key, name in pairs(DRList.categoryNames.retail) do
@@ -808,16 +918,24 @@ function DRTracker:GetOptions()
 							return BuildSpellDropdownMaps(key)
 						end,
 						get = function()
+							local className, specName = GetCurrentProfileKey()
 							local selectedID
-							Gladius.dbi.profile.drDropdowns["defaultDRs"] = Gladius.dbi.profile.drDropdowns["defaultDRs"] or {}
-							selectedID = Gladius.dbi.profile.drDropdowns["defaultDRs"][key]
+							if Gladius.dbi.profile.classSpecEnabled then
+								selectedID = Gladius.dbi.profile.drDropdowns[className][specName][key]
+							else
+								selectedID = Gladius.dbi.profile.drDropdowns["defaultDRs"][key]
+							end
 							local _, _, idToName = BuildSpellDropdownMaps(key)
 							return idToName[selectedID]
 						end,
 						set = function(_, value)
+							local className, specName = GetCurrentProfileKey()
 							local _, nameToID = BuildSpellDropdownMaps(key)
-							Gladius.dbi.profile.drDropdowns["defaultDRs"] = Gladius.dbi.profile.drDropdowns["defaultDRs"] or {}
-							Gladius.dbi.profile.drDropdowns["defaultDRs"][key] = nameToID[value]
+							if Gladius.dbi.profile.classSpecEnabled then
+								Gladius.dbi.profile.drDropdowns[className][specName][key] = (value == "1_dynamic" and 0) or (value == "2_custom" and 1) or nameToID[value] or 0
+							else
+								Gladius.dbi.profile.drDropdowns["defaultDRs"][key] = nameToID[value]
+							end
 						end,
 					},
 					testButton = {
@@ -825,8 +943,13 @@ function DRTracker:GetOptions()
 						name = "Test",
 						order = 3,
 						func = function()
+							local className, specName = GetCurrentProfileKey()
 							local spellID = Gladius.dbi.profile.drDropdowns["defaultDRs"][key]
-
+							if Gladius.dbi.profile.classSpecEnabled then
+								spellID = Gladius.dbi.profile.drDropdowns[className][specName][key] or 0
+							else
+								spellID = Gladius.dbi.profile.drDropdowns["defaultDRs"][key] or 0
+							end
 							if not Gladius.test then SlashCmdList["GLADIUS"]("test") end
 							if spellID == 0 then
 								local candidates = {}
