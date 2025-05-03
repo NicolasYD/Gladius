@@ -224,7 +224,7 @@ end
 
 function Gladius:OnInitialize()
 	-- setup db
-	self.dbi = LibStub("AceDB-3.0"):New("Gladius2DB", self.defaults)
+	self.dbi = LibStub("AceDB-3.0"):New("Gladius2DB", self.defaults, "Default")
 	self.dbi.RegisterCallback(self, "OnProfileChanged", "OnProfileChanged")
 	self.dbi.RegisterCallback(self, "OnProfileCopied", "OnProfileChanged")
 	self.dbi.RegisterCallback(self, "OnProfileReset", "OnProfileChanged")
