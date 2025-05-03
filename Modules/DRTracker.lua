@@ -46,7 +46,16 @@ local DRTracker = Gladius:NewModule("DRTracker", false, true, {
 })
 
 
---@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ Helper Functions @@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+--@@@@@@@@@@@@@@@@@@@@@@@@@ Testspells for Testmode @@@@@@@@@@@@@@@@@@@@@@@@@@@@
+local testSpells = {
+	[8122] = {duration = 6}, -- Psychic Scream
+	[118] = {duration = 6}, -- Polymorph
+	[408] = {duration = 5}, -- Kidney Shot
+}
+--@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+
+--@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ Helper Functions @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 local function InitializeDefaultDrDropdowns()
 	Gladius.dbi.profile.drDropdowns = Gladius.dbi.profile.drDropdowns or {}
 	Gladius.dbi.profile.drDropdowns["defaultDRs"] = Gladius.dbi.profile.drDropdowns["defaultDRs"] or {}
@@ -150,7 +159,7 @@ local WA_GetUnitDebuff = function(unit, spell, filter)
   filter = filter and filter.."|HARMFUL" or "HARMFUL"
   return WA_GetUnitAura(unit, spell, filter)
 end
---@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+--@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
 
 function DRTracker:OnInitialize()
@@ -438,11 +447,13 @@ function DRTracker:Reset(unit)
 	self.frame[unit]:SetAlpha(0)
 end
 
+
 function DRTracker:Test(unit)
-	self:DRApplied(unit, 33786, true)
-	self:DRApplied(unit, 8122, true)
-	self:DRApplied(unit, 118, true)
+	for spellID, spellData in pairs(testSpells) do
+		self:DRApplied(unit, spellID, nil, spellData.duration)
+	end
 end
+
 
 function DRTracker:GetOptions()
 	local t = {
