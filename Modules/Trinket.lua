@@ -185,7 +185,7 @@ function Trinket:UNIT_AURA(event, unit)
 	end
 end
 
-function Trinket:UNIT_SPELLCAST_SUCCEEDED(event, unit, spell, rank)
+function Trinket:UNIT_SPELLCAST_SUCCEEDED(event, unit, spellLineID, spell)
 	local _, instanceType = IsInInstance()
 	if instanceType ~= "arena" or not strfind(unit, "arena") or strfind(unit, "pet") then
 		return
@@ -237,12 +237,15 @@ function Trinket:GROUP_ROSTER_UPDATE()
     Trinket:ResetTrinketShuffle()
 end
 
+
 function Trinket:GetTrinketCD(unit)
 	local cd = 0
 	local startTime, duration = self.frame[unit].cooldown:GetCooldownTimes()
 	cd = ((startTime + duration)/1000 - GetTime())
 	return cd
 end
+
+
 function Trinket:UpdateTrinket(unit, duration)
 	-- grid style icon
 	if Gladius.db.trinketGridStyleIcon then
