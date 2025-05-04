@@ -49,10 +49,7 @@ local function GetDefaultAuraList()
 	local auraTable = {}
 
 	for spellID, data in pairs(spellTable) do
-		local name = GetSpellInfo(spellID)
-		if name and data.priority then
-			auraTable[name] = data.priority
-		elseif data.priority then
+		if data.priority then
 			auraTable[spellID] = data.priority
 		end
 	end
@@ -153,7 +150,7 @@ function ClassIcon:UpdateAura(unit)
 				break
 			end
 			local auraList = Gladius.db.classIconAuras
-			local priority = auraList[name] or auraList[tostring(spellid)]
+			local priority = auraList[spellid]
 
 			if priority and (not aura or aura.priority < priority)  then
 				aura = {
