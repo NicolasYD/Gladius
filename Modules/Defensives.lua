@@ -6,6 +6,7 @@ local L = Gladius.L
 local LSM
 
 local CDList = LibStub("CDList-1.0")
+local spellList = CDList.spellList
 
 -- Localizing commonly used global functions
 local IsInInstance = IsInInstance
@@ -50,7 +51,7 @@ local testSpells = {
 
 --@@@@@@@@@@@@@@@@@@@@ Helper Functions @@@@@@@@@@@@@@@@@@@
 local function GetDefensiveSpellData(spell)
-    local spellData = CDList.spellList[spell]
+    local spellData = spellList[spell]
     if spellData and spellData.category == "defensive" then
         return spellData
     end
@@ -197,25 +198,12 @@ function Defensives:SortIcons(unit)
 end
 
 
-function Defensives:UNIT_SPELLCAST_SUCCEEDED(event)
-	self:CombatLogEvent(event, CombatLogGetCurrentEventInfo())
-end
-
-
-function Defensives:CombatLogEvent(event, timestamp, eventType, hideCaster, sourceGUID, sourceName, sourceFlags, sourceRaidFlags, destGUID, destName, destFlags, destRaidFlags, spellID, spellName, spellSchool, auraType)
-	local unit
-	for u, _ in pairs(Gladius.buttons) do
-		if UnitGUID(u) == destGUID then
-			unit = u
-		end
-	end
+function Defensives:UNIT_SPELLCAST_SUCCEEDED(event, unit, _, spellID)
 	if not unit then
 		return
 	end
-	if eventType == "UNIT_SPELLCAST_SUCCEEDED" then
-		if auraType == "BUFF" and CDList:GetCategoryBySpellID(spellID) == "defensive" then
-			self:DefensiveUsed(unit, spellID)
-		end
+	if spellList[spellID] and spellList[spellID].category == "defensive" and (unit == "arena1" or unit == "arena2" or unit == "arena3") then
+		self:DefensiveUsed(unit, spellID)
 	end
 end
 
