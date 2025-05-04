@@ -13,6 +13,7 @@ local strformat = string.format
 
 local CreateFrame = CreateFrame
 local GetSpellInfo = C_Spell.GetSpellInfo
+local GetSpellTexture = C_Spell.GetSpellTexture
 local IsInInstance = IsInInstance
 local UnitClass = UnitClass
 local UnitFactionGroup = UnitFactionGroup
@@ -164,7 +165,7 @@ function Trinket:ARENA_CROWD_CONTROL_SPELL_UPDATE(event, unit, spellID)
 		return
 	end
 	if (spellID ~= self.frame[unit].spellID) then
-		local spellTexture = GetSpellInfo(spellID).iconID;
+		local spellTexture = GetSpellTexture(spellID);
 		self.frame[unit].spellID = spellID;
 		self.frame[unit].texture:SetTexture(spellTexture);
 	end
