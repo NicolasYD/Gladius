@@ -120,7 +120,7 @@ function Racial:UNIT_NAME_UPDATE(event, unit)
 	end
 	local _, race =  UnitRace(unit)
 	race = string.upper(race)
-	local spellTexture = GetSpellInfo(unitRaceCDs[race].spellID).spellID
+	local spellTexture = GetSpellTexture(unitRaceCDs[race].spellID)
 	self.frame[unit].race = race
 	self.frame[unit].texture:SetTexture(spellTexture)
 end
@@ -132,7 +132,7 @@ function Racial:AutoFixAll()
 		local unit = 'arena'..i
 		local _, race =  UnitRace(unit)
 		race = string.upper(race or 'HUMAN')
-		local spellTexture = GetSpellInfo(unitRaceCDs[race].spellID).spellID
+		local spellTexture = GetSpellTexture(unitRaceCDs[race].spellID)
 		if (self.frame[unit]) then
 			self.frame[unit].race = race
 			self.frame[unit].texture:SetTexture(spellTexture)
