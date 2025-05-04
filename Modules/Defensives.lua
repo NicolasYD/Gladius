@@ -38,13 +38,18 @@ local Defensives = Gladius:NewModule("Defensives", false, true, {
 local testSpells = {
 	["firstEvent"] = {
 		arena1 = 45438, -- Ice Block
-		arena2 = 264735, -- Survival of the Fittest
+		arena2 = 53480, -- Roar of Sacrifice
 		arena3 = 1966, -- Feint
 	},
 	["secondEvent"] = {
-		arena1 = 110960, --Greater Invisibilitys
-		arena2 = 53480, -- Roar of Sacrifice
+		arena1 = 108978, -- Alter Time
+		arena2 = 264735, -- Survival of the Fittest
 		arena3 = 1856, -- Vanish
+	},
+	["thirdEvent"] = {
+		arena1 = 110960, -- Greater Invisibilitys
+		arena2 = 186265, -- Aspect of the Turtle
+		arena3 = 31224, -- Evasion
 	}
 }
 --@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
@@ -186,13 +191,36 @@ function Defensives:SortIcons(unit)
     local baseFrame = self.frame[unit]
     local lastFrame = baseFrame
 
-    for _, frame in pairs(self.frame[unit].tracker) do
-        frame:ClearAllPoints()
-        frame:SetAlpha(0)
+    -- Collect active icons
+    local activeIcons = {}
+    for spellID, frame in pairs(self.frame[unit].tracker) do
         if frame.active then
-            frame:SetPoint("LEFT", lastFrame, lastFrame == baseFrame and "LEFT" or "RIGHT", margin, 0)
-            lastFrame = frame
-            frame:SetAlpha(1)
+            table.insert(activeIcons, {
+                spellID = spellID,
+                frame = frame,
+                priority = (spellList[spellID] and spellList[spellID].priority) or 0
+            })
+        end
+    end
+
+    -- Step 2: Sort icons by descending priority
+    table.sort(activeIcons, function(a, b)
+        return a.priority > b.priority
+    end)
+
+    -- Step 3: Reposition and show icons
+    for _, data in ipairs(activeIcons) do
+        local frame = data.frame
+        frame:ClearAllPoints()
+        frame:SetPoint("LEFT", lastFrame, lastFrame == baseFrame and "LEFT" or "RIGHT", margin, 0)
+        lastFrame = frame
+        frame:SetAlpha(1)
+    end
+
+    -- Hide inactive icons
+    for spellID, frame in pairs(self.frame[unit].tracker) do
+        if not frame.active then
+            frame:SetAlpha(0)
         end
     end
 end
@@ -294,13 +322,23 @@ end
 
 
 function Defensives:Test(unit)
+	local testSpellDelay = 5
 	local firstTestSpell = testSpells["firstEvent"][unit]
 	local secondTestSpell = testSpells["secondEvent"][unit]
+	local thirdTestSpell = testSpells["thirdEvent"][unit]
+
 	if firstTestSpell then
-		self:DefensiveUsed(unit, firstTestSpell)
+		self:DefensiveUsed(unit, firstTestSpell)			
 	end
 	if secondTestSpell then
-		self:DefensiveUsed(unit, secondTestSpell)
+		C_Timer.After(testSpellDelay, function ()
+			self:DefensiveUsed(unit, secondTestSpell)
+		end)
+	end
+	if thirdTestSpell then
+		C_Timer.After(testSpellDelay + 5, function ()
+			self:DefensiveUsed(unit, thirdTestSpell)
+		end)
 	end
 end
 
