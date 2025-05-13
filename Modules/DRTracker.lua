@@ -110,7 +110,7 @@ local function BuildSpellDropdownMaps(drCategory)
 	values[customName] = customDisplay
 	nameToID[customName] = 1
 	idToName[1] = customName
-	
+
 	for spellID, effectType in pairs(spellList) do
 		if effectType == drCategory then
 			local spellName = GetSpellInfo(spellID).name
@@ -300,6 +300,10 @@ function DRTracker:DRApplied(unit, spellID, force, auraDuration)
 	local drCat = DRList:GetCategoryBySpellID(spellID)
 	local setSpellID
 	local customSpellID
+
+	if not Gladius.dbi.profile.drDropdowns["defaultDRs"] then
+		InitializeDefaultDrDropdowns()
+	end
 
 	if Gladius.dbi.profile.classSpecEnabled and not Gladius.test then
 		local className = Gladius.dbi.profile.class
