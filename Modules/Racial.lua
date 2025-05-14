@@ -73,7 +73,7 @@ local Racial = Gladius:NewModule("Racial", false, true, {
 	RacialOffsetY = 0,
 	RacialFrameLevel = 1,
 	RacialIconCrop = false,
-	RacialGloss = true,
+	RacialGloss = false,
 	RacialGlossColor = {r = 1, g = 1, b = 1, a = 0.4},
 	RacialCooldown = true,
 	RacialCooldownReverse = false,
