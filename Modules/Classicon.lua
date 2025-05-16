@@ -256,6 +256,7 @@ function ClassIcon:CreateFrame(unit)
 	self.frame[unit].texture = _G[self.frame[unit]:GetName().."Icon"]
 	self.frame[unit].normalTexture = _G[self.frame[unit]:GetName().."NormalTexture"]
 	self.frame[unit].cooldown = _G[self.frame[unit]:GetName().."Cooldown"]
+	self.frame[unit].IconMask:Hide()
 
 	-- secure
 	local secure = CreateFrame("Button", "Gladius"..self.name.."SecureButton"..unit, button, "SecureActionButtonTemplate")
