@@ -12,11 +12,9 @@ local spellTable = CDList.spellList
 -- Global Functions
 local _G = _G
 local pairs = pairs
-local select = select
 local strfind = string.find
 local tonumber = tonumber
 local tostring = tostring
-local unpack = unpack
 
 local CreateFrame = CreateFrame
 local GetSpecializationInfoByID = GetSpecializationInfoByID
