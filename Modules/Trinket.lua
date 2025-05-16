@@ -33,7 +33,7 @@ local Trinket = Gladius:NewModule("Trinket", false, true, {
 	trinketOffsetY = 0,
 	trinketFrameLevel = 1,
 	trinketIconCrop = false,
-	trinketGloss = true,
+	trinketGloss = false,
 	trinketGlossColor = {r = 1, g = 1, b = 1, a = 0.4},
 	trinketCooldown = true,
 	trinketCooldownReverse = false,

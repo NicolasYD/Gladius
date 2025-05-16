@@ -69,7 +69,7 @@ local ClassIcon = Gladius:NewModule("ClassIcon", false, true, {
 	classIconOffsetX = -1,
 	classIconOffsetY = 0,
 	classIconFrameLevel = 1,
-	classIconGloss = true,
+	classIconGloss = false,
 	classIconGlossColor = {r = 1, g = 1, b = 1, a = 0.4},
 	classIconImportantAuras = true,
 	classIconCrop = false,
