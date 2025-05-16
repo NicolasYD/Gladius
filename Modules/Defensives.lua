@@ -1,3 +1,8 @@
+-- @@@@@@@@@@@@@@@@@@@@@@@@@ Defensives Module @@@@@@@@@@@@@@@@@@@@@@@@@@@
+-- Written by: Pharmac1st
+-- Game Version: 11.1.5
+-- @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
 local Gladius = _G.Gladius
 if not Gladius then
 	DEFAULT_CHAT_FRAME:AddMessage(format("Module %s requires Gladius", "Interrupts"))
@@ -19,7 +24,7 @@ local Defensives = Gladius:NewModule("Defensives", false, true, {
 	DefensivesAnchor = "TOPLEFT",
 	DefensivesRelativePoint = "BOTTOMLEFT",
 	DefensivesAdjustSize = false,
-	DefensivesMargin = 1,
+	DefensivesMargin = 5,
 	DefensivesSize = 40,
 	DefensivesOffsetX = 0,
 	DefensivesOffsetY = 0,
@@ -53,6 +58,7 @@ local testSpells = {
 	}
 }
 --@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
 
 --@@@@@@@@@@@@@@@@@@@@ Helper Functions @@@@@@@@@@@@@@@@@@@
 local function GetDefensiveSpellData(spell)
@@ -242,7 +248,7 @@ function Defensives:CreateFrame(unit)
 		return
 	end
 	-- create frame
-	self.frame[unit] = CreateFrame("CheckButton", "Gladius"..self.name.."Frame"..unit, button, "ActionButtonTemplate")
+	self.frame[unit] = CreateFrame("CheckButton", "Gladius"..self.name.."Frame"..unit, button)
 	self.frame[unit]:EnableMouse(false)
 	self.frame[unit]:SetNormalTexture("Interface\\COMMON\\spacer")
 end
