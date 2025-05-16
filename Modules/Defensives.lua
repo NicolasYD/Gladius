@@ -513,30 +513,6 @@ function Defensives:GetOptions()
 						},
 					},
 				},
-				font = {
-					type = "group",
-					name = L["Font"],
-					desc = L["Font settings"],
-					inline = true,
-					hidden = function()
-						return not Gladius.db.advancedOptions
-					end,
-					order = 3,
-					args = {
-						DefensivesFontSize = {
-							type = "range",
-							name = L["Defensives Text Size"],
-							desc = L["Text size of the Defensives text"],
-							min = 1,
-							max = 20,
-							step = 1,
-							disabled = function()
-								return not Gladius.dbi.profile.castText or not Gladius.dbi.profile.modules[self.name]
-							end,
-							order = 15,
-						},
-					},
-				},
 				position = {
 					type = "group",
 					name = L["Position"],
