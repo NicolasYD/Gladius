@@ -333,6 +333,7 @@ function DRTracker:DRApplied(unit, spellID, force, auraDuration)
 	}
 	if not self.frame[unit].tracker[drCat] then
 		self.frame[unit].tracker[drCat] = CreateFrame("CheckButton", "Gladius"..self.name.."FrameCat"..drCat..unit, self.frame[unit], "ActionButtonTemplate")
+		self.frame[unit].tracker[drCat].IconMask:Hide()
 		self:UpdateIcon(unit, drCat)
 	end
 	local tracked = self.frame[unit].tracker[drCat]
