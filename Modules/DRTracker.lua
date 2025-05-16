@@ -38,7 +38,7 @@ local DRTracker = Gladius:NewModule("DRTracker", false, true, {
 	drTrackerAnchor = "TOPRIGHT",
 	drTrackerRelativePoint = "TOPLEFT",
 	drTrackerAdjustSize = false,
-	drTrackerMargin = 1,
+	drTrackerMargin = 5,
 	drTrackerSize = 50,
 	drTrackerOffsetX = 0,
 	drTrackerOffsetY = 0,
@@ -110,7 +110,7 @@ local function BuildSpellDropdownMaps(drCategory)
 	values[customName] = customDisplay
 	nameToID[customName] = 1
 	idToName[1] = customName
-	
+
 	for spellID, effectType in pairs(spellList) do
 		if effectType == drCategory then
 			local spellName = GetSpellInfo(spellID).name
@@ -301,6 +301,10 @@ function DRTracker:DRApplied(unit, spellID, force, auraDuration)
 	local setSpellID
 	local customSpellID
 
+	if not Gladius.dbi.profile.drDropdowns["defaultDRs"] then
+		InitializeDefaultDrDropdowns()
+	end
+
 	if Gladius.dbi.profile.classSpecEnabled and not Gladius.test then
 		local className = Gladius.dbi.profile.class
 		local specName = Gladius.dbi.profile.spec
@@ -329,6 +333,7 @@ function DRTracker:DRApplied(unit, spellID, force, auraDuration)
 	}
 	if not self.frame[unit].tracker[drCat] then
 		self.frame[unit].tracker[drCat] = CreateFrame("CheckButton", "Gladius"..self.name.."FrameCat"..drCat..unit, self.frame[unit], "ActionButtonTemplate")
+		self.frame[unit].tracker[drCat].IconMask:Hide()
 		self:UpdateIcon(unit, drCat)
 	end
 	local tracked = self.frame[unit].tracker[drCat]
