@@ -158,6 +158,7 @@ function Defensives:DefensiveUsed(unit, spell) -- not complete yet
 
 	if not self.frame[unit].tracker[spell] then
 		self.frame[unit].tracker[spell] = CreateFrame("CheckButton", "Gladius"..self.name.."FrameCat"..spell..unit, self.frame[unit], "ActionButtonTemplate")
+		self.frame[unit].tracker[spell].IconMask:Hide()
 		self:UpdateIcon(unit, spell)
 	end
 	local tracked = self.frame[unit].tracker[spell]
