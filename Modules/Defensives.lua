@@ -37,6 +37,7 @@ local Defensives = Gladius:NewModule("Defensives", false, true, {
 	DefensivesFontSize = 10,
 	DefensivesFontColor = {r = 0, g = 1, b = 0, a = 1},
 	DefensivesDetached = false,
+	defensives = { },
 })
 
 
@@ -388,6 +389,10 @@ function Defensives:GetOptions()
 		local className = classInfo.className
 		local iconMarkup = "|A:classicon-" .. string.lower(key) .. ":20:20|a "
 
+		if not Gladius.dbi.profile.defensives[key] then
+			Gladius.dbi.profile.defensives[key] = {}
+		end
+
 		classOptions[key] = {
 			type = "group",
 			name = iconMarkup .. className, -- icon + name
@@ -417,8 +422,12 @@ function Defensives:GetOptions()
 						for spellID, _ in pairs(CDList:GetDefensiveSpellIDsByClass(key)) do
 							local spellInfo = GetSpellInfo(spellID)
 							local tooltip = ""
-
 							local tooltipInfo = C_TooltipInfo.GetSpellByID(spellID)
+
+							if Gladius.dbi.profile.defensives[key][spellID] == nil then
+								Gladius.dbi.profile.defensives[key][spellID] = true
+							end
+
 							if tooltipInfo and tooltipInfo.lines then
 								for _, line in ipairs(tooltipInfo.lines) do
 									local left = line.leftText or ""
@@ -434,11 +443,10 @@ function Defensives:GetOptions()
 									name = "|T" .. spellInfo.iconID .. ":20:20:0:0:64:64:5:59:5:59|t " .. spellInfo.name,
 									desc = tooltip,
 									get = function()
-										return Gladius.dbi.profile[key] and Gladius.dbi.profile[key][spellID]
+										return Gladius.dbi.profile.defensives[key][spellID]
 									end,
 									set = function(_, value)
-										Gladius.dbi.profile[key] = Gladius.dbi.profile[key] or {}
-										Gladius.dbi.profile[key][spellID] = value
+										Gladius.dbi.profile.defensives[key][spellID] = value
 										Gladius:UpdateFrame()
 									end,
 									order = spellID,
