@@ -392,21 +392,26 @@ function Defensives:GetOptions()
 			type = "group",
 			name = iconMarkup .. className, -- icon + name
 			args = {
-				header = {
+				headerBeginning = {
 					type = "header",
-					name = classInfo.className .. " Options",
+					name = classInfo.className,
 					order = 1,
 				},
 				description = {
 					type = "description",
-					name = "Add options for " .. classInfo.className .. " here.",
+					name = "Choose the spells that you want to be tracked by this module.",
 					order = 2,
+				},
+				headerEnd = {
+					type = "header",
+					name = "",
+					order = 3,
 				},
 				spells = {
 					type = "group",
-					name = "Tracked Spells",
+					name = "Tracked Defensives",
 					inline = true,
-					order = 3,
+					order = 4,
 					args = (function()
 						local spellArgs = {}
 						for spellID, _ in pairs(CDList:GetDefensiveSpellIDsByClass(key)) do
