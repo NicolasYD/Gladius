@@ -416,7 +416,18 @@ function Defensives:GetOptions()
 						local spellArgs = {}
 						for spellID, _ in pairs(CDList:GetDefensiveSpellIDsByClass(key)) do
 							local spellInfo = GetSpellInfo(spellID)
-							local tooltip = C_TooltipInfo.GetSpellByID(spellID).lines[4].leftText
+							local tooltip = ""
+
+							local tooltipInfo = C_TooltipInfo.GetSpellByID(spellID)
+							if tooltipInfo and tooltipInfo.lines then
+								for _, line in ipairs(tooltipInfo.lines) do
+									local left = line.leftText or ""
+									if left ~= "" and left ~= spellInfo.name then
+										tooltip = left
+									end
+								end
+							end
+
 							if spellInfo then
 								spellArgs["spell_" .. spellID] = {
 									type = "toggle",
