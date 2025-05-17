@@ -15,7 +15,10 @@ Gladius.defaults = {
 		y = { },
 		modules = {
 			["*"] = true,
+			["Announcements"] = false,
 			["Auras"] = false,
+			["Clicks"] = false,
+			["Layout"] = false,
 			["TargetBar"] = false,
 		},
 		locked = false,
