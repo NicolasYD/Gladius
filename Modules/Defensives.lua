@@ -410,14 +410,13 @@ function Defensives:GetOptions()
 					args = (function()
 						local spellArgs = {}
 						for spellID, _ in pairs(CDList:GetDefensiveSpellIDsByClass(key)) do
-							print(spellID)
 							local spellInfo = GetSpellInfo(spellID)
-							print(spellInfo.name)
+							local tooltip = C_TooltipInfo.GetSpellByID(spellID).lines[4].leftText
 							if spellInfo then
 								spellArgs["spell_" .. spellID] = {
 									type = "toggle",
 									name = "|T" .. spellInfo.iconID .. ":20:20:0:0:64:64:5:59:5:59|t " .. spellInfo.name,
-									desc = "Enable tracking for " .. spellInfo.name,
+									desc = tooltip,
 									get = function()
 										return Gladius.dbi.profile[key] and Gladius.dbi.profile[key][spellID]
 									end,
