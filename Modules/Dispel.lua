@@ -32,7 +32,7 @@ local Dispel = Gladius:NewModule("Dispel", false, true, {
 	dispellOffsetX = 100,
 	dispellOffsetY = 0,
 	dispellFrameLevel = 1,
-	dispellIconCrop = false,
+	dispellIconCrop = true,
 	dispellGloss = false,
 	dispellGlossColor = {r = 1, g = 1, b = 1, a = 0.4},
 	dispellCooldown = true,
@@ -208,6 +208,8 @@ function Dispel:CreateFrame(unit)
 	self.frame[unit].texture = _G[self.frame[unit]:GetName().."Icon"]
 	self.frame[unit].normalTexture = _G[self.frame[unit]:GetName().."NormalTexture"]
 	self.frame[unit].cooldown = _G[self.frame[unit]:GetName().."Cooldown"]
+	self.frame[unit].IconMask:Hide()
+
 end
 
 function Dispel:Update(unit)
