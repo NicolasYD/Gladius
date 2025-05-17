@@ -384,11 +384,12 @@ function Defensives:GetOptions()
 	-- Loop through the sorted classes
 	for _, classInfo in ipairs(classes) do
 		local key = classInfo.classFile  -- use classFile as the key
+		local className = classInfo.className
+		local iconMarkup = "|A:classicon-" .. string.lower(key) .. ":20:20|a "
 
 		classOptions[key] = {
 			type = "group",
-			name = classInfo.className,
-			order = 1,
+			name = iconMarkup .. className, -- icon + name
 			args = {
 				header = {
 					type = "header",
@@ -402,17 +403,17 @@ function Defensives:GetOptions()
 				},
 --[[ 				-- Example placeholder
 				spellID = {
-					type = "input",
-					name = "Tracked Spell ID",
-					desc = "Enter the spell ID to track for this class.",
-					get = function()
-						return Gladius.dbi.profile[self.name]["spellID" .. key] or ""
-					end,
-					set = function(_, value)
-						Gladius.dbi.profile[self.name]["spellID" .. key] = value
-						Gladius:UpdateFrame()
-					end,
-					order = 3,
+				type = "input",
+				name = "Tracked Spell ID",
+				desc = "Enter the spell ID to track for this class.",
+				get = function()
+					return Gladius.dbi.profile[classInfo.classFile]["spellID"] or ""
+				end,
+				set = function(_, value)
+					Gladius.dbi.profile[classInfo.classFile]["spellID"] = value
+					Gladius:UpdateFrame()
+				end,
+				order = 3,
 				}, ]]
 			},
 		}
