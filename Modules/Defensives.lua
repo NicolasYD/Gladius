@@ -18,6 +18,7 @@ local IsInInstance = IsInInstance
 local strfind = string.find
 local GetSpellTexture = C_Spell.GetSpellTexture
 local CreateFrame = CreateFrame
+local GetSpellInfo = C_Spell.GetSpellInfo
 
 local Defensives = Gladius:NewModule("Defensives", false, true, {
 	DefensivesAttachTo = "ClassIcon",
@@ -401,20 +402,37 @@ function Defensives:GetOptions()
 					name = "Add options for " .. classInfo.className .. " here.",
 					order = 2,
 				},
---[[ 				-- Example placeholder
-				spellID = {
-				type = "input",
-				name = "Tracked Spell ID",
-				desc = "Enter the spell ID to track for this class.",
-				get = function()
-					return Gladius.dbi.profile[classInfo.classFile]["spellID"] or ""
-				end,
-				set = function(_, value)
-					Gladius.dbi.profile[classInfo.classFile]["spellID"] = value
-					Gladius:UpdateFrame()
-				end,
-				order = 3,
-				}, ]]
+				spells = {
+					type = "group",
+					name = "Tracked Spells",
+					inline = true,
+					order = 3,
+					args = (function()
+						local spellArgs = {}
+						for spellID, _ in pairs(CDList:GetDefensiveSpellIDsByClass(key)) do
+							print(spellID)
+							local spellInfo = GetSpellInfo(spellID)
+							print(spellInfo.name)
+							if spellInfo then
+								spellArgs["spell_" .. spellID] = {
+									type = "toggle",
+									name = "|T" .. spellInfo.iconID .. ":20:20:0:0:64:64:5:59:5:59|t " .. spellInfo.name,
+									desc = "Enable tracking for " .. spellInfo.name,
+									get = function()
+										return Gladius.dbi.profile[key] and Gladius.dbi.profile[key][spellID]
+									end,
+									set = function(_, value)
+										Gladius.dbi.profile[key] = Gladius.dbi.profile[key] or {}
+										Gladius.dbi.profile[key][spellID] = value
+										Gladius:UpdateFrame()
+									end,
+									order = spellID,
+								}
+							end
+						end
+						return spellArgs
+					end)()
+				},
 			},
 		}
 	end
