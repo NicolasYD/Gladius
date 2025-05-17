@@ -364,6 +364,62 @@ end
 
 
 function Defensives:GetOptions()
+		local classes = {
+		"Death Knight",
+		"Demon Hunter",
+		"Druid",
+		"Evoker",
+		"Hunter",
+		"Mage",
+		"Monk",
+		"Paladin",
+		"Priest",
+		"Rogue",
+		"Shaman",
+		"Warlock",
+		"Warrior"
+	}
+
+	-- Sort alphabetically
+	table.sort(classes)
+
+	local classOptions = {}
+
+	for i, class in ipairs(classes) do
+		local key = class:gsub("%s+", "") -- e.g., "Death Knight" -> "DeathKnight"
+
+		classOptions[key] = {
+			type = "group",
+			name = class,
+			order = i,
+			args = {
+				header = {
+					type = "header",
+					name = class .. " Options",
+					order = 1,
+				},
+				description = {
+					type = "description",
+					name = "Add options for " .. class .. " here.",
+					order = 2,
+				},
+--[[ 				-- Example placeholder
+				spellID = {
+					type = "input",
+					name = "Tracked Spell ID",
+					desc = "Enter the spell ID to track for this class.",
+					get = function()
+						return Gladius.dbi.profile[self.name]["spellID" .. key] or ""
+					end,
+					set = function(_, value)
+						Gladius.dbi.profile[self.name]["spellID" .. key] = value
+						Gladius:UpdateFrame()
+					end,
+					order = 3,
+				}, ]]
+			},
+		}
+	end
 	local t = {
 		general = {
 			type = "group",
@@ -627,6 +683,13 @@ function Defensives:GetOptions()
 					},
 				},
 			},
+		},
+		defensives = {
+			type = "group",
+			name = L["Defensives"],
+			order = 2,
+			childGroups = "tree",
+			args = classOptions
 		},
 	}
 	return t
