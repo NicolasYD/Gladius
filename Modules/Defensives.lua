@@ -364,43 +364,40 @@ end
 
 
 function Defensives:GetOptions()
-		local classes = {
-		"Death Knight",
-		"Demon Hunter",
-		"Druid",
-		"Evoker",
-		"Hunter",
-		"Mage",
-		"Monk",
-		"Paladin",
-		"Priest",
-		"Rogue",
-		"Shaman",
-		"Warlock",
-		"Warrior"
-	}
+	-- Prepare the classes table
+	local classes = {}
 
-	-- Sort alphabetically
-	table.sort(classes)
+	-- Populate list with all classes currently in the game
+	for classId = 1, GetNumClasses() do
+		local classInfo = C_CreatureInfo.GetClassInfo(classId)
+		table.insert(classes, classInfo)
+	end
 
+	-- Sort classes alphabetically by className
+	table.sort(classes, function(a, b)
+		return a.className < b.className
+	end)
+
+	-- Prepare the classOptions table
 	local classOptions = {}
 
-	for i, class in ipairs(classes) do
-		local key = class:gsub("%s+", "") -- e.g., "Death Knight" -> "DeathKnight"
+	-- Loop through the sorted classes
+	for _, classInfo in ipairs(classes) do
+		local key = classInfo.classFile  -- use classFile as the key
 
 		classOptions[key] = {
 			type = "group",
-			name = class,
-			order = i,
+			name = classInfo.className,
+			order = 1,
 			args = {
 				header = {
 					type = "header",
-					name = class .. " Options",
+					name = classInfo.className .. " Options",
 					order = 1,
 				},
 				description = {
 					type = "description",
-					name = "Add options for " .. class .. " here.",
+					name = "Add options for " .. classInfo.className .. " here.",
 					order = 2,
 				},
 --[[ 				-- Example placeholder
