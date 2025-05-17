@@ -19,6 +19,7 @@ local strfind = string.find
 local GetSpellTexture = C_Spell.GetSpellTexture
 local CreateFrame = CreateFrame
 local GetSpellInfo = C_Spell.GetSpellInfo
+local UnitClass = UnitClass
 
 local Defensives = Gladius:NewModule("Defensives", false, true, {
 	DefensivesAttachTo = "ClassIcon",
@@ -152,7 +153,7 @@ function Defensives:UpdateIcon(unit, spell)
 end
 
 
-function Defensives:DefensiveUsed(unit, spell) -- not complete yet
+function Defensives:DefensiveUsed(unit, spell, class) -- not complete yet
 	local _, instanceType = IsInInstance()
 	if not Gladius.test and (instanceType ~= "arena" or not unit:find("arena") or unit:find("pet")) then
 		return
@@ -163,15 +164,20 @@ function Defensives:DefensiveUsed(unit, spell) -- not complete yet
 		self.frame[unit].tracker[spell].IconMask:Hide()
 		self:UpdateIcon(unit, spell)
 	end
-	local tracked = self.frame[unit].tracker[spell]
-	tracked.active = true
+
+	if not class then
+		_, class, _ = UnitClass(unit)
+	end
+
+	Gladius.dbi.profile.defensives[class] = Gladius.dbi.profile.defensives[class] or {}
 
     local spellData = GetDefensiveSpellData(spell)
 
-	tracked.timeLeft = spellData.baseCooldown
-
-    if spellData then
+    if spellData and Gladius.dbi.profile.defensives[class][spell] then
         local icon = GetSpellTexture(spell)
+		local tracked = self.frame[unit].tracker[spell]
+		tracked.active = true
+		tracked.timeLeft = spellData.baseCooldown
         tracked.texture:SetTexture(icon)
 		-- Gladius:Call(Gladius.modules.Timer, "RegisterTimer", self.frame[unit], Gladius.db.DefensivesCooldown, Gladius.db.DefensivesCooldown)
 		Gladius:Call(Gladius.modules.Timer, "SetTimer", tracked, spellData.baseCooldown)
@@ -335,18 +341,19 @@ function Defensives:Test(unit)
 	local firstTestSpell = testSpells["firstEvent"][unit]
 	local secondTestSpell = testSpells["secondEvent"][unit]
 	local thirdTestSpell = testSpells["thirdEvent"][unit]
+	local class = Gladius.testing[unit].unitClass
 
 	if firstTestSpell then
-		self:DefensiveUsed(unit, firstTestSpell)			
+		self:DefensiveUsed(unit, firstTestSpell, class)
 	end
 	if secondTestSpell then
 		C_Timer.After(testSpellDelay, function ()
-			self:DefensiveUsed(unit, secondTestSpell)
+			self:DefensiveUsed(unit, secondTestSpell, class)
 		end)
 	end
 	if thirdTestSpell then
 		C_Timer.After(testSpellDelay + 5, function ()
-			self:DefensiveUsed(unit, thirdTestSpell)
+			self:DefensiveUsed(unit, thirdTestSpell, class)
 		end)
 	end
 end
