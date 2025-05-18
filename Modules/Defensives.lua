@@ -33,9 +33,9 @@ local function SetDefaultClasses()
 
 		for spellID, spellData in pairs(defensifesList) do
 			if spellData.class == key and spellData.category == "defensive" then
-				classes[key][spellID] = true
+				classes[key][spellID] = spellData
 			elseif spellData.category == "defensive" then
-				classes["general"][spellID] = true
+				classes["general"][spellID] = spellData
 			end
 		end
 	end
@@ -192,7 +192,7 @@ function Defensives:DefensiveUsed(unit, spell, class) -- not complete yet
 
     local spellData = GetDefensiveSpellData(spell)
 
-    if spellData and Gladius.dbi.profile.defensives[class][spell] then
+    if spellData and (Gladius.dbi.profile.defensives[class][spell] or Gladius.dbi.profile.defensives["general"][spell]) then
         local icon = GetSpellTexture(spell)
 		local tracked = self.frame[unit].tracker[spell]
 		tracked.active = true
@@ -207,20 +207,18 @@ function Defensives:DefensiveUsed(unit, spell, class) -- not complete yet
 				Gladius:Call(Gladius.modules.Timer, "HideTimer", f)
 				-- tracked[unit]:Hide()
 				-- position icons
-				self:SortIcons(unit)
+				self:SortIcons(unit, class)
 				-- reset script
 				self.frame[unit]:SetScript("OnUpdate", nil)
 			end
 		end)
 		tracked:SetAlpha(1)
-		self:SortIcons(unit)
+		self:SortIcons(unit, class)
     end
 end
 
 
-function Defensives:SortIcons(unit)
-    local anchor = Gladius.db.DefensivesAnchor
-    local relativePoint = Gladius.db.DefensivesRelativePoint
+function Defensives:SortIcons(unit, class)
     local margin = Gladius.db.DefensivesMargin
     local baseFrame = self.frame[unit]
     local lastFrame = baseFrame
@@ -232,7 +230,8 @@ function Defensives:SortIcons(unit)
             table.insert(activeIcons, {
                 spellID = spellID,
                 frame = frame,
-                priority = (spellList[spellID] and spellList[spellID].priority) or 0
+                priority = Gladius.dbi.profile.defensives[class][spellID] and Gladius.dbi.profile.defensives[class][spellID].priority
+				or Gladius.dbi.profile.defensives["general"][spellID] and Gladius.dbi.profile.defensives["general"][spellID].priority
             })
         end
     end
@@ -438,17 +437,54 @@ function Defensives:GetOptions()
 							end
 
 							if spellInfo then
-								spellArgs["spell_" .. spellID] = {
-									type = "toggle",
-									name = "|T" .. spellInfo.iconID .. ":20:20:0:0:64:64:5:59:5:59|t " .. spellInfo.name,
-									desc = tooltip,
-									get = function()
-										return Gladius.dbi.profile.defensives["general"][spellID]
-									end,
-									set = function(_, value)
-										Gladius.dbi.profile.defensives["general"][spellID] = value
-									end,
-									order = spellID,
+								spellArgs["spellgroup_" .. spellID] = {
+									type = "group",
+									inline = true,
+									name = "",
+									order = - spellData.priority,
+									args = {
+										toggle = {
+											type = "toggle",
+											name = "|T" .. spellInfo.iconID .. ":20:20:0:0:64:64:5:59:5:59|t " .. spellInfo.name,
+											order = 1,
+											desc = tooltip,
+											get = function()
+												return Gladius.dbi.profile.defensives["general"][spellID] ~= nil
+											end,
+											set = function(_, value)
+												if value then
+													if type(Gladius.dbi.profile.defensives["general"][spellID]) ~= "table" then
+														Gladius.dbi.profile.defensives["general"][spellID] = {}
+													end
+													Gladius.dbi.profile.defensives["general"][spellID].enabled = true
+												else
+													Gladius.dbi.profile.defensives["general"][spellID] = nil
+												end
+											end,
+										},
+										slider = {
+											type = "range",
+											name = "Priority",
+											order = 2,
+											desc = "Adjust the priority of this spell.\nHigher priority icons show more left on the tracking frame.",
+											min = 0,
+											max = 20,
+											step = 1,
+											get = function()
+												local data = Gladius.dbi.profile.defensives["general"][spellID]
+												return type(data) == "table" and data.priority or 0
+											end,
+											set = function(_, value)
+												if type(Gladius.dbi.profile.defensives["general"][spellID]) ~= "table" then
+													Gladius.dbi.profile.defensives["general"][spellID] = { enabled = true }
+												end
+												Gladius.dbi.profile.defensives["general"][spellID].priority = value
+											end,
+											disabled = function()
+												return not Gladius.dbi.profile.defensives["general"][spellID]
+											end,
+										},
+									}
 								}
 							end
 						end
@@ -522,17 +558,54 @@ function Defensives:GetOptions()
 								end
 
 								if spellInfo then
-									spellArgs["spell_" .. spellID] = {
-										type = "toggle",
-										name = "|T" .. spellInfo.iconID .. ":20:20:0:0:64:64:5:59:5:59|t " .. spellInfo.name,
-										desc = tooltip,
-										get = function()
-											return Gladius.dbi.profile.defensives[key][spellID]
-										end,
-										set = function(_, value)
-											Gladius.dbi.profile.defensives[key][spellID] = value
-										end,
-										order = spellID,
+									spellArgs["spellgroup_" .. spellID] = {
+										type = "group",
+										inline = true,
+										name = "",
+										order = - spellData.priority,
+										args = {
+											toggle = {
+												type = "toggle",
+												name = "|T" .. spellInfo.iconID .. ":20:20:0:0:64:64:5:59:5:59|t " .. spellInfo.name,
+												order = 1,
+												desc = tooltip,
+												get = function()
+													return Gladius.dbi.profile.defensives[key][spellID] ~= nil
+												end,
+												set = function(_, value)
+													if value then
+														if type(Gladius.dbi.profile.defensives[key][spellID]) ~= "table" then
+															Gladius.dbi.profile.defensives[key][spellID] = {}
+														end
+														Gladius.dbi.profile.defensives[key][spellID].enabled = true
+													else
+														Gladius.dbi.profile.defensives[key][spellID] = nil
+													end
+												end,
+											},
+											slider = {
+												type = "range",
+												name = "Priority",
+												order = 2,
+												desc = "Adjust the priority of this spell.\nHigher priority icons show more left on the tracking frame.",
+												min = 0,
+												max = 20,
+												step = 1,
+												get = function()
+													local data = Gladius.dbi.profile.defensives[key][spellID]
+													return type(data) == "table" and data.priority or 0
+												end,
+												set = function(_, value)
+													if type(Gladius.dbi.profile.defensives[key][spellID]) ~= "table" then
+														Gladius.dbi.profile.defensives[key][spellID] = { enabled = true }
+													end
+													Gladius.dbi.profile.defensives[key][spellID].priority = value
+												end,
+												disabled = function()
+													return not Gladius.dbi.profile.defensives[key][spellID]
+												end,
+											},
+										}
 									}
 								end
 							end
