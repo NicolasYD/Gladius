@@ -10,9 +10,34 @@ end
 local L = Gladius.L
 local LSM
 
+
+-- @@@@@@@@@@@@@@@@@@@@@@@@@ Deepcopy Function @@@@@@@@@@@@@@@@@@@@@@@@@@@
+local function deepcopy(orig, copies)
+    copies = copies or {}
+    local orig_type = type(orig)
+    local copy
+    if orig_type == 'table' then
+        if copies[orig] then
+            return copies[orig]
+        end
+        copy = {}
+        copies[orig] = copy
+        for k, v in next, orig, nil do
+            copy[deepcopy(k, copies)] = deepcopy(v, copies)
+        end
+        setmetatable(copy, deepcopy(getmetatable(orig), copies))
+    else
+        copy = orig
+    end
+    return copy
+end
+-- @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+
 local CDList = LibStub("CDList-1.0")
 local spellList = CDList.spellList
-local defensifesList = CDList:GetDefensives()
+local defaultValues = CDList:GetDefensives()
+local defensivesList = deepcopy(defaultValues)
 
 -- Localizing commonly used global functions
 local IsInInstance = IsInInstance
@@ -22,20 +47,19 @@ local CreateFrame = CreateFrame
 local GetSpellInfo = C_Spell.GetSpellInfo
 local UnitClass = UnitClass
 
-local function SetDefaultClasses()
+
+local function SetDefaultClasses(dl)
 	local classes = {}
 	for classId = 1, GetNumClasses() do
 		local classInfo = C_CreatureInfo.GetClassInfo(classId)
 		local key = classInfo.classFile
-
 		classes[key] = {}
 		classes["general"] = {}
-
-		for spellID, spellData in pairs(defensifesList) do
+		for spellID, spellData in pairs(dl) do
 			if spellData.class == key and spellData.category == "defensive" then
 				classes[key][spellID] = spellData
 				classes[key][spellID].enabled = true
-			elseif spellData.category == "defensive" then
+			elseif spellData.class == nil and spellData.category == "defensive" then
 				classes["general"][spellID] = spellData
 				classes["general"][spellID].enabled = true
 			end
@@ -43,6 +67,7 @@ local function SetDefaultClasses()
 	end
 	return classes
 end
+
 
 local Defensives = Gladius:NewModule("Defensives", false, true, {
 	DefensivesAttachTo = "ClassIcon",
@@ -61,11 +86,11 @@ local Defensives = Gladius:NewModule("Defensives", false, true, {
 	DefensivesFontSize = 10,
 	DefensivesFontColor = {r = 0, g = 1, b = 0, a = 1},
 	DefensivesDetached = false,
-	defensives = SetDefaultClasses(),
+	defensives = SetDefaultClasses(defensivesList),
 })
 
 
---@@@@@@@@@@@@@@@@@@@@ Shared Scopes @@@@@@@@@@@@@@@@@@@@@@
+-- @@@@@@@@@@@@@@@@@@@@@@@@@@ Shared Scopes @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 local testSpells = {
 	["firstEvent"] = {
 		arena1 = 45438, -- Ice Block
@@ -83,10 +108,10 @@ local testSpells = {
 		arena3 = 31224, -- Evasion
 	}
 }
---@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+-- @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
 
---@@@@@@@@@@@@@@@@@@@@ Helper Functions @@@@@@@@@@@@@@@@@@@
+-- @@@@@@@@@@@@@@@@@@@@@@@@@@@ Helper Functions @@@@@@@@@@@@@@@@@@@@@@@@@@
 local function GetDefensiveSpellData(spell)
     local spellData = spellList[spell]
     if spellData and spellData.category == "defensive" then
@@ -94,7 +119,7 @@ local function GetDefensiveSpellData(spell)
     end
     return nil
 end
---@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+-- @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
 
 function Defensives:OnEnable()
@@ -194,7 +219,8 @@ function Defensives:DefensiveUsed(unit, spell, class) -- not complete yet
 
     local spellData = GetDefensiveSpellData(spell)
 
-    if spellData and (Gladius.dbi.profile.defensives[class][spell] or Gladius.dbi.profile.defensives["general"][spell]) then
+    if spellData and ((Gladius.dbi.profile.defensives[class][spell] and Gladius.dbi.profile.defensives[class][spell].enabled)
+				   or (Gladius.dbi.profile.defensives["general"][spell] and Gladius.dbi.profile.defensives["general"][spell].enabled)) then
         local icon = GetSpellTexture(spell)
 		local tracked = self.frame[unit].tracker[spell]
 		tracked.active = true
@@ -221,6 +247,10 @@ end
 
 
 function Defensives:SortIcons(unit, class)
+	if Gladius.testing then
+		class = Gladius.testing[unit].unitClass
+	end
+
     local margin = Gladius.db.DefensivesMargin
     local baseFrame = self.frame[unit]
     local lastFrame = baseFrame
@@ -353,6 +383,21 @@ function Defensives:Reset(unit)
 	end
 	-- hide
 	self.frame[unit]:SetAlpha(0)
+end
+
+
+function Defensives:ResetModule()
+	if not self.frame then
+		return
+	end
+
+	for unit, _ in pairs(self.frame) do
+		self:Reset(unit)
+	end
+
+	-- Reset saved profile data for defensive spell tracking
+	local dl = deepcopy(defaultValues)
+	Gladius.dbi.profile.defensives = SetDefaultClasses(dl)
 end
 
 
@@ -694,7 +739,7 @@ function Defensives:GetOptions()
 							order = 4,
 							args = (function()
 								local spellArgs = {}
-								for spellID, spellData in pairs(defensifesList) do
+								for spellID, spellData in pairs(defensivesList) do
 									if spellData.class == nil then
 										local spellInfo = GetSpellInfo(spellID)
 										local tooltip = ""
@@ -726,6 +771,10 @@ function Defensives:GetOptions()
 														end,
 														set = function(_, value)
 															Gladius.dbi.profile.defensives["general"][spellID].enabled = value
+															for unit, _ in pairs(self.frame) do
+																self:Reset(unit)
+															end
+															Gladius:UpdateFrame()
 														end,
 													},
 													slider = {
@@ -800,7 +849,7 @@ function Defensives:GetOptions()
 								order = 4,
 								args = (function()
 									local spellArgs = {}
-									for spellID, spellData in pairs(defensifesList) do
+									for spellID, spellData in pairs(defensivesList) do
 										if spellData.class == key then
 											local spellInfo = GetSpellInfo(spellID)
 											local tooltip = ""
@@ -832,6 +881,10 @@ function Defensives:GetOptions()
 															end,
 															set = function(_, value)
 																Gladius.dbi.profile.defensives[key][spellID].enabled = value
+																for unit, _ in pairs(self.frame) do
+																	self:Reset(unit)
+																end
+																Gladius:UpdateFrame()
 															end,
 														},
 														slider = {
