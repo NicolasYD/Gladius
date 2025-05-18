@@ -90,27 +90,6 @@ local Defensives = Gladius:NewModule("Defensives", false, true, {
 })
 
 
--- @@@@@@@@@@@@@@@@@@@@@@@@@@ Shared Scopes @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-local testSpells = {
-	["firstEvent"] = {
-		arena1 = 45438, -- Ice Block
-		arena2 = 53480, -- Roar of Sacrifice
-		arena3 = 1966, -- Feint
-	},
-	["secondEvent"] = {
-		arena1 = 108978, -- Alter Time
-		arena2 = 264735, -- Survival of the Fittest
-		arena3 = 1856, -- Vanish
-	},
-	["thirdEvent"] = {
-		arena1 = 110960, -- Greater Invisibilitys
-		arena2 = 186265, -- Aspect of the Turtle
-		arena3 = 31224, -- Evasion
-	}
-}
--- @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-
-
 -- @@@@@@@@@@@@@@@@@@@@@@@@@@@ Helper Functions @@@@@@@@@@@@@@@@@@@@@@@@@@
 local function GetDefensiveSpellData(spell)
     local spellData = spellList[spell]
@@ -402,25 +381,36 @@ end
 
 
 function Defensives:Test(unit)
-	local testSpellDelay = 5
-	local firstTestSpell = testSpells["firstEvent"][unit]
-	local secondTestSpell = testSpells["secondEvent"][unit]
-	local thirdTestSpell = testSpells["thirdEvent"][unit]
-	local class = Gladius.testing[unit].unitClass
+    local testSpellDelay = 15
+    local class = Gladius.testing[unit] and Gladius.testing[unit].unitClass
 
-	if firstTestSpell then
-		self:DefensiveUsed(unit, firstTestSpell, class)
-	end
-	if secondTestSpell then
-		C_Timer.After(testSpellDelay, function ()
-			self:DefensiveUsed(unit, secondTestSpell, class)
-		end)
-	end
-	if thirdTestSpell then
-		C_Timer.After(testSpellDelay + 5, function ()
-			self:DefensiveUsed(unit, thirdTestSpell, class)
-		end)
-	end
+    -- Get a list of all spellIDs in the table
+    local defensives = {}
+    for spellID, spellData in pairs(spellList) do
+		if (spellData.class == class or spellData.class == nil) and spellData.category == "defensive" then
+			table.insert(defensives, spellID)
+		end
+    end
+
+    local function triggerRandomSpell()
+        if not Gladius.test then
+            print("Stopped testing for", unit)
+            return
+        end
+
+        local randomIndex = math.random(1, #defensives)
+        local randomSpellID = defensives[randomIndex]
+
+        if randomSpellID then
+            self:DefensiveUsed(unit, randomSpellID, class)
+        end
+
+        -- Schedule the next spell cast
+        C_Timer.After(testSpellDelay, triggerRandomSpell)
+    end
+
+    -- Start the testing loop
+    triggerRandomSpell()
 end
 
 
