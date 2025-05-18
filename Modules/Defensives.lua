@@ -34,8 +34,10 @@ local function SetDefaultClasses()
 		for spellID, spellData in pairs(defensifesList) do
 			if spellData.class == key and spellData.category == "defensive" then
 				classes[key][spellID] = spellData
+				classes[key][spellID].enabled = true
 			elseif spellData.category == "defensive" then
 				classes["general"][spellID] = spellData
+				classes["general"][spellID].enabled = true
 			end
 		end
 	end
@@ -391,232 +393,7 @@ end
 
 
 function Defensives:GetOptions()
-	-- Prepare the classOptions table
-	local classOptions = {}
-
-	classOptions["GENERAL"] = {
-		type = "group",
-		name = "|TInterface\\Icons\\INV_Misc_QuestionMark:20:20|t General",
-		order = 0,
-		args = {
-			headerBeginning = {
-				type = "header",
-				name = "General",
-				order = 1,
-			},
-			description = {
-				type = "description",
-				name = "Choose the spells that you want to be tracked by this module.",
-				order = 2,
-			},
-			headerEnd = {
-					type = "header",
-					name = "",
-					order = 3,
-			},
-			spells = {
-				type = "group",
-				name = "Tracked Defensives",
-				inline = true,
-				order = 4,
-				args = (function()
-					local spellArgs = {}
-					for spellID, spellData in pairs(defensifesList) do
-						if spellData.class == nil then
-							local spellInfo = GetSpellInfo(spellID)
-							local tooltip = ""
-							local tooltipInfo = C_TooltipInfo.GetSpellByID(spellID)
-
-							if tooltipInfo and tooltipInfo.lines then
-								for _, line in ipairs(tooltipInfo.lines) do
-									local left = line.leftText or ""
-									if left ~= "" and left ~= spellInfo.name then
-										tooltip = left
-									end
-								end
-							end
-
-							if spellInfo then
-								spellArgs["spellgroup_" .. spellID] = {
-									type = "group",
-									inline = true,
-									name = "",
-									order = - spellData.priority,
-									args = {
-										toggle = {
-											type = "toggle",
-											name = "|T" .. spellInfo.iconID .. ":20:20:0:0:64:64:5:59:5:59|t " .. spellInfo.name,
-											order = 1,
-											desc = tooltip,
-											get = function()
-												return Gladius.dbi.profile.defensives["general"][spellID] ~= nil
-											end,
-											set = function(_, value)
-												if value then
-													if type(Gladius.dbi.profile.defensives["general"][spellID]) ~= "table" then
-														Gladius.dbi.profile.defensives["general"][spellID] = {}
-													end
-													Gladius.dbi.profile.defensives["general"][spellID].enabled = true
-												else
-													Gladius.dbi.profile.defensives["general"][spellID] = nil
-												end
-											end,
-										},
-										slider = {
-											type = "range",
-											name = "Priority",
-											order = 2,
-											desc = "Adjust the priority of this spell.\nHigher priority icons show more left on the tracking frame.",
-											min = 0,
-											max = 20,
-											step = 1,
-											get = function()
-												local data = Gladius.dbi.profile.defensives["general"][spellID]
-												return type(data) == "table" and data.priority or 0
-											end,
-											set = function(_, value)
-												if type(Gladius.dbi.profile.defensives["general"][spellID]) ~= "table" then
-													Gladius.dbi.profile.defensives["general"][spellID] = { enabled = true }
-												end
-												Gladius.dbi.profile.defensives["general"][spellID].priority = value
-											end,
-											disabled = function()
-												return not Gladius.dbi.profile.defensives["general"][spellID]
-											end,
-										},
-									}
-								}
-							end
-						end
-					end
-					return spellArgs
-				end)()
-			}
-		},
-	}
-
-	-- Prepare the classes table
-	local classes = {}
-
-	-- Populate list with all classes currently in the game
-	for classId = 1, GetNumClasses() do
-		local classInfo = C_CreatureInfo.GetClassInfo(classId)
-		table.insert(classes, classInfo)
-	end
-
-	-- Sort classes alphabetically by className
-	table.sort(classes, function(a, b)
-		return a.className < b.className
-	end)
-
-
-	-- Loop through the sorted classes
-	for _, classInfo in ipairs(classes) do
-		local key = classInfo.classFile  -- use classFile as the key
-		local className = classInfo.className
-		local iconMarkup = "|A:classicon-" .. string.lower(key) .. ":20:20|a "
-
-		classOptions[key] = {
-			type = "group",
-			name = iconMarkup .. className, -- icon + name
-			args = {
-				headerBeginning = {
-					type = "header",
-					name = classInfo.className,
-					order = 1,
-				},
-				description = {
-					type = "description",
-					name = "Choose the spells that you want to be tracked by this module.",
-					order = 2,
-				},
-				headerEnd = {
-					type = "header",
-					name = "",
-					order = 3,
-				},
-				spells = {
-					type = "group",
-					name = "Tracked Defensives",
-					inline = true,
-					order = 4,
-					args = (function()
-						local spellArgs = {}
-						for spellID, spellData in pairs(defensifesList) do
-							if spellData.class == key then
-								local spellInfo = GetSpellInfo(spellID)
-								local tooltip = ""
-								local tooltipInfo = C_TooltipInfo.GetSpellByID(spellID)
-
-								if tooltipInfo and tooltipInfo.lines then
-									for _, line in ipairs(tooltipInfo.lines) do
-										local left = line.leftText or ""
-										if left ~= "" and left ~= spellInfo.name then
-											tooltip = left
-										end
-									end
-								end
-
-								if spellInfo then
-									spellArgs["spellgroup_" .. spellID] = {
-										type = "group",
-										inline = true,
-										name = "",
-										order = - spellData.priority,
-										args = {
-											toggle = {
-												type = "toggle",
-												name = "|T" .. spellInfo.iconID .. ":20:20:0:0:64:64:5:59:5:59|t " .. spellInfo.name,
-												order = 1,
-												desc = tooltip,
-												get = function()
-													return Gladius.dbi.profile.defensives[key][spellID] ~= nil
-												end,
-												set = function(_, value)
-													if value then
-														if type(Gladius.dbi.profile.defensives[key][spellID]) ~= "table" then
-															Gladius.dbi.profile.defensives[key][spellID] = {}
-														end
-														Gladius.dbi.profile.defensives[key][spellID].enabled = true
-													else
-														Gladius.dbi.profile.defensives[key][spellID] = nil
-													end
-												end,
-											},
-											slider = {
-												type = "range",
-												name = "Priority",
-												order = 2,
-												desc = "Adjust the priority of this spell.\nHigher priority icons show more left on the tracking frame.",
-												min = 0,
-												max = 20,
-												step = 1,
-												get = function()
-													local data = Gladius.dbi.profile.defensives[key][spellID]
-													return type(data) == "table" and data.priority or 0
-												end,
-												set = function(_, value)
-													if type(Gladius.dbi.profile.defensives[key][spellID]) ~= "table" then
-														Gladius.dbi.profile.defensives[key][spellID] = { enabled = true }
-													end
-													Gladius.dbi.profile.defensives[key][spellID].priority = value
-												end,
-												disabled = function()
-													return not Gladius.dbi.profile.defensives[key][spellID]
-												end,
-											},
-										}
-									}
-								end
-							end
-						end
-						return spellArgs
-					end)()
-				},
-			},
-		}
-	end
-	local t = {
+	local options = {
 		general = {
 			type = "group",
 			name = L["General"],
@@ -880,13 +657,212 @@ function Defensives:GetOptions()
 				},
 			},
 		},
+
 		defensives = {
 			type = "group",
 			name = L["Defensives"],
 			order = 2,
 			childGroups = "tree",
-			args = classOptions
-		},
+			args = (function ()
+				-- Prepare the classOptions table
+				local classOptions = {}
+
+				classOptions["GENERAL"] = {
+					type = "group",
+					name = "|TInterface\\Icons\\INV_Misc_QuestionMark:20:20|t General",
+					order = 0,
+					args = {
+						headerBeginning = {
+							type = "header",
+							name = "General",
+							order = 1,
+						},
+						description = {
+							type = "description",
+							name = "Choose the spells that you want to be tracked by this module.",
+							order = 2,
+						},
+						headerEnd = {
+								type = "header",
+								name = "",
+								order = 3,
+						},
+						spells = {
+							type = "group",
+							name = "Tracked Defensives",
+							inline = true,
+							order = 4,
+							args = (function()
+								local spellArgs = {}
+								for spellID, spellData in pairs(defensifesList) do
+									if spellData.class == nil then
+										local spellInfo = GetSpellInfo(spellID)
+										local tooltip = ""
+										local tooltipInfo = C_TooltipInfo.GetSpellByID(spellID)
+
+										if tooltipInfo and tooltipInfo.lines then
+											for _, line in ipairs(tooltipInfo.lines) do
+												local left = line.leftText or ""
+												if left ~= "" and left ~= spellInfo.name then
+													tooltip = left
+												end
+											end
+										end
+
+										if spellInfo then
+											spellArgs["spellgroup_" .. spellID] = {
+												type = "group",
+												inline = true,
+												name = "",
+												order = - spellData.priority,
+												args = {
+													toggle = {
+														type = "toggle",
+														name = "|T" .. spellInfo.iconID .. ":20:20:0:0:64:64:5:59:5:59|t " .. spellInfo.name,
+														order = 1,
+														desc = tooltip,
+														get = function()
+															return Gladius.dbi.profile.defensives["general"][spellID].enabled
+														end,
+														set = function(_, value)
+															Gladius.dbi.profile.defensives["general"][spellID].enabled = value
+														end,
+													},
+													slider = {
+														type = "range",
+														name = "Priority",
+														order = 2,
+														desc = "Adjust the priority of this spell.\nHigher priority icons show more left on the tracking frame.",
+														min = 0,
+														max = 20,
+														step = 1,
+														get = function()
+															return Gladius.dbi.profile.defensives["general"][spellID].priority
+														end,
+														set = function(_, value)
+															Gladius.dbi.profile.defensives["general"][spellID].priority = value
+														end,
+													},
+												}
+											}
+										end
+									end
+								end
+								return spellArgs
+							end)()
+						}
+					},
+				}
+
+				-- Prepare the classes table
+				local classes = {}
+
+				-- Populate list with all classes currently in the game
+				for classId = 1, GetNumClasses() do
+					local classInfo = C_CreatureInfo.GetClassInfo(classId)
+					table.insert(classes, classInfo)
+				end
+
+				-- Sort classes alphabetically by className
+				table.sort(classes, function(a, b)
+					return a.className < b.className
+				end)
+
+				-- Loop through the sorted classes
+				for _, classInfo in ipairs(classes) do
+					local key = classInfo.classFile  -- use classFile as the key
+					local className = classInfo.className
+					local iconMarkup = "|A:classicon-" .. string.lower(key) .. ":20:20|a "
+
+					classOptions[key] = {
+						type = "group",
+						name = iconMarkup .. className, -- icon + name
+						args = {
+							headerBeginning = {
+								type = "header",
+								name = classInfo.className,
+								order = 1,
+							},
+							description = {
+								type = "description",
+								name = "Choose the spells that you want to be tracked by this module.",
+								order = 2,
+							},
+							headerEnd = {
+								type = "header",
+								name = "",
+								order = 3,
+							},
+							spells = {
+								type = "group",
+								name = "Tracked Defensives",
+								inline = true,
+								order = 4,
+								args = (function()
+									local spellArgs = {}
+									for spellID, spellData in pairs(defensifesList) do
+										if spellData.class == key then
+											local spellInfo = GetSpellInfo(spellID)
+											local tooltip = ""
+											local tooltipInfo = C_TooltipInfo.GetSpellByID(spellID)
+
+											if tooltipInfo and tooltipInfo.lines then
+												for _, line in ipairs(tooltipInfo.lines) do
+													local left = line.leftText or ""
+													if left ~= "" and left ~= spellInfo.name then
+														tooltip = left
+													end
+												end
+											end
+
+											if spellInfo then
+												spellArgs["spellgroup_" .. spellID] = {
+													type = "group",
+													inline = true,
+													name = "",
+													order = - spellData.priority,
+													args = {
+														toggle = {
+															type = "toggle",
+															name = "|T" .. spellInfo.iconID .. ":20:20:0:0:64:64:5:59:5:59|t " .. spellInfo.name,
+															order = 1,
+															desc = tooltip,
+															get = function()
+																return Gladius.dbi.profile.defensives[key][spellID].enabled
+															end,
+															set = function(_, value)
+																Gladius.dbi.profile.defensives[key][spellID].enabled = value
+															end,
+														},
+														slider = {
+															type = "range",
+															name = "Priority",
+															order = 2,
+															desc = "Adjust the priority of this spell.\nHigher priority icons show more left on the tracking frame.",
+															min = 0,
+															max = 20,
+															step = 1,
+															get = function()
+																return Gladius.dbi.profile.defensives[key][spellID].priority
+															end,
+															set = function(_, value)
+																Gladius.dbi.profile.defensives[key][spellID].priority = value
+															end,
+														},
+													}
+												}
+											end
+										end
+									end
+									return spellArgs
+								end)()
+							},
+						},
+					}
+				end
+				return classOptions
+			end)()
+		}
 	}
-	return t
+	return options
 end
