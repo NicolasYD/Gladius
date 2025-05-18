@@ -32,7 +32,7 @@ local Dispel = Gladius:NewModule("Dispel", false, true, {
 	dispellOffsetX = 100,
 	dispellOffsetY = 0,
 	dispellFrameLevel = 1,
-	dispellIconCrop = true,
+	dispellIconCrop = false,
 	dispellGloss = false,
 	dispellGlossColor = {r = 1, g = 1, b = 1, a = 0.4},
 	dispellCooldown = true,
