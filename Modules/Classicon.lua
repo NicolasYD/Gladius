@@ -393,9 +393,9 @@ function ClassIcon:Test(unit)
     local data = testSpells[unit]
     if not data then return end
 
-    local _, iconID = GetSpellInfo(data.spellID)
-    if iconID then
-        self:ShowAura(unit, { icon = iconID, duration = data.duration })
+    local spellInfo = GetSpellInfo(data.spellID)
+    if spellInfo.iconID then
+        self:ShowAura(unit, { icon = spellInfo.iconID, duration = data.duration })
         C_Timer.After(data.duration, function()
             ClassIcon:UNIT_AURA("any", unit)
         end)
