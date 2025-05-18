@@ -18,16 +18,7 @@ local tostring = tostring
 
 local CreateFrame = CreateFrame
 local GetSpecializationInfoByID = GetSpecializationInfoByID
-local GetSpellInfo = C_SpellBook.GetSpellInfo or function(spellID)
-  if not spellID then
-    return nil;
-  end
-
-  local spellInfo = C_Spell.GetSpellInfo(spellID);
-  if spellInfo then
-    return spellInfo.name, nil, spellInfo.iconID, spellInfo.castTime, spellInfo.minRange, spellInfo.maxRange, spellInfo.spellID, spellInfo.originalIconID;
-  end
-end
+local GetSpellInfo = C_Spell.GetSpellInfo
 
 local GetTime = GetTime
 local UnitAura = UnitAura or function(unitToken, index, filter)
@@ -75,7 +66,7 @@ local ClassIcon = Gladius:NewModule("ClassIcon", false, true, {
 	classIconCooldownReverse = false,
 	classIconShowSpec = false,
 	classIconDetached = false,
-	classIconAuras = GetDefaultAuraList(),
+	classIconAuras = spellTable,
 })
 
 
@@ -382,16 +373,15 @@ end
 
 function ClassIcon:ResetModule()
 	Gladius.db.classIconAuras = { }
-	Gladius.db.classIconAuras = GetDefaultAuraList()
+	Gladius.db.classIconAuras = spellTable
 	local newAura = Gladius.options.args[self.name].args.auraList.args.newAura
 	Gladius.options.args[self.name].args.auraList.args = {
 		newAura = newAura,
 	}
-	for aura, priority in pairs(Gladius.db.classIconAuras) do
-		if priority then
-			local isNum = tonumber(aura) ~= nil
-			local name = isNum and GetSpellInfo(aura) or aura
-			Gladius.options.args[self.name].args.auraList.args[aura] = self:SetupAura(aura, priority, name)
+	for spellID, spellData in pairs(Gladius.db.classIconAuras) do
+		if spellData.priority then
+			local spellInfo = GetSpellInfo(spellID)
+			Gladius.options.args[self.name].args.auraList.args[spellInfo.name] = self:SetupAura(spellID, spellData.priority, spellInfo.name, spellInfo.iconID)
 		end
 	end
 end
@@ -403,9 +393,9 @@ function ClassIcon:Test(unit)
     local data = testSpells[unit]
     if not data then return end
 
-    local _, _, icon = GetSpellInfo(data.spellID)
-    if icon then
-        self:ShowAura(unit, { icon = icon, duration = data.duration })
+    local _, iconID = GetSpellInfo(data.spellID)
+    if iconID then
+        self:ShowAura(unit, { icon = iconID, duration = data.duration })
         C_Timer.After(data.duration, function()
             ClassIcon:UNIT_AURA("any", unit)
         end)
@@ -762,9 +752,8 @@ function ClassIcon:GetOptions()
 								if not self.newAuraPriority then
 									self.newAuraPriority = 0
 								end
-								local isNum = tonumber(self.newAuraName) ~= nil
-								local name = isNum and GetSpellInfo(self.newAuraName) or self.newAuraName
-								Gladius.options.args[self.name].args.auraList.args[self.newAuraName] = self:SetupAura(self.newAuraName, self.newAuraPriority, name)
+								local spellInfo = GetSpellInfo(self.newAuraName)
+								Gladius.options.args[self.name].args.auraList.args[self.newAuraName] = self:SetupAura(self.newAuraName, self.newAuraPriority, spellInfo.name, spellInfo.iconID)
 								Gladius.db.classIconAuras[self.newAuraName] = self.newAuraPriority
 								self.newAuraName = ""
 							end,
@@ -778,11 +767,10 @@ function ClassIcon:GetOptions()
 			},
 		},
 	}
-	for aura, priority in pairs(Gladius.db.classIconAuras) do
-		if priority then
-			local isNum = tonumber(aura) ~= nil
-			local name = isNum and GetSpellInfo(aura) or aura
-			options.auraList.args[aura] = self:SetupAura(aura, priority, name)
+	for spellID, spellData in pairs(Gladius.db.classIconAuras) do
+		if spellData.priority then
+			local spellInfo = GetSpellInfo(spellID)
+			options.auraList.args[spellInfo.name] = self:SetupAura(spellID, spellData.priority, spellInfo.name, spellInfo.iconID)
 		end
 	end
 	return options
@@ -801,11 +789,10 @@ local function setAura(info, value)
 		Gladius.options.args["ClassIcon"].args.auraList.args = {
 			newAura = newAura,
 		}
-		for aura, priority in pairs(Gladius.db.classIconAuras) do
-			if priority then
-				local isNum = tonumber(aura) ~= nil
-				local name = isNum and GetSpellInfo(aura) or aura
-				Gladius.options.args["ClassIcon"].args.auraList.args[aura] = ClassIcon:SetupAura(aura, priority, name)
+		for spellID, spellData in pairs(Gladius.db.classIconAuras) do
+			if spellData.priority then
+				local spellInfo = GetSpellInfo(spellID)
+				Gladius.options.args["ClassIcon"].args.auraList.args[spellInfo.name] = ClassIcon:SetupAura(spellID, spellData.priority, spellInfo.name, spellInfo.iconID)
 			end
 		end
 	else
@@ -821,11 +808,11 @@ local function getAura(info)
 	end
 end
 
-function ClassIcon:SetupAura(aura, priority, name)
-	local name = name or aura
+function ClassIcon:SetupAura(spellID, priority, name, iconID)
+	local name = name or spellID
 	return {
 		type = "group",
-		name = name,
+		name = "|T" .. iconID .. ":20:20:0:0:64:64:5:59:5:59|t " .. name,
 		desc = name,
 		get = getAura,
 		set = setAura,
@@ -855,7 +842,7 @@ function ClassIcon:SetupAura(aura, priority, name)
 				type = "execute",
 				name = L["Delete"],
 				func = function(info)
-					local defaults = GetDefaultAuraList()
+					local defaults = spellTable
 					if defaults[info[#(info) - 1]] then
 						Gladius.db.classIconAuras[info[#(info) - 1]] = false
 					else
@@ -865,11 +852,10 @@ function ClassIcon:SetupAura(aura, priority, name)
 					Gladius.options.args[self.name].args.auraList.args = {
 						newAura = newAura,
 					}
-					for aura, priority in pairs(Gladius.db.classIconAuras) do
-						if priority then
-							local isNum = tonumber(aura) ~= nil
-							local name = isNum and GetSpellInfo(aura) or aura
-							Gladius.options.args[self.name].args.auraList.args[aura] = self:SetupAura(aura, priority, name)
+					for spellID, spellData in pairs(Gladius.db.classIconAuras) do
+						if spellData.priority then
+							local spellInfo = GetSpellInfo(spellID)
+							Gladius.options.args[self.name].args.auraList.args[spellInfo.name] = self:SetupAura(spellID, spellData.priority, spellInfo.name, spellInfo.iconID)
 						end
 					end
 				end,
