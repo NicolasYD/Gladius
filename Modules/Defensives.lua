@@ -12,6 +12,7 @@ local LSM
 
 local CDList = LibStub("CDList-1.0")
 local spellList = CDList.spellList
+local defensifesList = CDList:GetDefensives()
 
 -- Localizing commonly used global functions
 local IsInInstance = IsInInstance
@@ -20,6 +21,26 @@ local GetSpellTexture = C_Spell.GetSpellTexture
 local CreateFrame = CreateFrame
 local GetSpellInfo = C_Spell.GetSpellInfo
 local UnitClass = UnitClass
+
+local function SetDefaultClasses()
+	local classes = {}
+	for classId = 1, GetNumClasses() do
+		local classInfo = C_CreatureInfo.GetClassInfo(classId)
+		local key = classInfo.classFile
+
+		classes[key] = {}
+		classes["general"] = {}
+
+		for spellID, spellData in pairs(defensifesList) do
+			if spellData.class == key and spellData.category == "defensive" then
+				classes[key][spellID] = true
+			elseif spellData.category == "defensive" then
+				classes["general"][spellID] = true
+			end
+		end
+	end
+	return classes
+end
 
 local Defensives = Gladius:NewModule("Defensives", false, true, {
 	DefensivesAttachTo = "ClassIcon",
@@ -38,7 +59,7 @@ local Defensives = Gladius:NewModule("Defensives", false, true, {
 	DefensivesFontSize = 10,
 	DefensivesFontColor = {r = 0, g = 1, b = 0, a = 1},
 	DefensivesDetached = false,
-	defensives = { },
+	defensives = SetDefaultClasses(),
 })
 
 
@@ -168,8 +189,6 @@ function Defensives:DefensiveUsed(unit, spell, class) -- not complete yet
 	if not class then
 		_, class, _ = UnitClass(unit)
 	end
-
-	Gladius.dbi.profile.defensives[class] = Gladius.dbi.profile.defensives[class] or {}
 
     local spellData = GetDefensiveSpellData(spell)
 
@@ -373,6 +392,73 @@ end
 
 
 function Defensives:GetOptions()
+	-- Prepare the classOptions table
+	local classOptions = {}
+
+	classOptions["GENERAL"] = {
+		type = "group",
+		name = "|TInterface\\Icons\\INV_Misc_QuestionMark:20:20|t General",
+		order = 0,
+		args = {
+			headerBeginning = {
+				type = "header",
+				name = "General",
+				order = 1,
+			},
+			description = {
+				type = "description",
+				name = "Choose the spells that you want to be tracked by this module.",
+				order = 2,
+			},
+			headerEnd = {
+					type = "header",
+					name = "",
+					order = 3,
+			},
+			spells = {
+				type = "group",
+				name = "Tracked Defensives",
+				inline = true,
+				order = 4,
+				args = (function()
+					local spellArgs = {}
+					for spellID, spellData in pairs(defensifesList) do
+						if spellData.class == nil then
+							local spellInfo = GetSpellInfo(spellID)
+							local tooltip = ""
+							local tooltipInfo = C_TooltipInfo.GetSpellByID(spellID)
+
+							if tooltipInfo and tooltipInfo.lines then
+								for _, line in ipairs(tooltipInfo.lines) do
+									local left = line.leftText or ""
+									if left ~= "" and left ~= spellInfo.name then
+										tooltip = left
+									end
+								end
+							end
+
+							if spellInfo then
+								spellArgs["spell_" .. spellID] = {
+									type = "toggle",
+									name = "|T" .. spellInfo.iconID .. ":20:20:0:0:64:64:5:59:5:59|t " .. spellInfo.name,
+									desc = tooltip,
+									get = function()
+										return Gladius.dbi.profile.defensives["general"][spellID]
+									end,
+									set = function(_, value)
+										Gladius.dbi.profile.defensives["general"][spellID] = value
+									end,
+									order = spellID,
+								}
+							end
+						end
+					end
+					return spellArgs
+				end)()
+			}
+		},
+	}
+
 	-- Prepare the classes table
 	local classes = {}
 
@@ -387,18 +473,12 @@ function Defensives:GetOptions()
 		return a.className < b.className
 	end)
 
-	-- Prepare the classOptions table
-	local classOptions = {}
 
 	-- Loop through the sorted classes
 	for _, classInfo in ipairs(classes) do
 		local key = classInfo.classFile  -- use classFile as the key
 		local className = classInfo.className
 		local iconMarkup = "|A:classicon-" .. string.lower(key) .. ":20:20|a "
-
-		if not Gladius.dbi.profile.defensives[key] then
-			Gladius.dbi.profile.defensives[key] = {}
-		end
 
 		classOptions[key] = {
 			type = "group",
@@ -426,38 +506,35 @@ function Defensives:GetOptions()
 					order = 4,
 					args = (function()
 						local spellArgs = {}
-						for spellID, _ in pairs(CDList:GetDefensiveSpellIDsByClass(key)) do
-							local spellInfo = GetSpellInfo(spellID)
-							local tooltip = ""
-							local tooltipInfo = C_TooltipInfo.GetSpellByID(spellID)
+						for spellID, spellData in pairs(defensifesList) do
+							if spellData.class == key then
+								local spellInfo = GetSpellInfo(spellID)
+								local tooltip = ""
+								local tooltipInfo = C_TooltipInfo.GetSpellByID(spellID)
 
-							if Gladius.dbi.profile.defensives[key][spellID] == nil then
-								Gladius.dbi.profile.defensives[key][spellID] = true
-							end
-
-							if tooltipInfo and tooltipInfo.lines then
-								for _, line in ipairs(tooltipInfo.lines) do
-									local left = line.leftText or ""
-									if left ~= "" and left ~= spellInfo.name then
-										tooltip = left
+								if tooltipInfo and tooltipInfo.lines then
+									for _, line in ipairs(tooltipInfo.lines) do
+										local left = line.leftText or ""
+										if left ~= "" and left ~= spellInfo.name then
+											tooltip = left
+										end
 									end
 								end
-							end
 
-							if spellInfo then
-								spellArgs["spell_" .. spellID] = {
-									type = "toggle",
-									name = "|T" .. spellInfo.iconID .. ":20:20:0:0:64:64:5:59:5:59|t " .. spellInfo.name,
-									desc = tooltip,
-									get = function()
-										return Gladius.dbi.profile.defensives[key][spellID]
-									end,
-									set = function(_, value)
-										Gladius.dbi.profile.defensives[key][spellID] = value
-										Gladius:UpdateFrame()
-									end,
-									order = spellID,
-								}
+								if spellInfo then
+									spellArgs["spell_" .. spellID] = {
+										type = "toggle",
+										name = "|T" .. spellInfo.iconID .. ":20:20:0:0:64:64:5:59:5:59|t " .. spellInfo.name,
+										desc = tooltip,
+										get = function()
+											return Gladius.dbi.profile.defensives[key][spellID]
+										end,
+										set = function(_, value)
+											Gladius.dbi.profile.defensives[key][spellID] = value
+										end,
+										order = spellID,
+									}
+								end
 							end
 						end
 						return spellArgs
