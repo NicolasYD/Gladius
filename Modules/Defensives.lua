@@ -733,14 +733,11 @@ function Defensives:GetOptions()
 									if spellData.class == nil then
 										local spellInfo = GetSpellInfo(spellID)
 										local tooltip = ""
-										local tooltipInfo = C_TooltipInfo.GetSpellByID(spellID)
+										local tooltipInfo = C_TooltipInfo.GetSpellByID(spellID, false, true, false, nil, true)
 
 										if tooltipInfo and tooltipInfo.lines then
 											for _, line in ipairs(tooltipInfo.lines) do
-												local left = line.leftText or ""
-												if left ~= "" and left ~= spellInfo.name then
-													tooltip = left
-												end
+												tooltip = (line.leftText or "")
 											end
 										end
 
@@ -847,10 +844,7 @@ function Defensives:GetOptions()
 
 											if tooltipInfo and tooltipInfo.lines then
 												for _, line in ipairs(tooltipInfo.lines) do
-													local left = line.leftText or ""
-													if left ~= "" and left ~= spellInfo.name then
-														tooltip = left
-													end
+													tooltip = (line.leftText or "")
 												end
 											end
 
