@@ -1,10 +1,8 @@
-local addon, ns = ...
 local Gladius = _G.Gladius
 if not Gladius then
 	DEFAULT_CHAT_FRAME:AddMessage(format("Module %s requires Gladius", "Class Icon"))
 end
 local L = Gladius.L
-local LSM
 
 local CDList = LibStub("CDList-1.0")
 local spellTable = CDList.spellList
@@ -13,7 +11,6 @@ local spellTable = CDList.spellList
 local _G = _G
 local pairs = pairs
 local strfind = string.find
-local tonumber = tonumber
 local tostring = tostring
 
 local CreateFrame = CreateFrame
@@ -36,21 +33,6 @@ local UnitAura = UnitAura or function(unitToken, index, filter)
 local CLASS_BUTTONS = CLASS_ICON_TCOORDS
 
 local IsWrathClassic = WOW_PROJECT_ID == WOW_PROJECT_WRATH_CLASSIC
-
-local function GetDefaultAuraList()
-	local auraTable = {}
-
-	for spellID, data in pairs(spellTable) do
-		local name = GetSpellInfo(spellID)
-		if name and data.priority then
-			auraTable[name] = data.priority
-		elseif data.priority then
-			auraTable[spellID] = data.priority
-		end
-	end
-
-	return auraTable
-end
 
 local ClassIcon = Gladius:NewModule("ClassIcon", false, true, {
 	classIconAttachTo = "Frame",
@@ -145,7 +127,8 @@ function ClassIcon:UpdateAura(unit)
 				break
 			end
 			local auraList = Gladius.db.classIconAuras
-			local priority = auraList[name] or auraList[tostring(spellid)]
+			local priority = auraList[spellid].priority
+			local enabled = Gladius.dbi.profile.classIconAuras[spellid].enabled
 
 			if priority and (not aura or aura.priority < priority)  then
 				aura = {
@@ -154,13 +137,14 @@ function ClassIcon:UpdateAura(unit)
 					duration = duration,
 					expires = expires,
 					spellid = spellid,
-					priority = priority
+					priority = priority,
+					enabled = enabled
 				}
 			end
 		end
 	end
 
-	if aura and (not unitFrame.aura or (unitFrame.aura.id ~= aura or unitFrame.aura.expires ~= aura.expires)) then
+	if aura and aura.enabled and (not unitFrame.aura or (unitFrame.aura.id ~= aura or unitFrame.aura.expires ~= aura.expires)) then
 		self:ShowAura(unit, aura)
 	elseif not aura then
 		self.frame[unit].aura = nil
@@ -374,7 +358,7 @@ function ClassIcon:Reset(unit)
 	self.frame[unit]:SetAlpha(0)
 end
 
-function ClassIcon:ResetModule()
+function ClassIcon:ResetModule() -- needs to be fixed
 	Gladius.db.classIconAuras = { }
 	Gladius.db.classIconAuras = spellTable
 	local newAura = Gladius.options.args[self.name].args.auraList.args.newAura
@@ -384,21 +368,30 @@ function ClassIcon:ResetModule()
 	for spellID, spellData in pairs(Gladius.db.classIconAuras) do
 		if spellData.priority then
 			local spellInfo = GetSpellInfo(spellID)
-			Gladius.options.args[self.name].args.auraList.args[spellInfo.name] = self:SetupAura(spellID, spellData.priority, spellInfo.name, spellInfo.iconID)
+			Gladius.options.args[self.name].args.auraList.args[tostring(spellID)] = self:SetupAura(spellID, spellData.priority, spellInfo.name, spellInfo.iconID)
 		end
 	end
 end
 
 
 function ClassIcon:Test(unit)
-    if not Gladius.db.classIconImportantAuras then return end
+    if not Gladius.db.classIconImportantAuras then
+		return
+	end
 
     local data = testSpells[unit]
-    if not data then return end
+
+    if not data then
+		return
+	end
 
     local spellInfo = GetSpellInfo(data.spellID)
-    if spellInfo.iconID then
-        self:ShowAura(unit, { icon = spellInfo.iconID, duration = data.duration })
+	local enabled = Gladius.dbi.profile.classIconAuras[data.spellID].enabled
+    if spellInfo.iconID and enabled then
+        self:ShowAura(unit, {
+			icon = spellInfo.iconID,
+			duration = data.duration,
+			})
         C_Timer.After(data.duration, function()
             ClassIcon:UNIT_AURA("any", unit)
         end)
@@ -709,28 +702,36 @@ function ClassIcon:GetOptions()
 		},
 	}
 
-	for classID = 1, GetNumClasses() do
-		local classInfo = GetClassInfo(classID)
-		if classInfo.classFile and classInfo.className then
-			options.auraList.args[classInfo.classFile] = self:SetupClass(classInfo.classFile, classInfo.className)
+	if not options.auraList.args["general"] then
+		options.auraList.args["general"] = self:SetupClass(nil, "General", 0)
+	end
+
+	for spellID, spellData in pairs(Gladius.db.classIconAuras) do
+		if Gladius.dbi.profile.classIconAuras[spellID].enabled == nil then
+			Gladius.dbi.profile.classIconAuras[spellID].enabled = true
 		end
-		for spellID, spellData in pairs(Gladius.db.classIconAuras) do
-			if classInfo.classFile == spellData.class and spellData.priority then
-				local spellInfo = GetSpellInfo(spellID)
-				local tooltip = ""
-				local tooltipInfo = GetSpellByID(spellID, false, true, false, nil, true)
 
-				if tooltipInfo and tooltipInfo.lines then
-					for _, line in ipairs(tooltipInfo.lines) do
-						tooltip = (line.leftText or "")
-					end
-				end
+		local spellInfo = GetSpellInfo(spellID)
+		local tooltip = ""
+		local tooltipInfo = GetSpellByID(spellID, false, true, false, nil, true)
 
-				if Gladius.dbi.profile.classIconAuras[spellID].enabled == nil then
-					Gladius.dbi.profile.classIconAuras[spellID].enabled = true
-				end
+		if tooltipInfo and tooltipInfo.lines then
+			for _, line in ipairs(tooltipInfo.lines) do
+				tooltip = (line.leftText or "")
+			end
+		end
 
-				options.auraList.args[classInfo.classFile].args.spells.args[spellInfo.name] = self:SetupAura(spellID, spellData.priority, spellInfo.name, spellInfo.iconID, tooltip)
+		for classID = 1, GetNumClasses() do
+			local classInfo = GetClassInfo(classID)
+
+			if not options.auraList.args[classInfo.classFile] and classInfo.classFile and classInfo.className then
+				options.auraList.args[classInfo.classFile] = self:SetupClass(classInfo.classFile, classInfo.className)
+			end
+
+			if not options.auraList.args[classInfo.classFile].args.spells.args[tostring(spellID)] and classInfo.classFile == spellData.class and spellData.priority then
+				options.auraList.args[classInfo.classFile].args.spells.args[tostring(spellID)] = self:SetupAura(spellID, spellData.priority, spellInfo.name, spellInfo.iconID, tooltip)
+			elseif not options.auraList.args["general"].args.spells.args[tostring(spellID)] and not spellData.class and spellData.priority then
+				options.auraList.args["general"].args.spells.args[tostring(spellID)] = self:SetupAura(spellID, spellData.priority, spellInfo.name, spellInfo.iconID, tooltip)
 			end
 		end
 	end
@@ -739,10 +740,17 @@ function ClassIcon:GetOptions()
 end
 
 
-function ClassIcon:SetupClass(classFile, className)
+function ClassIcon:SetupClass(classFile, className, order)
+	local icon
+	if classFile then
+		icon = "|A:classicon-" .. string.lower(classFile) .. ":20:20|a "
+	else
+		icon = "|TInterface\\Icons\\INV_Misc_QuestionMark:20:20|t "
+	end
 	return {
 		type = "group",
-		name = "|A:classicon-" .. string.lower(classFile) .. ":20:20|a " .. className,
+		name = icon .. className,
+		order = order,
 		args = {
 			spells = {
 				type = "group",
@@ -761,6 +769,7 @@ function ClassIcon:SetupAura(spellID, priority, name, iconID, tooltip)
 	return {
 		type = "group",
 		name = "",
+		order = - priority - 1,
 		args = {
 			spell = {
 				type = "toggle",
