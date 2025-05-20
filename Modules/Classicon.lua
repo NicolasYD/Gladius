@@ -715,7 +715,7 @@ function ClassIcon:GetOptions()
 			options.auraList.args[classInfo.classFile] = self:SetupClass(classInfo.classFile, classInfo.className)
 		end
 		for spellID, spellData in pairs(Gladius.db.classIconAuras) do
-			if classInfo.classFile == spellData.class then
+			if classInfo.classFile == spellData.class and spellData.priority then
 				local spellInfo = GetSpellInfo(spellID)
 				local tooltip = ""
 				local tooltipInfo = GetSpellByID(spellID, false, true, false, nil, true)
@@ -725,46 +725,17 @@ function ClassIcon:GetOptions()
 						tooltip = (line.leftText or "")
 					end
 				end
+
+				if Gladius.dbi.profile.classIconAuras[spellID].enabled == nil then
+					Gladius.dbi.profile.classIconAuras[spellID].enabled = true
+				end
+
 				options.auraList.args[classInfo.classFile].args.spells.args[spellInfo.name] = self:SetupAura(spellID, spellData.priority, spellInfo.name, spellInfo.iconID, tooltip)
 			end
 		end
 	end
 
 	return options
-end
-
-
-local function setAura(info, value)
-	if info[#(info)] == "name" then
-		if info[#(info) - 1] == value then
-			return
-		end
-		-- create new aura
-		Gladius.db.classIconAuras[value] = Gladius.db.classIconAuras[info[#(info) - 1]]
-		-- delete old aura
-		Gladius.db.classIconAuras[info[#(info) - 1]] = nil
-		local newAura = Gladius.options.args["ClassIcon"].args.auraList.args.newAura
-		Gladius.options.args["ClassIcon"].args.auraList.args = {
-			newAura = newAura,
-		}
-		for spellID, spellData in pairs(Gladius.db.classIconAuras) do
-			if spellData.priority then
-				local spellInfo = GetSpellInfo(spellID)
-				Gladius.options.args["ClassIcon"].args.auraList.args[spellInfo.name] = ClassIcon:SetupAura(spellID, spellData.priority, spellInfo.name, spellInfo.iconID)
-			end
-		end
-	else
-		Gladius.dbi.profile.classIconAuras[info[#(info) - 1]] = value
-	end
-end
-
-
-local function getAura(info)
-	if info[#(info)] == "name" then
-		return info[#(info) - 1]
-	else
-		return Gladius.dbi.profile.classIconAuras[info[#(info) - 1]]
-	end
 end
 
 
@@ -790,19 +761,29 @@ function ClassIcon:SetupAura(spellID, priority, name, iconID, tooltip)
 	return {
 		type = "group",
 		name = "",
-		get = getAura,
-		set = setAura,
 		args = {
 			spell = {
 				type = "toggle",
 				name = "|T" .. iconID .. ":20:20:0:0:64:64:5:59:5:59|t " .. name,
 				order = 1,
 				desc = tooltip,
+				get = function ()
+					return Gladius.dbi.profile.classIconAuras[spellID].enabled
+				end,
+				set = function (_, value)
+					Gladius.dbi.profile.classIconAuras[spellID].enabled = value
+				end,
 			},
 			priority = {
 				type = "range",
 				name = L["Priority"],
 				desc = L["Select what priority the aura should have - higher equals more priority"],
+				get = function ()
+					return Gladius.dbi.profile.classIconAuras[spellID].priority
+				end,
+				set = function (_, value)
+					Gladius.dbi.profile.classIconAuras[spellID].priority = value
+				end,
 				min = 0,
 				max = 20,
 				step = 1,
