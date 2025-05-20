@@ -19,6 +19,9 @@ local tostring = tostring
 local CreateFrame = CreateFrame
 local GetSpecializationInfoByID = GetSpecializationInfoByID
 local GetSpellInfo = C_Spell.GetSpellInfo
+local GetNumClasses = GetNumClasses
+local GetClassInfo = C_CreatureInfo.GetClassInfo
+local GetSpellByID = C_TooltipInfo.GetSpellByID
 
 local GetTime = GetTime
 local UnitAura = UnitAura or function(unitToken, index, filter)
@@ -702,79 +705,34 @@ function ClassIcon:GetOptions()
 			childGroups = "tree",
 			order = 3,
 			args = {
-				newAura = {
-					type = "group",
-					name = L["New Aura"],
-					desc = L["New Aura"],
-					inline = true,
-					order = 1,
-					args = {
-						name = {
-							type = "input",
-							name = L["Name"],
-							desc = L["Name of the aura"],
-							get = function()
-								return self.newAuraName or ""
-							end,
-							set = function(info, value)
-								self.newAuraName = value
-							end,
-							disabled = function()
-								return not Gladius.dbi.profile.modules[self.name] or not Gladius.db.classIconImportantAuras
-							end,
-							order = 1,
-						},
-						priority = {
-							type = "range",
-							name = L["Priority"],
-							desc = L["Select what priority the aura should have - higher equals more priority"],
-							get = function()
-								return self.newAuraPriority or 0
-							end,
-							set = function(info, value)
-								self.newAuraPriority = value
-							end,
-							disabled = function()
-								return not Gladius.dbi.profile.modules[self.name] or not Gladius.db.classIconImportantAuras
-							end,
-							min = 0,
-							max = 20,
-							step = 1,
-							order = 2,
-						},
-						add = {
-							type = "execute",
-							name = L["Add new Aura"],
-							func = function(info)
-								if not self.newAuraName or self.newAuraName == "" then
-									return
-								end
-								if not self.newAuraPriority then
-									self.newAuraPriority = 0
-								end
-								local spellInfo = GetSpellInfo(self.newAuraName)
-								Gladius.options.args[self.name].args.auraList.args[self.newAuraName] = self:SetupAura(self.newAuraName, self.newAuraPriority, spellInfo.name, spellInfo.iconID)
-								Gladius.db.classIconAuras[self.newAuraName] = self.newAuraPriority
-								self.newAuraName = ""
-							end,
-							disabled = function()
-								return not Gladius.dbi.profile.modules[self.name] or not Gladius.db.classIconImportantAuras or not self.newAuraName or self.newAuraName == ""
-							end,
-							order = 3,
-						},
-					},
-				},
 			},
 		},
 	}
-	for spellID, spellData in pairs(Gladius.db.classIconAuras) do
-		if spellData.priority then
-			local spellInfo = GetSpellInfo(spellID)
-			options.auraList.args[spellInfo.name] = self:SetupAura(spellID, spellData.priority, spellInfo.name, spellInfo.iconID)
+
+	for classID = 1, GetNumClasses() do
+		local classInfo = GetClassInfo(classID)
+		if classInfo.classFile and classInfo.className then
+			options.auraList.args[classInfo.classFile] = self:SetupClass(classInfo.classFile, classInfo.className)
+		end
+		for spellID, spellData in pairs(Gladius.db.classIconAuras) do
+			if classInfo.classFile == spellData.class then
+				local spellInfo = GetSpellInfo(spellID)
+				local tooltip = ""
+				local tooltipInfo = GetSpellByID(spellID, false, true, false, nil, true)
+
+				if tooltipInfo and tooltipInfo.lines then
+					for _, line in ipairs(tooltipInfo.lines) do
+						tooltip = (line.leftText or "")
+					end
+				end
+				options.auraList.args[classInfo.classFile].args.spells.args[spellInfo.name] = self:SetupAura(spellID, spellData.priority, spellInfo.name, spellInfo.iconID, tooltip)
+			end
 		end
 	end
+
 	return options
 end
+
 
 local function setAura(info, value)
 	if info[#(info)] == "name" then
@@ -800,6 +758,7 @@ local function setAura(info, value)
 	end
 end
 
+
 local function getAura(info)
 	if info[#(info)] == "name" then
 		return info[#(info) - 1]
@@ -808,23 +767,37 @@ local function getAura(info)
 	end
 end
 
-function ClassIcon:SetupAura(spellID, priority, name, iconID)
-	local name = name or spellID
+
+function ClassIcon:SetupClass(classFile, className)
 	return {
 		type = "group",
-		name = "|T" .. iconID .. ":20:20:0:0:64:64:5:59:5:59|t " .. name,
-		desc = name,
+		name = "|A:classicon-" .. string.lower(classFile) .. ":20:20|a " .. className,
+		args = {
+			spells = {
+				type = "group",
+				name = "Tracked Spells",
+				inline = true,
+				order = 1,
+				args = {
+				}
+			},
+		}
+	}
+end
+
+
+function ClassIcon:SetupAura(spellID, priority, name, iconID, tooltip)
+	return {
+		type = "group",
+		name = "",
 		get = getAura,
 		set = setAura,
 		args = {
-			name = {
-				type = "input",
-				name = L["Name or ID"],
-				desc = L["Name or ID of the aura"],
+			spell = {
+				type = "toggle",
+				name = "|T" .. iconID .. ":20:20:0:0:64:64:5:59:5:59|t " .. name,
 				order = 1,
-				disabled = function()
-					return not Gladius.dbi.profile.modules[self.name] or not Gladius.db.classIconImportantAuras
-				end,
+				desc = tooltip,
 			},
 			priority = {
 				type = "range",
@@ -837,43 +810,6 @@ function ClassIcon:SetupAura(spellID, priority, name, iconID)
 				disabled = function()
 					return not Gladius.dbi.profile.modules[self.name] or not Gladius.db.classIconImportantAuras
 				end,
-			},
-			delete = {
-				type = "execute",
-				name = L["Delete"],
-				func = function(info)
-					local defaults = spellTable
-					if defaults[info[#(info) - 1]] then
-						Gladius.db.classIconAuras[info[#(info) - 1]] = false
-					else
-						Gladius.db.classIconAuras[info[#(info) - 1]] = nil
-					end
-					local newAura = Gladius.options.args[self.name].args.auraList.args.newAura
-					Gladius.options.args[self.name].args.auraList.args = {
-						newAura = newAura,
-					}
-					for spellID, spellData in pairs(Gladius.db.classIconAuras) do
-						if spellData.priority then
-							local spellInfo = GetSpellInfo(spellID)
-							Gladius.options.args[self.name].args.auraList.args[spellInfo.name] = self:SetupAura(spellID, spellData.priority, spellInfo.name, spellInfo.iconID)
-						end
-					end
-				end,
-				disabled = function()
-					return not Gladius.dbi.profile.modules[self.name] or not Gladius.db.classIconImportantAuras
-				end,
-				order = 3,
-			},
-			reset = {
-				type = "execute",
-				name = L["Reset Auras"],
-				func = function(info)
-					self:ResetModule()
-				end,
-				disabled = function()
-					return not Gladius.dbi.profile.modules[self.name] or not Gladius.db.classIconImportantAuras
-				end,
-				order = 4,
 			},
 		},
 	}
