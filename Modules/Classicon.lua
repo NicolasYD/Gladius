@@ -1,10 +1,41 @@
+-- @@@@@@@@@@@@@@@@@@@@@@@@@ Classicon Module @@@@@@@@@@@@@@@@@@@@@@@@@@@
+-- Originally written by: Resike and Firebunny. Original author: Proditor
+-- Modified by: Pharmac1st
+-- Game Version: 11.1.5
+-- @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
 local Gladius = _G.Gladius
 if not Gladius then
 	DEFAULT_CHAT_FRAME:AddMessage(format("Module %s requires Gladius", "Class Icon"))
 end
 local L = Gladius.L
 
+
+-- @@@@@@@@@@@@@@@@@@@@@@@@@ Deepcopy Function @@@@@@@@@@@@@@@@@@@@@@@@@@
+local function deepcopy(orig, copies)
+    copies = copies or {}
+    local orig_type = type(orig)
+    local copy
+    if orig_type == 'table' then
+        if copies[orig] then
+            return copies[orig]
+        end
+        copy = {}
+        copies[orig] = copy
+        for k, v in next, orig, nil do
+            copy[deepcopy(k, copies)] = deepcopy(v, copies)
+        end
+        setmetatable(copy, deepcopy(getmetatable(orig), copies))
+    else
+        copy = orig
+    end
+    return copy
+end
+-- @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+
 local CDList = LibStub("CDList-1.0")
+local originalSpellTable = deepcopy(CDList.spellList)
 local spellTable = CDList.spellList
 
 -- Global Functions
@@ -72,6 +103,11 @@ function ClassIcon:OnEnable()
 		self.frame = { }
 	end
 	Gladius.db.auraVersion = self.version
+	for spellID, _ in pairs(Gladius.db.classIconAuras) do
+		if Gladius.dbi.profile.classIconAuras[spellID].enabled == nil then
+			Gladius.dbi.profile.classIconAuras[spellID].enabled = true
+		end
+	end
 end
 
 function ClassIcon:OnDisable()
@@ -358,14 +394,11 @@ function ClassIcon:Reset(unit)
 	self.frame[unit]:SetAlpha(0)
 end
 
-function ClassIcon:ResetModule() -- needs to be fixed
-	Gladius.db.classIconAuras = { }
-	Gladius.db.classIconAuras = spellTable
-	local newAura = Gladius.options.args[self.name].args.auraList.args.newAura
-	Gladius.options.args[self.name].args.auraList.args = {
-		newAura = newAura,
-	}
+function ClassIcon:ResetModule()
+	Gladius.db.classIconAuras = deepcopy(originalSpellTable)
+
 	for spellID, spellData in pairs(Gladius.db.classIconAuras) do
+		Gladius.dbi.profile.classIconAuras[spellID].enabled = true
 		if spellData.priority then
 			local spellInfo = GetSpellInfo(spellID)
 			Gladius.options.args[self.name].args.auraList.args[tostring(spellID)] = self:SetupAura(spellID, spellData.priority, spellInfo.name, spellInfo.iconID)
@@ -707,10 +740,6 @@ function ClassIcon:GetOptions()
 	end
 
 	for spellID, spellData in pairs(Gladius.db.classIconAuras) do
-		if Gladius.dbi.profile.classIconAuras[spellID].enabled == nil then
-			Gladius.dbi.profile.classIconAuras[spellID].enabled = true
-		end
-
 		local spellInfo = GetSpellInfo(spellID)
 		local tooltip = ""
 		local tooltipInfo = GetSpellByID(spellID, false, true, false, nil, true)
