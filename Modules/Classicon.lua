@@ -731,6 +731,71 @@ function ClassIcon:GetOptions()
 			childGroups = "tree",
 			order = 3,
 			args = {
+				newAura = {
+					type = "group",
+					name = L["New Aura"],
+					desc = L["New Aura"],
+					inline = true,
+					order = 1,
+					args = {
+						spell = {
+							type = "input",
+							name = L["Spell ID"],
+							desc = L["Spell ID of the aura"],
+							get = function()
+								return self.newAuraID or ""
+							end,
+							set = function(info, value)
+								self.newAuraID = value
+							end,
+							disabled = function()
+								return not Gladius.dbi.profile.modules[self.name] or not Gladius.db.classIconImportantAuras
+							end,
+							order = 1,
+						},
+						priority = {
+							type = "range",
+							name = L["Priority"],
+							desc = L["Select what priority the aura should have - higher equals more priority"],
+							get = function()
+								return self.newAuraPriority or 0
+							end,
+							set = function(info, value)
+								self.newAuraPriority = value
+							end,
+							disabled = function()
+								return not Gladius.dbi.profile.modules[self.name] or not Gladius.db.classIconImportantAuras
+							end,
+							min = 0,
+							max = 20,
+							step = 1,
+							order = 2,
+						},
+						add = {
+							type = "execute",
+							name = L["Add new Aura"],
+							func = function(info)
+								if not self.newAuraID or self.newAuraID == "" then
+									return
+								end
+
+								if not self.newAuraPriority then
+									self.newAuraPriority = 0
+								end
+								
+								local spellInfo = GetSpellInfo(self.newAuraID) or self.newAuraID
+								Gladius.options.args[self.name].args.auraList.args["general"].args.spells.args[self.newAuraID] = self:SetupAura(self.newAuraID, self.newAuraPriority, spellInfo.name, spellInfo.iconID)
+								Gladius.dbi.profile.classIconAuras[self.newAuraID] = {priority = self.newAuraPriority, name = spellInfo.name, iconID = spellInfo.iconID}
+								print(self.newAuraID, self.newAuraPriority)
+								self.newAuraID = ""
+							end,
+							disabled = function()
+								return not Gladius.dbi.profile.modules[self.name] or not Gladius.db.classIconImportantAuras or not self.newAuraID or self.newAuraID == ""
+							end,
+							order = 3,
+						},
+					},
+				}
 			},
 		},
 	}
