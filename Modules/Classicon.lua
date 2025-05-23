@@ -85,14 +85,51 @@ local ClassIcon = Gladius:NewModule("ClassIcon", false, true, {
 	classIconAuras = spellTable,
 })
 
-
---@@@@@@@@@@@@@@@@@@@@ Testspells for Testmode @@@@@@@@@@@@@@@@@@@@@@
+-- @@@@@@@@@@@@@@@@@@@@ Testspells for Testmode @@@@@@@@@@@@@@@@@@@@@@@
 local testSpells = {
 	arena1 = {spellID = 45438, duration = 10},  -- Ice Block
 	arena2 = {spellID = 53480, duration = 12},  -- Roar of Sacrifice
 	arena3 = {spellID = 1966,  duration = 6},  -- Feint
 }
---@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+-- @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+
+-- @@@@@@@@@@@@@@@@@@@@@@@@ Helper Functions @@@@@@@@@@@@@@@@@@@@@@@@@@
+function GetSortedClassIDs()
+
+	-- Create table of all classes in the game
+	local classes = {}
+	for classID = 1, GetNumClasses() do
+		local classInfo = GetClassInfo(classID)
+		if classInfo then
+			classes[classID] = classInfo
+		end
+	end
+
+	-- Create a table where index == classID
+	local sortedKeys = {}
+	for classID in pairs(classes) do
+		table.insert(sortedKeys, classID)
+	end
+
+	-- Sort table alphabetically by className
+	table.sort(sortedKeys, function(a, b)
+		return classes[a].className < classes[b].className
+	end)
+
+	local sortedClasses = {}
+	sortedClasses[0] = {className = "General", classFile = "GENERAL", classID = nil}
+
+	for index, classID in pairs(sortedKeys) do
+		sortedClasses[index] = classes[classID]
+	end
+
+
+	return sortedClasses
+end
+local sortedClasses = GetSortedClassIDs()
+local selectedSortedClass = 0
+-- @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
 
 function ClassIcon:OnEnable()
@@ -738,6 +775,30 @@ function ClassIcon:GetOptions()
 					inline = true,
 					order = 1,
 					args = {
+						class = {
+							type = "select",
+							name = "Class",
+							desc = "Choose the class to which you want to add the custom aura",
+							values = (function ()
+								local dropdown = {}
+								for index, classData in pairs(sortedClasses) do
+									if index == 0 then
+										dropdown[index] = "|TInterface\\Icons\\INV_Misc_QuestionMark:20:20|t " .. classData.className
+									else
+										dropdown[index] = "|A:classicon-" .. string.lower(classData.classFile) .. ":20:20|a " .. classData.className
+									end
+								end
+
+								return dropdown
+							end)(),
+							get = function()
+								return selectedSortedClass
+							end,
+							set = function (_, value)
+								selectedSortedClass = value
+							end,
+							order = 1,
+						},
 						spell = {
 							type = "input",
 							name = L["Spell ID"],
@@ -751,7 +812,7 @@ function ClassIcon:GetOptions()
 							disabled = function()
 								return not Gladius.dbi.profile.modules[self.name] or not Gladius.db.classIconImportantAuras
 							end,
-							order = 1,
+							order = 2,
 						},
 						priority = {
 							type = "range",
@@ -769,7 +830,7 @@ function ClassIcon:GetOptions()
 							min = 0,
 							max = 20,
 							step = 1,
-							order = 2,
+							order = 3,
 						},
 						add = {
 							type = "execute",
@@ -784,15 +845,14 @@ function ClassIcon:GetOptions()
 								end
 								
 								local spellInfo = GetSpellInfo(self.newAuraID) or self.newAuraID
-								Gladius.options.args[self.name].args.auraList.args["general"].args.spells.args[self.newAuraID] = self:SetupAura(self.newAuraID, self.newAuraPriority, spellInfo.name, spellInfo.iconID)
+								Gladius.options.args[self.name].args.auraList.args["GENERAL"].args.spells.args[self.newAuraID] = self:SetupAura(self.newAuraID, self.newAuraPriority, spellInfo.name, spellInfo.iconID)
 								Gladius.dbi.profile.classIconAuras[self.newAuraID] = {priority = self.newAuraPriority, name = spellInfo.name, iconID = spellInfo.iconID}
-								print(self.newAuraID, self.newAuraPriority)
 								self.newAuraID = ""
 							end,
 							disabled = function()
 								return not Gladius.dbi.profile.modules[self.name] or not Gladius.db.classIconImportantAuras or not self.newAuraID or self.newAuraID == ""
 							end,
-							order = 3,
+							order = 4,
 						},
 					},
 				}
@@ -800,8 +860,8 @@ function ClassIcon:GetOptions()
 		},
 	}
 
-	if not options.auraList.args["general"] then
-		options.auraList.args["general"] = self:SetupClass(nil, "General", 0)
+	if not options.auraList.args["GENERAL"] then
+		options.auraList.args["GENERAL"] = self:SetupClass(nil, "General", 0)
 	end
 
 	for spellID, spellData in pairs(Gladius.db.classIconAuras) do
@@ -824,8 +884,8 @@ function ClassIcon:GetOptions()
 
 			if not options.auraList.args[classInfo.classFile].args.spells.args[tostring(spellID)] and classInfo.classFile == spellData.class and spellData.priority then
 				options.auraList.args[classInfo.classFile].args.spells.args[tostring(spellID)] = self:SetupAura(spellID, spellData.priority, spellInfo.name, spellInfo.iconID, tooltip)
-			elseif not options.auraList.args["general"].args.spells.args[tostring(spellID)] and not spellData.class and spellData.priority then
-				options.auraList.args["general"].args.spells.args[tostring(spellID)] = self:SetupAura(spellID, spellData.priority, spellInfo.name, spellInfo.iconID, tooltip)
+			elseif not options.auraList.args["GENERAL"].args.spells.args[tostring(spellID)] and not spellData.class and spellData.priority then
+				options.auraList.args["GENERAL"].args.spells.args[tostring(spellID)] = self:SetupAura(spellID, spellData.priority, spellInfo.name, spellInfo.iconID, tooltip)
 			end
 		end
 	end
