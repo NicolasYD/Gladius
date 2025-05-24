@@ -877,15 +877,16 @@ function ClassIcon:GetOptions()
 
 		for classID = 1, GetNumClasses() do
 			local classInfo = GetClassInfo(classID)
+			if classInfo then
+				if not options.auraList.args[classInfo.classFile] and classInfo.classFile and classInfo.className then
+					options.auraList.args[classInfo.classFile] = self:SetupClass(classInfo.classFile, classInfo.className)
+				end
 
-			if not options.auraList.args[classInfo.classFile] and classInfo.classFile and classInfo.className then
-				options.auraList.args[classInfo.classFile] = self:SetupClass(classInfo.classFile, classInfo.className)
-			end
-
-			if not options.auraList.args[classInfo.classFile].args.spells.args[tostring(spellID)] and classInfo.classFile == spellData.class and spellData.priority then
-				options.auraList.args[classInfo.classFile].args.spells.args[tostring(spellID)] = self:SetupAura(spellID, spellData.priority, spellInfo.name, spellInfo.iconID, tooltip)
-			elseif not options.auraList.args["GENERAL"].args.spells.args[tostring(spellID)] and not spellData.class and spellData.priority then
-				options.auraList.args["GENERAL"].args.spells.args[tostring(spellID)] = self:SetupAura(spellID, spellData.priority, spellInfo.name, spellInfo.iconID, tooltip)
+				if not options.auraList.args[classInfo.classFile].args.spells.args[tostring(spellID)] and classInfo.classFile == spellData.class and spellData.priority then
+					options.auraList.args[classInfo.classFile].args.spells.args[tostring(spellID)] = self:SetupAura(spellID, spellData.priority, spellInfo.name, spellInfo.iconID, tooltip)
+				elseif not options.auraList.args["GENERAL"].args.spells.args[tostring(spellID)] and not spellData.class and spellData.priority then
+					options.auraList.args["GENERAL"].args.spells.args[tostring(spellID)] = self:SetupAura(spellID, spellData.priority, spellInfo.name, spellInfo.iconID, tooltip)
+				end
 			end
 		end
 	end
