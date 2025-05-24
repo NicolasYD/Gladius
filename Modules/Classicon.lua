@@ -442,13 +442,16 @@ function ClassIcon:Reset(unit)
 end
 
 function ClassIcon:ResetModule()
+	Gladius.dbi.profile.classIconAuras = {}
 	Gladius.dbi.profile.classIconAuras = deepcopy(originalSpellTable)
 
 	for spellID, spellData in pairs(Gladius.dbi.profile.classIconAuras) do
 		Gladius.dbi.profile.classIconAuras[spellID].enabled = true
-		if spellData.priority then
-			local spellInfo = GetSpellInfo(spellID)
-			Gladius.options.args[self.name].args.auraList.args[tostring(spellID)] = self:SetupAura(spellID, spellData.priority, spellInfo.name, spellInfo.iconID)
+		local spellInfo = GetSpellInfo(spellID)
+		if spellData.priority and spellData.class then
+			Gladius.options.args[self.name].args.auraList.args[spellData.class].args.spells.args[tostring(spellID)] = self:SetupAura(spellID, spellData.priority, spellInfo.name, spellInfo.iconID)
+		elseif spellData.priority then
+			Gladius.options.args[self.name].args.auraList.args["GENERAL"].args.spells.args[tostring(spellID)] = self:SetupAura(spellID, spellData.priority, spellInfo.name, spellInfo.iconID)
 		end
 	end
 end
