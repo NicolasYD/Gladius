@@ -931,7 +931,9 @@ function ClassIcon:SetupAura(spellID, priority, name, iconID, tooltip)
 				order = 1,
 				desc = tooltip,
 				get = function ()
-					return Gladius.dbi.profile.classIconAuras[spellID].enabled
+					if spellTable[spellID] then
+						return spellTable[spellID].enabled
+					end
 				end,
 				set = function (_, value)
 					Gladius.dbi.profile.classIconAuras[spellID].enabled = value
@@ -942,7 +944,9 @@ function ClassIcon:SetupAura(spellID, priority, name, iconID, tooltip)
 				name = L["Priority"],
 				desc = L["Select what priority the aura should have - higher equals more priority"],
 				get = function ()
-					return Gladius.dbi.profile.classIconAuras[spellID].priority
+					if spellTable[spellID] then
+						return spellTable[spellID].priority
+					end
 				end,
 				set = function (_, value)
 					Gladius.dbi.profile.classIconAuras[spellID].priority = value
