@@ -955,6 +955,15 @@ function ClassIcon:SetupAura(spellID, priority, name, iconID, tooltip)
 					return not Gladius.dbi.profile.modules[self.name] or not Gladius.db.classIconImportantAuras
 				end,
 			},
+			delete = {
+				type = "execute",
+				name = "Delete",
+				func = function (info)
+					local spell = info[#(info) - 1]
+					spellTable[spell] = nil
+					Gladius.options.args[self.name].args.auraList.args["GENERAL"].args.spells.args[spell] = nil
+				end
+			},
 		},
 	}
 end
