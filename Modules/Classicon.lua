@@ -444,6 +444,12 @@ end
 function ClassIcon:ResetModule()
 	Gladius.dbi.profile.classIconAuras = {}
 	Gladius.dbi.profile.classIconAuras = deepcopy(originalSpellTable)
+	Gladius.options.args[self.name].args.auraList.args["GENERAL"].args.spells.args = {}
+	for _, spellData in pairs(Gladius.dbi.profile.classIconAuras) do
+		if spellData.class then
+			Gladius.options.args[self.name].args.auraList.args[spellData.class].args.spells.args = {}
+		end
+	end
 
 	for spellID, spellData in pairs(Gladius.dbi.profile.classIconAuras) do
 		Gladius.dbi.profile.classIconAuras[spellID].enabled = true
@@ -804,7 +810,12 @@ function ClassIcon:GetOptions()
 
 								return dropdown
 							end)(),
-							get = function()
+							get = function(info)
+								for index, classData in pairs(sortedClasses) do
+									if index == selectedSortedClass then
+										self.newClassFile = classData.classFile
+									end
+								end
 								return selectedSortedClass
 							end,
 							set = function (_, value)
@@ -851,7 +862,7 @@ function ClassIcon:GetOptions()
 							type = "execute",
 							name = L["Add new Aura"],
 							func = function(info)
-								if not self.newAuraID or self.newAuraID == "" then
+								if not self.newAuraID then
 									return
 								end
 
@@ -860,8 +871,12 @@ function ClassIcon:GetOptions()
 								end
 
 								local spellInfo = GetSpellInfo(self.newAuraID)
-								Gladius.options.args[self.name].args.auraList.args["GENERAL"].args.spells.args[self.newAuraID] = self:SetupAura(self.newAuraID, self.newAuraPriority, spellInfo.name, spellInfo.iconID)
-								Gladius.dbi.profile.classIconAuras[tonumber(self.newAuraID)] = {priority = self.newAuraPriority, name = spellInfo.name, iconID = spellInfo.iconID, enabled = true}
+								Gladius.options.args[self.name].args.auraList.args[self.newClassFile].args.spells.args[self.newAuraID] = self:SetupAura(self.newAuraID, self.newAuraPriority, spellInfo.name, spellInfo.iconID)
+								if self.newClassFile == "GENERAL" then
+									Gladius.dbi.profile.classIconAuras[tonumber(self.newAuraID)] = {priority = self.newAuraPriority, name = spellInfo.name, iconID = spellInfo.iconID, enabled = true, deleted = false}
+								else
+									Gladius.dbi.profile.classIconAuras[tonumber(self.newAuraID)] = {priority = self.newAuraPriority, class = self.newClassFile, name = spellInfo.name, iconID = spellInfo.iconID, enabled = true, deleted = false}
+								end
 								self.newAuraID = nil
 							end,
 							disabled = function()
@@ -900,10 +915,11 @@ function ClassIcon:GetOptions()
 
 					if not options.auraList.args[classInfo.classFile].args.spells.args[tostring(spellID)] and classInfo.classFile == spellData.class and spellData.priority then
 						options.auraList.args[classInfo.classFile].args.spells.args[tostring(spellID)] = self:SetupAura(spellID, spellData.priority, spellInfo.name, spellInfo.iconID, tooltip)
-					elseif not options.auraList.args["GENERAL"].args.spells.args[tostring(spellID)] and not spellData.class and spellData.priority then
-						options.auraList.args["GENERAL"].args.spells.args[tostring(spellID)] = self:SetupAura(spellID, spellData.priority, spellInfo.name, spellInfo.iconID, tooltip)
 					end
 				end
+			end
+			if not options.auraList.args["GENERAL"].args.spells.args[tostring(spellID)] and not spellData.class and spellData.priority then
+				options.auraList.args["GENERAL"].args.spells.args[tostring(spellID)] = self:SetupAura(spellID, spellData.priority, spellInfo.name, spellInfo.iconID, tooltip)
 			end
 		end
 	end
@@ -981,8 +997,9 @@ function ClassIcon:SetupAura(spellID, priority, name, iconID, tooltip)
 				type = "execute",
 				name = "Delete",
 				func = function (info)
-					local spell = info[#(info) - 1]
-					Gladius.dbi.profile.classIconAuras[tonumber(spell)].deleted = true
+					local spell = tonumber(info[#info - 1])
+					local class = info[#info - 3]
+					Gladius.dbi.profile.classIconAuras[spell].deleted = true
 					Gladius.options.args[self.name].args.auraList.args["GENERAL"].args.spells.args[spell] = nil
 				end
 			},
