@@ -47,20 +47,12 @@ local tonumber = tonumber
 
 local CreateFrame = CreateFrame
 local GetSpecializationInfoByID = GetSpecializationInfoByID
-local GetSpellInfo = C_Spell.GetSpellInfo
 local GetNumClasses = GetNumClasses
+local GetTime = GetTime
+local GetSpellInfo = C_Spell.GetSpellInfo
 local GetClassInfo = C_CreatureInfo.GetClassInfo
 local GetSpellByID = C_TooltipInfo.GetSpellByID
-
-local GetTime = GetTime
-local UnitAura = UnitAura or function(unitToken, index, filter)
-		local auraData = C_UnitAuras.GetAuraDataByIndex(unitToken, index, filter)
-		if not auraData then
-			return nil
-		end
-
-		return AuraUtil.UnpackAuraData(auraData)
-	end
+local UnitAura = C_UnitAuras.GetAuraDataByIndex
 
 local CLASS_BUTTONS = CLASS_ICON_TCOORDS
 
@@ -185,6 +177,7 @@ function ClassIcon:OnEnable()
 	end
 end
 
+
 function ClassIcon:OnDisable()
 	self:UnregisterAllEvents()
 	for unit in pairs(self.frame) do
@@ -192,17 +185,21 @@ function ClassIcon:OnDisable()
 	end
 end
 
+
 function ClassIcon:GetAttachTo()
 	return Gladius.db.classIconAttachTo
 end
+
 
 function ClassIcon:IsDetached()
 	return Gladius.db.classIconDetached
 end
 
+
 function ClassIcon:GetFrame(unit)
 	return self.frame[unit]
 end
+
 
 function ClassIcon:UNIT_AURA(event, unit)
 	if not Gladius:IsValidUnit(unit) then
@@ -213,9 +210,11 @@ function ClassIcon:UNIT_AURA(event, unit)
 	self:UpdateAura(unit)
 end
 
+
 function ClassIcon:UpdateColors(unit)
 	self.frame[unit].normalTexture:SetVertexColor(Gladius.db.classIconGlossColor.r, Gladius.db.classIconGlossColor.g, Gladius.db.classIconGlossColor.b, Gladius.db.classIconGloss and Gladius.db.classIconGlossColor.a or 0)
 end
+
 
 function ClassIcon:UpdateAura(unit)
 	local unitFrame = self.frame[unit]
@@ -232,36 +231,40 @@ function ClassIcon:UpdateAura(unit)
 
 	for _, auraType in pairs({'HELPFUL', 'HARMFUL'}) do
 		for i = 1, 40 do
-			local name, icon, _, _, duration, expires, _, _, _, spellid = UnitAura(unit, i, auraType)
+			local auraData = UnitAura(unit, i, auraType)
 
-			if not name then
+			if not auraData then
 				break
 			end
+
 			local auraList = Gladius.dbi.profile.classIconAuras
-			local priority = auraList[spellid].priority
-			local enabled = Gladius.dbi.profile.classIconAuras[spellid].enabled
+			local priority = auraList[auraData.spellId] and auraList[auraData.spellId].priority
+			local enabled = Gladius.dbi.profile.classIconAuras[auraData.spellId] and Gladius.dbi.profile.classIconAuras[auraData.spellId].enabled
+			local deleted = Gladius.dbi.profile.classIconAuras[auraData.spellId] and Gladius.dbi.profile.classIconAuras[auraData.spellId].deleted
 
 			if priority and (not aura or aura.priority < priority)  then
 				aura = {
-					name = name,
-					icon = icon,
-					duration = duration,
-					expires = expires,
-					spellid = spellid,
+					name = auraData.name,
+					icon = auraData.icon,
+					duration = auraData.duration,
+					expires = auraData.expirationTime,
+					spellid = auraData.spellId,
 					priority = priority,
-					enabled = enabled
+					enabled = enabled,
+					deleted = deleted,
 				}
 			end
 		end
 	end
 
-	if aura and aura.enabled and (not unitFrame.aura or (unitFrame.aura.id ~= aura or unitFrame.aura.expires ~= aura.expires)) then
+	if aura and aura.enabled and not aura.deleted and (not unitFrame.aura or (unitFrame.aura.id ~= aura or unitFrame.aura.expires ~= aura.expires)) then
 		self:ShowAura(unit, aura)
 	elseif not aura then
 		self.frame[unit].aura = nil
 		self:SetClassIcon(unit)
 	end
 end
+
 
 function ClassIcon:ShowAura(unit, aura)
 	local unitFrame = self.frame[unit]
@@ -284,6 +287,7 @@ function ClassIcon:ShowAura(unit, aura)
 
 	Gladius:Call(Gladius.modules.Timer, "SetTimer", unitFrame, aura.duration, start)
 end
+
 
 function ClassIcon:SetClassIcon(unit)
 	if not self.frame[unit] then
@@ -333,6 +337,7 @@ function ClassIcon:SetClassIcon(unit)
 	end
 end
 
+
 function ClassIcon:CreateFrame(unit)
 	local button = Gladius.buttons[unit]
 	if not button then
@@ -352,6 +357,7 @@ function ClassIcon:CreateFrame(unit)
 	secure:RegisterForClicks("AnyUp")
 	self.frame[unit].secure = secure
 end
+
 
 function ClassIcon:Update(unit)
 	-- TODO: check why we need this >_<
@@ -449,6 +455,7 @@ function ClassIcon:Update(unit)
 	self.frame[unit] = unitFrame
 end
 
+
 function ClassIcon:Show(unit)
 	local testing = Gladius.test
 	-- show frame
@@ -456,6 +463,7 @@ function ClassIcon:Show(unit)
 	-- set class icon
 	self:UpdateAura(unit)
 end
+
 
 function ClassIcon:Reset(unit)
 	-- reset frame
@@ -468,6 +476,7 @@ function ClassIcon:Reset(unit)
 	-- hide
 	self.frame[unit]:SetAlpha(0)
 end
+
 
 function ClassIcon:ResetModule()
 	Gladius.dbi.profile.classIconAuras = {}
@@ -918,18 +927,18 @@ function ClassIcon:GetOptions()
 								local spellData = Gladius.dbi.profile.classIconAuras[self.newAuraID]
 								local id = self.newAuraID
 								local classes = {}
-								
+
 								for classID = 1, GetNumClasses() do
 									local classInfo = GetClassInfo(classID)
 									if classInfo then
 										classes[classInfo.classFile] = classInfo.className
 									end
 								end
-								
+
 								if id and GetSpellInfo(id) then
 									local spellName = GetSpellInfo(id).name
 									local icon = GetSpellInfo(id).iconID
-									
+
 									if spellData then
 										local classIcon = "|A:classicon-" .. string.lower(spellData.class) .. ":20:20|a "
 										local _, _, _, argbHex = GetClassColor(spellData.class)
