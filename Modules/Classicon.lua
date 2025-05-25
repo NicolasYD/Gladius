@@ -130,6 +130,43 @@ function GetSortedClassIDs()
 end
 local sortedClasses = GetSortedClassIDs()
 local selectedSortedClass = 0
+
+
+local function BuildOptions(self)
+	if not Gladius.options.args[self.name].args.auraList.args["GENERAL"] then
+		Gladius.options.args[self.name].args.auraList.args["GENERAL"] = self:SetupClass(nil, "General", 0)
+	end
+
+	for spellID, spellData in pairs(Gladius.dbi.profile.classIconAuras) do
+		if not spellData.deleted then
+			local spellInfo = GetSpellInfo(spellID)
+			local tooltip = ""
+			local tooltipInfo = GetSpellByID(spellID, false, true, false, nil, true)
+
+			if tooltipInfo and tooltipInfo.lines then
+				for _, line in ipairs(tooltipInfo.lines) do
+					tooltip = (line.leftText or "")
+				end
+			end
+
+			for classID = 1, GetNumClasses() do
+				local classInfo = GetClassInfo(classID)
+				if classInfo then
+					if not Gladius.options.args[self.name].args.auraList.args[classInfo.classFile] and classInfo.classFile and classInfo.className then
+						Gladius.options.args[self.name].args.auraList.args[classInfo.classFile] = self:SetupClass(classInfo.classFile, classInfo.className)
+					end
+
+					if not Gladius.options.args[self.name].args.auraList.args[classInfo.classFile].args.spells.args[tostring(spellID)] and classInfo.classFile == spellData.class and spellData.priority then
+						Gladius.options.args[self.name].args.auraList.args[classInfo.classFile].args.spells.args[tostring(spellID)] = self:SetupAura(spellID, spellData.priority, spellInfo.name, spellInfo.iconID, tooltip)
+					end
+				end
+			end
+			if not Gladius.options.args[self.name].args.auraList.args["GENERAL"].args.spells.args[tostring(spellID)] and not spellData.class and spellData.priority then
+				Gladius.options.args[self.name].args.auraList.args["GENERAL"].args.spells.args[tostring(spellID)] = self:SetupAura(spellID, spellData.priority, spellInfo.name, spellInfo.iconID, tooltip)
+			end
+		end
+	end
+end
 -- @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
 
@@ -995,13 +1032,27 @@ function ClassIcon:SetupAura(spellID, priority, name, iconID, tooltip)
 			},
 			delete = {
 				type = "execute",
-				name = "Delete",
-				func = function (info)
-					local spell = tonumber(info[#info - 1])
-					local class = info[#info - 3]
-					Gladius.dbi.profile.classIconAuras[spell].deleted = true
-					Gladius.options.args[self.name].args.auraList.args["GENERAL"].args.spells.args[spell] = nil
-				end
+				name = L["Delete"],
+				func = function(info)
+					local defaults = spellTable
+					local spell = tonumber(info[#(info) - 1])
+					if spell and defaults[spell] then
+						Gladius.db.classIconAuras[spell] = nil
+					elseif spell then
+						Gladius.db.classIconAuras[spell] = nil
+					end
+
+					local newAura = Gladius.options.args[self.name].args.auraList.args.newAura
+					Gladius.options.args[self.name].args.auraList.args = {
+						newAura = newAura,
+					}
+
+					BuildOptions(self)
+				end,
+				disabled = function()
+					return not Gladius.dbi.profile.modules[self.name] or not Gladius.db.classIconImportantAuras
+				end,
+				order = 3,
 			},
 		},
 	}
