@@ -908,9 +908,44 @@ function ClassIcon:GetOptions()
 								self.newAuraID = nil
 							end,
 							disabled = function()
-								return not Gladius.dbi.profile.modules[self.name] or not Gladius.db.classIconImportantAuras or not self.newAuraID or not GetSpellInfo(self.newAuraID)
+								return not Gladius.dbi.profile.modules[self.name] or not Gladius.db.classIconImportantAuras or not self.newAuraID or not GetSpellInfo(self.newAuraID) or Gladius.dbi.profile.classIconAuras[self.newAuraID]
 							end,
 							order = 4,
+						},
+						newAuraPreview = {
+							type = "description",
+							name = function()
+								local spellData = Gladius.dbi.profile.classIconAuras[self.newAuraID]
+								local id = self.newAuraID
+								local classes = {}
+								
+								for classID = 1, GetNumClasses() do
+									local classInfo = GetClassInfo(classID)
+									if classInfo then
+										classes[classInfo.classFile] = classInfo.className
+									end
+								end
+								
+								if id and GetSpellInfo(id) then
+									local spellName = GetSpellInfo(id).name
+									local icon = GetSpellInfo(id).iconID
+									
+									if spellData then
+										local classIcon = "|A:classicon-" .. string.lower(spellData.class) .. ":20:20|a "
+										local _, _, _, argbHex = GetClassColor(spellData.class)
+										return "|T" .. icon .. ":16:16|t " .. spellName .. "\n" .. "|cffff0000Error:|r " .. "This Spell is already being tracked for " .. classIcon .. " |c" .. argbHex .. (classes[spellData.class] or "General") .. "|r"
+									end
+
+									return "|T" .. icon .. ":16:16|t " .. spellName .. " (" .. id .. ")"
+								else
+									return "Invalid spell ID entered."
+								end
+							end,
+							order = 5,
+							fontSize = "medium",
+							hidden = function()
+								return not self.newAuraID
+							end,
 						},
 					},
 				}
@@ -926,6 +961,7 @@ end
 
 function ClassIcon:SetupClass(classFile, className, order)
 	local icon
+	local _, _, _, argbHex = GetClassColor(classFile)
 	if classFile then
 		icon = "|A:classicon-" .. string.lower(classFile) .. ":20:20|a "
 	else
@@ -933,7 +969,7 @@ function ClassIcon:SetupClass(classFile, className, order)
 	end
 	return {
 		type = "group",
-		name = icon .. className,
+		name = icon .. "|c" .. argbHex .. className .. "|r",
 		order = order,
 		args = {
 			spells = {
