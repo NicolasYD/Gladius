@@ -226,7 +226,7 @@ end
 
 
 function Defensives:SortIcons(unit, class)
-	if Gladius.testing then
+	if Gladius.test then
 		class = Gladius.testing[unit].unitClass
 	end
 
@@ -240,6 +240,7 @@ function Defensives:SortIcons(unit, class)
         if frame.active then
             table.insert(activeIcons, {
                 spellID = spellID,
+				class = class,
                 frame = frame,
                 priority = Gladius.dbi.profile.defensives[class][spellID] and Gladius.dbi.profile.defensives[class][spellID].priority
 				or Gladius.dbi.profile.defensives["general"][spellID] and Gladius.dbi.profile.defensives["general"][spellID].priority
