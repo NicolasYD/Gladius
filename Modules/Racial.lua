@@ -353,6 +353,8 @@ function Racial:Show(unit)
 		RacialIcon = GetSpellTexture(237274)
 	end
 	if testing then
+		local unitRace = string.upper(Gladius.testing[unit].unitRace)
+		local RacialIcon = C_Spell.GetSpellTexture(unitRaceCDs[unitRace].spellID)
 		if (not self.frame[unit].race) then
 			self.frame[unit].texture:SetTexture(RacialIcon)
 		end
