@@ -35,8 +35,8 @@ end
 
 
 local CDList = LibStub("CDList-1.0")
+local spellTable = CDList:GetPrioritySpells()
 local originalSpellTable = deepcopy(CDList.spellList)
-local spellTable = CDList.spellList
 
 -- Global Functions
 local _G = _G
