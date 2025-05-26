@@ -59,7 +59,7 @@ local Defensives = Gladius:NewModule("Defensives", false, true, {
 	DefensivesAnchor = "TOPLEFT",
 	DefensivesRelativePoint = "BOTTOMLEFT",
 	DefensivesAdjustSize = false,
-	DefensivesMargin = 5,
+	DefensivesMargin = 0,
 	DefensivesSize = 40,
 	DefensivesOffsetX = 0,
 	DefensivesOffsetY = 0,
@@ -308,12 +308,14 @@ function Defensives:SortIcons(unit, classFile)
     -- Collect active icons
     local activeIcons = {}
     for spellID, frame in pairs(self.frame[unit].tracker) do
+		local config = Gladius.dbi.profile.defensives[spellID]
+		local priority = config and config.priority ~= nil and config.priority or defensivesList[spellID] and defensivesList[spellID].priority
         if frame.active then
             table.insert(activeIcons, {
                 spellID = spellID,
 				classFile = classFile,
                 frame = frame,
-                priority = defensivesList[spellID] and defensivesList[spellID].priority
+                priority = priority
             })
         end
     end
@@ -475,7 +477,7 @@ end
 
 
 function Defensives:Test(unit)
-    local testSpellDelay = 15
+    local testSpellDelay = 10
     local classFile = Gladius.testing[unit] and Gladius.testing[unit].unitClass
 
     -- Get a list of all spellIDs in the table
@@ -494,6 +496,12 @@ function Defensives:Test(unit)
 
         local randomIndex = math.random(1, #defensives)
         local randomSpellID = defensives[randomIndex]
+
+		for spellID, _ in pairs(self.frame[unit].tracker) do
+			if randomSpellID == spellID and self.frame[unit].tracker[randomSpellID].active then
+				randomSpellID = nil
+			end
+		end
 
         if randomSpellID then
             self:DefensiveUsed(unit, randomSpellID)
@@ -553,7 +561,7 @@ function Defensives:GetOptions()
 							width = "full",
 							order = 7,
 						},
-						DefensivesCooldown = {
+--[[ 						DefensivesCooldown = {
 							type = "toggle",
 							name = L["Defensives Cooldown Spiral"],
 							desc = L["Display the cooldown spiral for important auras"],
@@ -622,7 +630,7 @@ function Defensives:GetOptions()
 								return not Gladius.db.advancedOptions
 							end,
 							order = 33,
-						},
+						}, ]]
 						DefensivesFrameLevel = {
 							type = "range",
 							name = L["Defensives Frame Level"],
@@ -789,28 +797,28 @@ function Defensives:GetOptions()
 
 		auraList = {
 			type = "group",
-			name = L["Auras"],
+			name = L["Defensives"],
 			childGroups = "tree",
 			order = 3,
 			args = {
 				newAura = {
 					type = "group",
-					name = L["New Aura"],
-					desc = L["New Aura"],
+					name = L["Custom Spell"],
 					inline = true,
 					order = 1,
 					args = {
 						class = {
 							type = "select",
 							name = "Class",
-							desc = "Choose the class to which you want to add the custom aura",
+							desc = "Choose the class of the tracked spell",
 							values = (function ()
 								local dropdown = {}
 								for index, classData in pairs(sortedClasses) do
+									local _, _, _, argbHex = GetClassColor(classData.classFile)
 									if index == 0 then
 										dropdown[index] = "|TInterface\\Icons\\INV_Misc_QuestionMark:20:20|t " .. classData.className
 									else
-										dropdown[index] = "|A:classicon-" .. string.lower(classData.classFile) .. ":20:20|a " .. classData.className
+										dropdown[index] = "|A:classicon-" .. string.lower(classData.classFile) .. ":20:20|a " .. " |c" .. argbHex .. classData.className .. "|r"
 									end
 								end
 
@@ -832,7 +840,7 @@ function Defensives:GetOptions()
 						spell = {
 							type = "input",
 							name = L["Spell ID"],
-							desc = L["Spell ID of the aura"],
+							desc = L["Spell ID of the spell that you want to track"],
 							get = function()
 								if self.newAuraID then
 									return tostring(self.newAuraID)
@@ -846,7 +854,7 @@ function Defensives:GetOptions()
 						priority = {
 							type = "range",
 							name = L["Priority"],
-							desc = L["Select what priority the aura should have - higher equals more priority"],
+							desc = L["Select what priority the tracked spell should have - higher equals more priority"],
 							get = function()
 								return self.newAuraPriority or 0
 							end,
@@ -860,7 +868,7 @@ function Defensives:GetOptions()
 						},
 						add = {
 							type = "execute",
-							name = L["Add new Aura"],
+							name = L["Add Spell"],
 							func = function(info)
 								if not self.newAuraID then
 									return
@@ -977,7 +985,7 @@ function Defensives:SetupAura(spellID, priority, name, iconID, tooltip)
 			priority = {
 				type = "range",
 				name = L["Priority"],
-				desc = L["Select what priority the aura should have - higher equals more priority"],
+				desc = L["Select what priority the tracked spell should have - higher equals more priority"],
 				get = function ()
 					if Gladius.dbi.profile.defensives[spellID] then
 						return Gladius.dbi.profile.defensives[spellID].priority
@@ -993,7 +1001,7 @@ function Defensives:SetupAura(spellID, priority, name, iconID, tooltip)
 			},
 			delete = {
 				type = "execute",
-				name = L["Delete"],
+				name = L["Delete Spell"],
 				func = function(info)
 					local spell = tonumber(info[#(info) - 1])
 					if spell then
