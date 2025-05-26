@@ -497,6 +497,13 @@ function ClassIcon:ResetModule()
 			Gladius.options.args[self.name].args.auraList.args["GENERAL"].args.spells.args[tostring(spellID)] = self:SetupAura(spellID, spellData.priority, spellInfo.name, spellInfo.iconID)
 		end
 	end
+
+	local newAura = Gladius.options.args[self.name].args.auraList.args.newAura
+		Gladius.options.args[self.name].args.auraList.args = {
+			newAura = newAura,
+		}
+
+	self:BuildOptions(Gladius.options.args[self.name].args)
 end
 
 
@@ -939,7 +946,7 @@ function ClassIcon:GetOptions()
 									local spellName = GetSpellInfo(id).name
 									local icon = GetSpellInfo(id).iconID
 
-									if spellData then
+									if spellData and spellData.class then
 										local classIcon = "|A:classicon-" .. string.lower(spellData.class) .. ":20:20|a "
 										local _, _, _, argbHex = GetClassColor(spellData.class)
 										return "|T" .. icon .. ":16:16|t " .. spellName .. "\n" .. "|cffff0000Error:|r " .. "This Spell is already being tracked for " .. classIcon .. " |c" .. argbHex .. (classes[spellData.class] or "General") .. "|r"
@@ -1041,6 +1048,7 @@ function ClassIcon:SetupAura(spellID, priority, name, iconID, tooltip)
 					local spell = tonumber(info[#(info) - 1])
 					if spell then
 						Gladius.db.classIconAuras[spell] = nil
+						Gladius.db.classIconAuras[spell] = {deleted = true}
 					end
 
 					local newAura = Gladius.options.args[self.name].args.auraList.args.newAura
@@ -1049,6 +1057,12 @@ function ClassIcon:SetupAura(spellID, priority, name, iconID, tooltip)
 					}
 
 					self:BuildOptions(Gladius.options.args[self.name].args)
+
+					for unit, _ in pairs(self.frame) do
+						self:Reset(unit)
+					end
+
+					Gladius:UpdateFrame()
 				end,
 				disabled = function()
 					return not Gladius.dbi.profile.modules[self.name] or not Gladius.db.classIconImportantAuras
