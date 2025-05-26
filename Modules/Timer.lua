@@ -62,7 +62,7 @@ function Timer:SetFormattedNumber(frame, number)
 		local seconds = number - minutes * 60
 		frame:SetFont(LSM:Fetch(LSM.MediaType.FONT, Gladius.db.globalFont), Gladius.db.timerMinutesFontSize, "OUTLINE")
 		frame:SetTextColor(Gladius.db.timerMinutesFontColor.r, Gladius.db.timerMinutesFontColor.g, Gladius.db.timerMinutesFontColor.b, Gladius.db.timerMinutesFontColor.a)
-		frame:SetText(strformat("%sm %.0f", minutes, seconds))
+		frame:SetText(strformat("%s:%.0f", minutes, seconds))
 	else
 		if number > 5 then
 			frame:SetFont(LSM:Fetch(LSM.MediaType.FONT, Gladius.db.globalFont), Gladius.db.timerSecondsFontSize, "OUTLINE")
