@@ -41,34 +41,17 @@ local defensivesList = deepcopy(defaultValues)
 -- Localizing commonly used global functions
 local IsInInstance = IsInInstance
 local strfind = string.find
-local GetSpellTexture = C_Spell.GetSpellTexture
 local CreateFrame = CreateFrame
-local GetSpellInfo = C_Spell.GetSpellInfo
+local pairs = pairs
+local tostring = tostring
+local tonumber = tonumber
 local UnitClass = UnitClass
 local GetArenaOpponentSpec = GetArenaOpponentSpec
-
-
-local function SetDefaultClasses(dl)
-	local classes = {}
-	for classId = 1, GetNumClasses() do
-		local classInfo = C_CreatureInfo.GetClassInfo(classId)
-		local key = classInfo and classInfo.classFile
-		if key then
-			classes[key] = {}
-		end
-		classes["general"] = {}
-		for spellID, spellData in pairs(dl) do
-			if spellData.class == key and spellData.category == "defensive" then
-				classes[key][spellID] = spellData
-				classes[key][spellID].enabled = true
-			elseif spellData.class == nil and spellData.category == "defensive" then
-				classes["general"][spellID] = spellData
-				classes["general"][spellID].enabled = true
-			end
-		end
-	end
-	return classes
-end
+local GetNumClasses = GetNumClasses
+local GetSpellInfo = C_Spell.GetSpellInfo
+local GetSpellTexture = C_Spell.GetSpellTexture
+local GetClassInfo = C_CreatureInfo.GetClassInfo
+local GetSpellByID = C_TooltipInfo.GetSpellByID
 
 
 local Defensives = Gladius:NewModule("Defensives", false, true, {
@@ -88,8 +71,80 @@ local Defensives = Gladius:NewModule("Defensives", false, true, {
 	DefensivesFontSize = 10,
 	DefensivesFontColor = {r = 0, g = 1, b = 0, a = 1},
 	DefensivesDetached = false,
-	defensives = SetDefaultClasses(defensivesList),
+	defensives = defaultValues,
 })
+
+-- @@@@@@@@@@@@@@@@@@@@@@@@ Helper Functions @@@@@@@@@@@@@@@@@@@@@@@@@@
+function GetSortedClassIDs()
+
+	-- Create table of all classes in the game
+	local classes = {}
+	for classID = 1, GetNumClasses() do
+		local classInfo = GetClassInfo(classID)
+		if classInfo then
+			classes[classID] = classInfo
+		end
+	end
+
+	-- Create a table where index == classID
+	local sortedKeys = {}
+	for classID in pairs(classes) do
+		table.insert(sortedKeys, classID)
+	end
+
+	-- Sort table alphabetically by className
+	table.sort(sortedKeys, function(a, b)
+		return classes[a].className < classes[b].className
+	end)
+
+	local sortedClasses = {}
+	sortedClasses[0] = {className = "General", classFile = "GENERAL", classID = nil}
+
+	for index, classID in pairs(sortedKeys) do
+		sortedClasses[index] = classes[classID]
+	end
+
+
+	return sortedClasses
+end
+local sortedClasses = GetSortedClassIDs()
+local selectedSortedClass = 0
+
+
+function Defensives:BuildOptions(options)
+	if not options.auraList.args["GENERAL"] then
+		options.auraList.args["GENERAL"] = self:SetupClass(nil, "General", 0)
+	end
+
+	for classID = 1, GetNumClasses() do
+		local classInfo = GetClassInfo(classID)
+		if classInfo and not options.auraList.args[classInfo.classFile] then
+			options.auraList.args[classInfo.classFile] = self:SetupClass(classInfo.classFile, classInfo.className)
+		end
+	end
+
+	for spellID, spellData in pairs(Gladius.dbi.profile.defensives) do
+		if not spellData.deleted then
+			local spellInfo = GetSpellInfo(spellID)
+			local tooltip = ""
+			local tooltipInfo = GetSpellByID(spellID, false, true, false, nil, true)
+
+			if tooltipInfo and tooltipInfo.lines then
+				for _, line in ipairs(tooltipInfo.lines) do
+					tooltip = (line.leftText or "")
+				end
+			end
+
+			if not spellData.class and spellData.priority and not options.auraList.args["GENERAL"].args.spells.args[tostring(spellID)] then
+				options.auraList.args["GENERAL"].args.spells.args[tostring(spellID)] = self:SetupAura(spellID, spellData.priority, spellInfo.name, spellInfo.iconID, tooltip)
+
+			elseif spellData.class and spellData.priority and not options.auraList.args[spellData.class].args.spells.args[tostring(spellID)] then
+				options.auraList.args[spellData.class].args.spells.args[tostring(spellID)] = self:SetupAura(spellID, spellData.priority, spellInfo.name, spellInfo.iconID, tooltip)
+			end
+		end
+	end
+end
+-- @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
 
 function Defensives:OnEnable()
@@ -97,6 +152,13 @@ function Defensives:OnEnable()
 	LSM = Gladius.LSM
 	if not self.frame then
 		self.frame = { }
+	end
+
+	-- Activate auras in options by default
+	for spellID, _ in pairs(Gladius.dbi.profile.defensives) do
+		if Gladius.dbi.profile.defensives[spellID].enabled == nil then
+			Gladius.dbi.profile.defensives[spellID].enabled = true
+		end
 	end
 end
 
@@ -190,17 +252,16 @@ function Defensives:DefensiveUsed(unit, spell)
         specID = GetArenaOpponentSpec(number)
     end
 
-    local classDefensives = Gladius.dbi.profile.defensives[classFile]
-    local generalDefensives = Gladius.dbi.profile.defensives["general"]
-    local classSpell = classDefensives and classDefensives[spell]
-    local generalSpell = generalDefensives and generalDefensives[spell]
-
-    if not ((classSpell and classSpell.enabled) or (generalSpell and generalSpell.enabled)) then
+	if not Gladius.dbi.profile.defensives[spell]
+		or not Gladius.dbi.profile.defensives[spell].enabled
+		or Gladius.dbi.profile.defensives[spell].deleted then
         return
     end
 
     local unitFrame = self.frame[unit]
-    if not unitFrame then return end
+    if not unitFrame then
+		return
+	end
 
     local tracker = unitFrame.tracker[spell]
     if not tracker then
@@ -252,8 +313,7 @@ function Defensives:SortIcons(unit, classFile)
                 spellID = spellID,
 				classFile = classFile,
                 frame = frame,
-                priority = Gladius.dbi.profile.defensives[classFile][spellID] and Gladius.dbi.profile.defensives[classFile][spellID].priority
-				or Gladius.dbi.profile.defensives["general"][spellID] and Gladius.dbi.profile.defensives["general"][spellID].priority
+                priority = defensivesList[spellID] and defensivesList[spellID].priority
             })
         end
     end
@@ -386,9 +446,31 @@ function Defensives:ResetModule()
 		self:Reset(unit)
 	end
 
-	-- Reset saved profile data for defensive spell tracking
-	local dl = deepcopy(defaultValues)
-	Gladius.dbi.profile.defensives = SetDefaultClasses(dl)
+	Gladius.dbi.profile.defensives = {}
+	Gladius.dbi.profile.defensives = deepcopy(defensivesList)
+	Gladius.options.args[self.name].args.auraList.args["GENERAL"].args.spells.args = {}
+	for _, spellData in pairs(Gladius.dbi.profile.defensives) do
+		if spellData.class then
+			Gladius.options.args[self.name].args.auraList.args[spellData.class].args.spells.args = {}
+		end
+	end
+
+	for spellID, spellData in pairs(Gladius.dbi.profile.defensives) do
+		Gladius.dbi.profile.defensives[spellID].enabled = true
+		local spellInfo = GetSpellInfo(spellID)
+		if spellData.priority and spellData.class then
+			Gladius.options.args[self.name].args.auraList.args[spellData.class].args.spells.args[tostring(spellID)] = self:SetupAura(spellID, spellData.priority, spellInfo.name, spellInfo.iconID)
+		elseif spellData.priority then
+			Gladius.options.args[self.name].args.auraList.args["GENERAL"].args.spells.args[tostring(spellID)] = self:SetupAura(spellID, spellData.priority, spellInfo.name, spellInfo.iconID)
+		end
+	end
+
+	local newAura = Gladius.options.args[self.name].args.auraList.args.newAura
+		Gladius.options.args[self.name].args.auraList.args = {
+			newAura = newAura,
+		}
+
+	self:BuildOptions(Gladius.options.args[self.name].args)
 end
 
 
@@ -399,7 +481,7 @@ function Defensives:Test(unit)
     -- Get a list of all spellIDs in the table
     local defensives = {}
     for spellID, spellData in pairs(defaultValues) do
-		if (spellData.class == classFile or spellData.class == nil) and spellData.category == "defensive" then
+		if (spellData.class == classFile or spellData.class == nil) then
 			table.insert(defensives, spellID)
 		end
     end
@@ -705,213 +787,235 @@ function Defensives:GetOptions()
 			},
 		},
 
-		defensives = {
+		auraList = {
 			type = "group",
-			name = L["Defensives"],
-			order = 2,
+			name = L["Auras"],
 			childGroups = "tree",
-			args = (function ()
-				-- Prepare the classOptions table
-				local classOptions = {}
-
-				classOptions["GENERAL"] = {
+			order = 3,
+			args = {
+				newAura = {
 					type = "group",
-					name = "|TInterface\\Icons\\INV_Misc_QuestionMark:20:20|t General",
-					order = 0,
+					name = L["New Aura"],
+					desc = L["New Aura"],
+					inline = true,
+					order = 1,
 					args = {
-						headerBeginning = {
-							type = "header",
-							name = "General",
-							order = 1,
-						},
-						description = {
-							type = "description",
-							name = "Choose the spells that you want to be tracked by this module.",
-							order = 2,
-						},
-						headerEnd = {
-								type = "header",
-								name = "",
-								order = 3,
-						},
-						spells = {
-							type = "group",
-							name = "Tracked Defensives",
-							inline = true,
-							order = 4,
-							args = (function()
-								local spellArgs = {}
-								for spellID, spellData in pairs(defensivesList) do
-									if spellData.class == nil then
-										local spellInfo = GetSpellInfo(spellID)
-										local tooltip = ""
-										local tooltipInfo = C_TooltipInfo.GetSpellByID(spellID, false, true, false, nil, true)
-
-										if tooltipInfo and tooltipInfo.lines then
-											for _, line in ipairs(tooltipInfo.lines) do
-												tooltip = (line.leftText or "")
-											end
-										end
-
-										if spellInfo then
-											spellArgs["spellgroup_" .. spellID] = {
-												type = "group",
-												inline = true,
-												name = "",
-												order = - spellData.priority,
-												args = {
-													toggle = {
-														type = "toggle",
-														name = "|T" .. spellInfo.iconID .. ":20:20:0:0:64:64:5:59:5:59|t " .. spellInfo.name,
-														order = 1,
-														desc = tooltip,
-														get = function()
-															return Gladius.dbi.profile.defensives["general"][spellID].enabled
-														end,
-														set = function(_, value)
-															Gladius.dbi.profile.defensives["general"][spellID].enabled = value
-															for unit, _ in pairs(self.frame) do
-																self:Reset(unit)
-															end
-															Gladius:UpdateFrame()
-														end,
-													},
-													slider = {
-														type = "range",
-														name = "Priority",
-														order = 2,
-														desc = "Adjust the priority of this spell.\nHigher priority icons show more left on the tracking frame.",
-														min = 0,
-														max = 20,
-														step = 1,
-														get = function()
-															return Gladius.dbi.profile.defensives["general"][spellID].priority
-														end,
-														set = function(_, value)
-															Gladius.dbi.profile.defensives["general"][spellID].priority = value
-														end,
-													},
-												}
-											}
-										end
+						class = {
+							type = "select",
+							name = "Class",
+							desc = "Choose the class to which you want to add the custom aura",
+							values = (function ()
+								local dropdown = {}
+								for index, classData in pairs(sortedClasses) do
+									if index == 0 then
+										dropdown[index] = "|TInterface\\Icons\\INV_Misc_QuestionMark:20:20|t " .. classData.className
+									else
+										dropdown[index] = "|A:classicon-" .. string.lower(classData.classFile) .. ":20:20|a " .. classData.className
 									end
 								end
-								return spellArgs
-							end)()
-						}
+
+								return dropdown
+							end)(),
+							get = function(info)
+								for index, classData in pairs(sortedClasses) do
+									if index == selectedSortedClass then
+										self.newClassFile = classData.classFile
+									end
+								end
+								return selectedSortedClass
+							end,
+							set = function (_, value)
+								selectedSortedClass = value
+							end,
+							order = 1,
+						},
+						spell = {
+							type = "input",
+							name = L["Spell ID"],
+							desc = L["Spell ID of the aura"],
+							get = function()
+								if self.newAuraID then
+									return tostring(self.newAuraID)
+								end
+							end,
+							set = function(info, value)
+								self.newAuraID = tonumber(value)
+							end,
+							order = 2,
+						},
+						priority = {
+							type = "range",
+							name = L["Priority"],
+							desc = L["Select what priority the aura should have - higher equals more priority"],
+							get = function()
+								return self.newAuraPriority or 0
+							end,
+							set = function(info, value)
+								self.newAuraPriority = value
+							end,
+							min = 0,
+							max = 20,
+							step = 1,
+							order = 3,
+						},
+						add = {
+							type = "execute",
+							name = L["Add new Aura"],
+							func = function(info)
+								if not self.newAuraID then
+									return
+								end
+
+								if not self.newAuraPriority then
+									self.newAuraPriority = 0
+								end
+
+								local spellInfo = GetSpellInfo(self.newAuraID)
+								Gladius.options.args[self.name].args.auraList.args[self.newClassFile].args.spells.args[self.newAuraID] = self:SetupAura(self.newAuraID, self.newAuraPriority, spellInfo.name, spellInfo.iconID)
+								if self.newClassFile == "GENERAL" then
+									Gladius.dbi.profile.defensives[tonumber(self.newAuraID)] = {priority = self.newAuraPriority, name = spellInfo.name, iconID = spellInfo.iconID, enabled = true, deleted = false}
+								else
+									Gladius.dbi.profile.defensives[tonumber(self.newAuraID)] = {priority = self.newAuraPriority, class = self.newClassFile, name = spellInfo.name, iconID = spellInfo.iconID, enabled = true, deleted = false}
+								end
+								self.newAuraID = nil
+							end,
+							order = 4,
+						},
+						newAuraPreview = {
+							type = "description",
+							name = function()
+								local spellData = Gladius.dbi.profile.defensives[self.newAuraID]
+								local id = self.newAuraID
+								local classes = {}
+
+								for classID = 1, GetNumClasses() do
+									local classInfo = GetClassInfo(classID)
+									if classInfo then
+										classes[classInfo.classFile] = classInfo.className
+									end
+								end
+
+								if id and GetSpellInfo(id) then
+									local spellName = GetSpellInfo(id).name
+									local icon = GetSpellInfo(id).iconID
+
+									if spellData and spellData.class then
+										local classIcon = "|A:classicon-" .. string.lower(spellData.class) .. ":20:20|a "
+										local _, _, _, argbHex = GetClassColor(spellData.class)
+										return "|T" .. icon .. ":16:16|t " .. spellName .. "\n" .. "|cffff0000Error:|r " .. "This Spell is already being tracked for " .. classIcon .. " |c" .. argbHex .. (classes[spellData.class] or "General") .. "|r"
+									end
+
+									return "|T" .. icon .. ":16:16|t " .. spellName .. " (" .. id .. ")"
+								else
+									return "Invalid spell ID entered."
+								end
+							end,
+							order = 5,
+							fontSize = "medium",
+							hidden = function()
+								return not self.newAuraID
+							end,
+						},
 					},
 				}
+			},
+		},
+	}
 
-				-- Prepare the classes table
-				local classes = {}
+	self:BuildOptions(options)
 
-				-- Populate list with all classes currently in the game
-				for classId = 1, GetNumClasses() do
-					local classInfo = C_CreatureInfo.GetClassInfo(classId)
-					table.insert(classes, classInfo)
-				end
+	return options
+end
 
-				-- Sort classes alphabetically by className
-				table.sort(classes, function(a, b)
-					return a.className < b.className
-				end)
 
-				-- Loop through the sorted classes
-				for _, classInfo in ipairs(classes) do
-					local key = classInfo.classFile  -- use classFile as the key
-					local className = classInfo.className
-					local iconMarkup = "|A:classicon-" .. string.lower(key) .. ":20:20|a "
-
-					classOptions[key] = {
-						type = "group",
-						name = iconMarkup .. className, -- icon + name
-						args = {
-							headerBeginning = {
-								type = "header",
-								name = classInfo.className,
-								order = 1,
-							},
-							description = {
-								type = "description",
-								name = "Choose the spells that you want to be tracked by this module.",
-								order = 2,
-							},
-							headerEnd = {
-								type = "header",
-								name = "",
-								order = 3,
-							},
-							spells = {
-								type = "group",
-								name = "Tracked Defensives",
-								inline = true,
-								order = 4,
-								args = (function()
-									local spellArgs = {}
-									for spellID, spellData in pairs(defensivesList) do
-										if spellData.class == key then
-											local spellInfo = GetSpellInfo(spellID)
-											local tooltip = ""
-											local tooltipInfo = C_TooltipInfo.GetSpellByID(spellID)
-
-											if tooltipInfo and tooltipInfo.lines then
-												for _, line in ipairs(tooltipInfo.lines) do
-													tooltip = (line.leftText or "")
-												end
-											end
-
-											if spellInfo then
-												spellArgs["spellgroup_" .. spellID] = {
-													type = "group",
-													inline = true,
-													name = "",
-													order = - spellData.priority,
-													args = {
-														toggle = {
-															type = "toggle",
-															name = "|T" .. spellInfo.iconID .. ":20:20:0:0:64:64:5:59:5:59|t " .. spellInfo.name,
-															order = 1,
-															desc = tooltip,
-															get = function()
-																return Gladius.dbi.profile.defensives[key][spellID].enabled
-															end,
-															set = function(_, value)
-																Gladius.dbi.profile.defensives[key][spellID].enabled = value
-																for unit, _ in pairs(self.frame) do
-																	self:Reset(unit)
-																end
-																Gladius:UpdateFrame()
-															end,
-														},
-														slider = {
-															type = "range",
-															name = "Priority",
-															order = 2,
-															desc = "Adjust the priority of this spell.\nHigher priority icons show more left on the tracking frame.",
-															min = 0,
-															max = 20,
-															step = 1,
-															get = function()
-																return Gladius.dbi.profile.defensives[key][spellID].priority
-															end,
-															set = function(_, value)
-																Gladius.dbi.profile.defensives[key][spellID].priority = value
-															end,
-														},
-													}
-												}
-											end
-										end
-									end
-									return spellArgs
-								end)()
-							},
-						},
-					}
-				end
-				return classOptions
-			end)()
+function Defensives:SetupClass(classFile, className, order)
+	local icon
+	local _, _, _, argbHex = GetClassColor(classFile)
+	if classFile then
+		icon = "|A:classicon-" .. string.lower(classFile) .. ":20:20|a "
+	else
+		icon = "|TInterface\\Icons\\INV_Misc_QuestionMark:20:20|t "
+	end
+	return {
+		type = "group",
+		name = icon .. "|c" .. argbHex .. className .. "|r",
+		order = order,
+		args = {
+			spells = {
+				type = "group",
+				name = "Tracked Spells",
+				inline = true,
+				order = 1,
+				args = {
+				}
+			},
 		}
 	}
-	return options
+end
+
+
+function Defensives:SetupAura(spellID, priority, name, iconID, tooltip)
+	return {
+		type = "group",
+		name = "",
+		order = - priority - 1,
+		args = {
+			spell = {
+				type = "toggle",
+				name = "|T" .. iconID .. ":20:20:0:0:64:64:5:59:5:59|t " .. name,
+				order = 1,
+				desc = tooltip,
+				get = function ()
+					if Gladius.dbi.profile.defensives[spellID] then
+						return Gladius.dbi.profile.defensives[spellID].enabled
+					end
+				end,
+				set = function (_, value)
+					Gladius.dbi.profile.defensives[spellID].enabled = value
+				end,
+			},
+			priority = {
+				type = "range",
+				name = L["Priority"],
+				desc = L["Select what priority the aura should have - higher equals more priority"],
+				get = function ()
+					if Gladius.dbi.profile.defensives[spellID] then
+						return Gladius.dbi.profile.defensives[spellID].priority
+					end
+				end,
+				set = function (_, value)
+					Gladius.dbi.profile.defensives[spellID].priority = value
+				end,
+				min = 0,
+				max = 20,
+				step = 1,
+				order = 2,
+			},
+			delete = {
+				type = "execute",
+				name = L["Delete"],
+				func = function(info)
+					local spell = tonumber(info[#(info) - 1])
+					if spell then
+						Gladius.db.defensives[spell] = nil
+						Gladius.db.defensives[spell] = {deleted = true}
+					end
+
+					local newAura = Gladius.options.args[self.name].args.auraList.args.newAura
+					Gladius.options.args[self.name].args.auraList.args = {
+						newAura = newAura,
+					}
+
+					self:BuildOptions(Gladius.options.args[self.name].args)
+
+					for unit, _ in pairs(self.frame) do
+						self:Reset(unit)
+					end
+
+					Gladius:UpdateFrame()
+				end,
+				order = 3,
+			},
+		},
+	}
 end
