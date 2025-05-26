@@ -845,10 +845,11 @@ function ClassIcon:GetOptions()
 							values = (function ()
 								local dropdown = {}
 								for index, classData in pairs(sortedClasses) do
+									local _, _, _, argbHex = GetClassColor(classData.classFile)
 									if index == 0 then
 										dropdown[index] = "|TInterface\\Icons\\INV_Misc_QuestionMark:20:20|t " .. classData.className
 									else
-										dropdown[index] = "|A:classicon-" .. string.lower(classData.classFile) .. ":20:20|a " .. classData.className
+										dropdown[index] = "|A:classicon-" .. string.lower(classData.classFile) .. ":20:20|a " .. " |c" .. argbHex .. classData.className .. "|r"
 									end
 								end
 
