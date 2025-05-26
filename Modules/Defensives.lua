@@ -35,7 +35,6 @@ end
 
 
 local CDList = LibStub("CDList-1.0")
-local spellList = CDList.spellList
 local defaultValues = CDList:GetDefensives()
 local defensivesList = deepcopy(defaultValues)
 
@@ -46,14 +45,17 @@ local GetSpellTexture = C_Spell.GetSpellTexture
 local CreateFrame = CreateFrame
 local GetSpellInfo = C_Spell.GetSpellInfo
 local UnitClass = UnitClass
+local GetArenaOpponentSpec = GetArenaOpponentSpec
 
 
 local function SetDefaultClasses(dl)
 	local classes = {}
 	for classId = 1, GetNumClasses() do
 		local classInfo = C_CreatureInfo.GetClassInfo(classId)
-		local key = classInfo.classFile
-		classes[key] = {}
+		local key = classInfo and classInfo.classFile
+		if key then
+			classes[key] = {}
+		end
 		classes["general"] = {}
 		for spellID, spellData in pairs(dl) do
 			if spellData.class == key and spellData.category == "defensive" then
@@ -88,17 +90,6 @@ local Defensives = Gladius:NewModule("Defensives", false, true, {
 	DefensivesDetached = false,
 	defensives = SetDefaultClasses(defensivesList),
 })
-
-
--- @@@@@@@@@@@@@@@@@@@@@@@@@@@ Helper Functions @@@@@@@@@@@@@@@@@@@@@@@@@@
-local function GetDefensiveSpellData(spell)
-    local spellData = spellList[spell]
-    if spellData and spellData.category == "defensive" then
-        return spellData
-    end
-    return nil
-end
--- @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
 
 function Defensives:OnEnable()
@@ -180,54 +171,73 @@ function Defensives:UpdateIcon(unit, spell)
 end
 
 
-function Defensives:DefensiveUsed(unit, spell, class) -- not complete yet
-	local _, instanceType = IsInInstance()
-	if not Gladius.test and (instanceType ~= "arena" or not unit:find("arena") or unit:find("pet")) then
-		return
-	end
-
-	if not self.frame[unit].tracker[spell] then
-		self.frame[unit].tracker[spell] = CreateFrame("CheckButton", "Gladius"..self.name.."FrameCat"..spell..unit, self.frame[unit], "ActionButtonTemplate")
-		self.frame[unit].tracker[spell].IconMask:Hide()
-		self:UpdateIcon(unit, spell)
-	end
-
-	if not class then
-		_, class, _ = UnitClass(unit)
-	end
-
-    local spellData = GetDefensiveSpellData(spell)
-
-    if spellData and ((Gladius.dbi.profile.defensives[class][spell] and Gladius.dbi.profile.defensives[class][spell].enabled)
-				   or (Gladius.dbi.profile.defensives["general"][spell] and Gladius.dbi.profile.defensives["general"][spell].enabled)) then
-        local icon = GetSpellTexture(spell)
-		local tracked = self.frame[unit].tracker[spell]
-		tracked.active = true
-		tracked.timeLeft = spellData.baseCooldown
-        tracked.texture:SetTexture(icon)
-		-- Gladius:Call(Gladius.modules.Timer, "RegisterTimer", self.frame[unit], Gladius.db.DefensivesCooldown, Gladius.db.DefensivesCooldown)
-		Gladius:Call(Gladius.modules.Timer, "SetTimer", tracked, spellData.baseCooldown)
-		tracked:SetScript("OnUpdate", function(f, elapsed)
-			f.timeLeft = f.timeLeft - elapsed
-			if f.timeLeft <= 0 then
-				f.active = false
-				Gladius:Call(Gladius.modules.Timer, "HideTimer", f)
-				-- tracked[unit]:Hide()
-				-- position icons
-				self:SortIcons(unit, class)
-				-- reset script
-				self.frame[unit]:SetScript("OnUpdate", nil)
-			end
-		end)
-		tracked:SetAlpha(1)
-		self:SortIcons(unit, class)
+function Defensives:DefensiveUsed(unit, spell)
+    local _, instanceType = IsInInstance()
+    if not Gladius.test and (instanceType ~= "arena" or not unit:find("arena") or unit:find("pet")) then
+        return
     end
+
+    local classFile, specID
+    if Gladius.test then
+        local testData = Gladius.testing[unit]
+        if not testData then return end
+        classFile = testData.unitClass
+        specID = testData.unitSpecId
+    else
+        local _, class = UnitClass(unit)
+        classFile = class
+        local number = unit:match("%d+")
+        specID = GetArenaOpponentSpec(number)
+    end
+
+    local classDefensives = Gladius.dbi.profile.defensives[classFile]
+    local generalDefensives = Gladius.dbi.profile.defensives["general"]
+    local classSpell = classDefensives and classDefensives[spell]
+    local generalSpell = generalDefensives and generalDefensives[spell]
+
+    if not ((classSpell and classSpell.enabled) or (generalSpell and generalSpell.enabled)) then
+        return
+    end
+
+    local unitFrame = self.frame[unit]
+    if not unitFrame then return end
+
+    local tracker = unitFrame.tracker[spell]
+    if not tracker then
+        tracker = CreateFrame("CheckButton", "Gladius"..self.name.."FrameCat"..spell..unit, unitFrame, "ActionButtonTemplate")
+        tracker.IconMask:Hide()
+        unitFrame.tracker[spell] = tracker
+        self:UpdateIcon(unit, spell)
+    end
+
+    local cooldown = CDList:GetCooldownNumber(spell, specID)
+    local icon = GetSpellTexture(spell)
+
+    tracker.active = true
+    tracker.timeLeft = cooldown
+    tracker.texture:SetTexture(icon)
+
+    Gladius:Call(Gladius.modules.Timer, "SetTimer", tracker, cooldown)
+
+    tracker:SetAlpha(1)
+    self:SortIcons(unit, classFile)
+
+    -- Only use OnUpdate for this tracker (not the whole frame)
+    tracker:SetScript("OnUpdate", function(f, elapsed)
+        f.timeLeft = f.timeLeft - elapsed
+        if f.timeLeft <= 0 then
+            f.active = false
+            Gladius:Call(Gladius.modules.Timer, "HideTimer", f)
+            f:SetScript("OnUpdate", nil)  -- Stop this tracker's update loop
+            self:SortIcons(unit, classFile)
+        end
+    end)
 end
 
 
-function Defensives:SortIcons(unit, class)
+function Defensives:SortIcons(unit, classFile)
 	if Gladius.test then
-		class = Gladius.testing[unit].unitClass
+		classFile = Gladius.testing[unit].unitClass
 	end
 
     local margin = Gladius.db.DefensivesMargin
@@ -240,9 +250,9 @@ function Defensives:SortIcons(unit, class)
         if frame.active then
             table.insert(activeIcons, {
                 spellID = spellID,
-				class = class,
+				classFile = classFile,
                 frame = frame,
-                priority = Gladius.dbi.profile.defensives[class][spellID] and Gladius.dbi.profile.defensives[class][spellID].priority
+                priority = Gladius.dbi.profile.defensives[classFile][spellID] and Gladius.dbi.profile.defensives[classFile][spellID].priority
 				or Gladius.dbi.profile.defensives["general"][spellID] and Gladius.dbi.profile.defensives["general"][spellID].priority
             })
         end
@@ -275,7 +285,8 @@ function Defensives:UNIT_SPELLCAST_SUCCEEDED(event, unit, _, spellID)
 	if not unit then
 		return
 	end
-	if spellList[spellID] and spellList[spellID].category == "defensive" and (unit == "arena1" or unit == "arena2" or unit == "arena3") then
+
+	if defaultValues[spellID] and (unit == "arena1" or unit == "arena2" or unit == "arena3") then
 		self:DefensiveUsed(unit, spellID)
 	end
 end
@@ -383,12 +394,12 @@ end
 
 function Defensives:Test(unit)
     local testSpellDelay = 15
-    local class = Gladius.testing[unit] and Gladius.testing[unit].unitClass
+    local classFile = Gladius.testing[unit] and Gladius.testing[unit].unitClass
 
     -- Get a list of all spellIDs in the table
     local defensives = {}
-    for spellID, spellData in pairs(spellList) do
-		if (spellData.class == class or spellData.class == nil) and spellData.category == "defensive" then
+    for spellID, spellData in pairs(defaultValues) do
+		if (spellData.class == classFile or spellData.class == nil) and spellData.category == "defensive" then
 			table.insert(defensives, spellID)
 		end
     end
@@ -403,7 +414,7 @@ function Defensives:Test(unit)
         local randomSpellID = defensives[randomIndex]
 
         if randomSpellID then
-            self:DefensiveUsed(unit, randomSpellID, class)
+            self:DefensiveUsed(unit, randomSpellID)
         end
 
         -- Schedule the next spell cast
