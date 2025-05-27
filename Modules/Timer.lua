@@ -140,26 +140,35 @@ function Timer:HideTimer(frame)
 	end
 end
 
+
 function Timer:RegisterTimer(frame, showSpiral, hideTimer)
 	if not self.frames then
 		return
 	end
+
 	local frameName = frame:GetName()
+	local cooldown = _G[frameName.."Cooldown"]
+
 	if not self.frames[frameName] then
 		self.frames[frameName] = CreateFrame("Frame", "Gladius"..self.name..frameName, frame)
 		self.frames[frameName].name = frameName
 		self.frames[frameName].text = self.frames[frameName]:CreateFontString("Gladius"..self.name..frameName.."Text", "OVERLAY")
 	end
+
 	self.frames[frameName].showSpiral = showSpiral or false
 	self.frames[frameName].hideTimer = hideTimer or false
-	if not Gladius.db.timerOmniCC and not hideTimer then
-		_G[frameName.."Cooldown"].noCooldownCount = true
-		self.frames[frameName].text:Show()
-	else
-		_G[frameName.."Cooldown"].noCooldownCount = false
-		self.frames[frameName].text:Hide()
-	end
 
+	 -- Hide Blizzard countdown numbers if Gladius.db.timerOmniCC is false or hideTimer is true
+    if cooldown and cooldown.SetHideCountdownNumbers then
+        cooldown:SetHideCountdownNumbers(not Gladius.db.timerOmniCC or hideTimer)
+    end
+
+	-- Show module countdown numbers if Gladius.db.timerOmniCC is false and hideTimer is false
+    if not Gladius.db.timerOmniCC and not hideTimer then
+        self.frames[frameName].text:Show()
+    else
+        self.frames[frameName].text:Hide()
+    end
 
 	-- update frame
 	self.frames[frameName]:SetAllPoints(frame)
@@ -172,6 +181,7 @@ function Timer:RegisterTimer(frame, showSpiral, hideTimer)
 	-- hide
 	self.frames[frameName].text:SetAlpha(0)
 end
+
 
 function Timer:GetOptions()
 	return {
