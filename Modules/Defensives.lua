@@ -490,7 +490,6 @@ function Defensives:Test(unit)
 
     local function triggerRandomSpell()
         if not Gladius.test then
-            print("Stopped testing for", unit)
             return
         end
 
