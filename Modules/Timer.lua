@@ -233,6 +233,9 @@ function Timer:GetOptions()
 							type = "toggle",
 							name = L["Timer Use Short Format"],
 							desc = L["The timer module will use the short Xm format for timeleft greater than 2 minutes."],
+							hidden = function ()
+								return Gladius.db.timerOmniCC
+							end,
 							disabled = function()
 								return not Gladius.dbi.profile.modules[self.name]
 							end,
@@ -255,6 +258,9 @@ function Timer:GetOptions()
 								return Gladius:SetColorOption(info, r, g, b, 1)
 							end,
 							hasAlpha = false,
+							hidden = function ()
+								return Gladius.db.timerOmniCC
+							end,
 							disabled = function()
 								return not Gladius.dbi.profile.modules[self.name]
 							end,
@@ -264,6 +270,9 @@ function Timer:GetOptions()
 							type = "range",
 							name = L["Timer Soon Size"],
 							desc = L["Text size of the timer when timeleft is less than 5 seconds."],
+							hidden = function ()
+								return Gladius.db.timerOmniCC
+							end,
 							disabled = function()
 								return not Gladius.dbi.profile.modules[self.name]
 							end,
@@ -289,6 +298,9 @@ function Timer:GetOptions()
 								return Gladius:SetColorOption(info, r, g, b, 1)
 							end,
 							hasAlpha = false,
+							hidden = function ()
+								return Gladius.db.timerOmniCC
+							end,
 							disabled = function()
 								return not Gladius.dbi.profile.modules[self.name]
 							end,
@@ -298,6 +310,9 @@ function Timer:GetOptions()
 							type = "range",
 							name = L["Timer Seconds Size"],
 							desc = L["Text size of the timer when timeleft is less than 60 seconds."],
+							hidden = function ()
+								return Gladius.db.timerOmniCC
+							end,
 							disabled = function()
 								return not Gladius.dbi.profile.modules[self.name]
 							end,
@@ -323,13 +338,21 @@ function Timer:GetOptions()
 								return Gladius:SetColorOption(info, r, g, b, 1)
 							end,
 							hasAlpha = false,
-							disabled = function() return not Gladius.dbi.profile.modules[self.name] end,
+							hidden = function ()
+								return Gladius.db.timerOmniCC
+							end,
+							disabled = function()
+								return not Gladius.dbi.profile.modules[self.name]
+							end,
 							order = 35,
 						},
 						timerMinutesFontSize = {
 							type = "range",
 							name = L["Timer Minutes Size"],
 							desc = L["Text size of the timer when timeleft is greater than 60 seconds but smaller than 2 minutes."],
+							hidden = function ()
+								return Gladius.db.timerOmniCC
+							end,
 							disabled = function()
 								return not Gladius.dbi.profile.modules[self.name]
 							end,
@@ -356,7 +379,7 @@ function Timer:GetOptions()
 							end,
 							hasAlpha = false,
 							hidden = function ()
-								return not Gladius.db.timerShort
+								return not Gladius.db.timerShort or Gladius.db.timerOmniCC
 							end,
 							disabled = function()
 								return not Gladius.dbi.profile.modules[self.name]
@@ -368,10 +391,10 @@ function Timer:GetOptions()
 							name = L["Timer Minutes > 2 Size"],
 							desc = L["Text size of the timer when timeleft is greater than 2 minutes."],
 							hidden = function ()
-								return not Gladius.db.timerShort
+								return not Gladius.db.timerShort or Gladius.db.timerOmniCC
 							end,
 							disabled = function()
-								return not Gladius.dbi.profile.modules[self.name] or not Gladius.db.timerShort
+								return not Gladius.dbi.profile.modules[self.name]
 							end,
 							min = 1,
 							max = 30,
