@@ -12,6 +12,7 @@ local ceil = math.ceil
 local pairs = pairs
 local strformat = string.format
 local type = type
+local tostring = tostring
 
 local CreateFrame = CreateFrame
 local GetTime = GetTime
@@ -26,10 +27,11 @@ local Timer = Gladius:NewModule("Timer", false, false, {
 	timerSecondsFontColor = {r = 1, g = 0.5, b = 0, a = 1},
 	timerMinutesFontSize = 16,
 	timerMinutesFontColor = {r = 1, g = 1, b = 0, a = 1},
-	timerCeilMinutesFontSize = 18,
-	timerCeilMinutesFontColor = {r = 0, g = 1, b = 0, a = 1},
+	timerShortFontSize = 18,
+	timerShortFontColor = {r = 0, g = 1, b = 0, a = 1},
 	timerOmniCC = false,
 	timerShort = true,
+	shortFormatThreshold = 2,
 })
 
 
@@ -68,10 +70,10 @@ end
 
 function Timer:SetFormattedNumber(frame, number)
 	local minutes = floor(number / 60)
-	if minutes >= 2 and Gladius.db.timerShort then
+	if minutes >= Gladius.db.shortFormatThreshold and Gladius.db.timerShort then
 		local ceilMinutes = ceil(number / 60)
-		frame:SetFont(LSM:Fetch(LSM.MediaType.FONT, Gladius.db.globalFont), Gladius.db.timerCeilMinutesFontSize, "OUTLINE")
-		frame:SetTextColor(Gladius.db.timerCeilMinutesFontColor.r, Gladius.db.timerCeilMinutesFontColor.g, Gladius.db.timerCeilMinutesFontColor.b, Gladius.db.timerCeilMinutesFontColor.a)
+		frame:SetFont(LSM:Fetch(LSM.MediaType.FONT, Gladius.db.globalFont), Gladius.db.timerShortFontSize, "OUTLINE")
+		frame:SetTextColor(Gladius.db.timerShortFontColor.r, Gladius.db.timerShortFontColor.g, Gladius.db.timerShortFontColor.b, Gladius.db.timerShortFontColor.a)
 		frame:SetText(string.format("%dm", ceilMinutes))
 	elseif minutes >= 1 then
 		local seconds = number - minutes * 60
@@ -175,9 +177,9 @@ function Timer:RegisterTimer(frame, showSpiral, hideTimer)
 	self.frames[frameName].showSpiral = showSpiral or false
 	self.frames[frameName].hideTimer = hideTimer or false
 
-	 -- Hide Blizzard countdown numbers if Gladius.db.timerOmniCC is false or hideTimer is true
+	 -- Hide Blizzard countdown numbers
     if cooldown and cooldown.SetHideCountdownNumbers then
-        cooldown:SetHideCountdownNumbers(not Gladius.db.timerOmniCC or hideTimer)
+        cooldown:SetHideCountdownNumbers(true)
     end
 
 	-- Show module countdown numbers if Gladius.db.timerOmniCC is false and hideTimer is false
@@ -217,7 +219,7 @@ function Timer:GetOptions()
 						timerOmniCC = {
 							type = "toggle",
 							name = L["Timer Use OmniCC"],
-							desc = L["The timer module will use OmniCC for text display"],
+							desc = L["The timer module will use OmniCC for text display."],
 							disabled = function()
 								return not Gladius.dbi.profile.modules[self.name]
 							end,
@@ -232,20 +234,35 @@ function Timer:GetOptions()
 						timerShort = {
 							type = "toggle",
 							name = L["Timer Use Short Format"],
-							desc = L["The timer module will use the short Xm format for timeleft greater than 2 minutes."],
-							hidden = function ()
-								return Gladius.db.timerOmniCC
-							end,
+							desc = L["The timer module will use the short 'Xm' format for text display if timeleft is greater than 'X' minutes."],
 							disabled = function()
-								return not Gladius.dbi.profile.modules[self.name]
+								return not Gladius.dbi.profile.modules[self.name] or Gladius.db.timerOmniCC
 							end,
 							order = 10,
+						},
+						shortFormatThreshold = {
+							type = "input",
+							name = L["Threshold In Minutes"],
+							desc = L["Set the short format threshold in 'X' minutes."],
+							get = function ()
+								return tostring(Gladius.db.shortFormatThreshold)
+							end,
+							set = function (_, value)
+								local number = tonumber(value)
+								if number then
+									Gladius.db.shortFormatThreshold = number
+								end
+							end,
+							disabled = function()
+								return not Gladius.dbi.profile.modules[self.name] or Gladius.db.timerOmniCC or not Gladius.db.timerShort
+							end,
+							order = 15,
 						},
 						sep2 = {
 							type = "description",
 							name = "",
 							width = "full",
-							order = 13,
+							order = 18,
 						},
 						timerSoonFontColor = {
 							type = "color",
@@ -258,34 +275,28 @@ function Timer:GetOptions()
 								return Gladius:SetColorOption(info, r, g, b, 1)
 							end,
 							hasAlpha = false,
-							hidden = function ()
-								return Gladius.db.timerOmniCC
-							end,
 							disabled = function()
-								return not Gladius.dbi.profile.modules[self.name]
+								return not Gladius.dbi.profile.modules[self.name] or Gladius.db.timerOmniCC
 							end,
-							order = 15,
+							order = 20,
 						},
 						timerSoonFontSize = {
 							type = "range",
 							name = L["Timer Soon Size"],
 							desc = L["Text size of the timer when timeleft is less than 5 seconds."],
-							hidden = function ()
-								return Gladius.db.timerOmniCC
-							end,
 							disabled = function()
-								return not Gladius.dbi.profile.modules[self.name]
+								return not Gladius.dbi.profile.modules[self.name] or Gladius.db.timerOmniCC
 							end,
 							min = 1,
 							max = 30,
 							step = 1,
-							order = 20,
+							order = 25,
 						},
 						sep3 = {
 							type = "description",
 							name = "",
 							width = "full",
-							order = 23,
+							order = 28,
 						},
 						timerSecondsFontColor = {
 							type = "color",
@@ -298,39 +309,33 @@ function Timer:GetOptions()
 								return Gladius:SetColorOption(info, r, g, b, 1)
 							end,
 							hasAlpha = false,
-							hidden = function ()
-								return Gladius.db.timerOmniCC
-							end,
 							disabled = function()
-								return not Gladius.dbi.profile.modules[self.name]
+								return not Gladius.dbi.profile.modules[self.name] or Gladius.db.timerOmniCC
 							end,
-							order = 25,
+							order = 30,
 						},
 						timerSecondsFontSize = {
 							type = "range",
 							name = L["Timer Seconds Size"],
 							desc = L["Text size of the timer when timeleft is less than 60 seconds."],
-							hidden = function ()
-								return Gladius.db.timerOmniCC
-							end,
 							disabled = function()
-								return not Gladius.dbi.profile.modules[self.name]
+								return not Gladius.dbi.profile.modules[self.name] or Gladius.db.timerOmniCC
 							end,
 							min = 1,
 							max = 30,
 							step = 1,
-							order = 30,
+							order = 35,
 						},
 						sep4 = {
 							type = "description",
 							name = "",
 							width = "full",
-							order = 33,
+							order = 38,
 						},
 						timerMinutesFontColor = {
 							type = "color",
 							name = L["Timer Minutes Color"],
-							desc = L["Color of the timer when timeleft is greater than 60 seconds but smaller than 2 minutes."],
+							desc = L["Color of the timer when timeleft is greater than 60 seconds."],
 							get = function(info)
 								return Gladius:GetColorOption(info)
 							end,
@@ -338,39 +343,33 @@ function Timer:GetOptions()
 								return Gladius:SetColorOption(info, r, g, b, 1)
 							end,
 							hasAlpha = false,
-							hidden = function ()
-								return Gladius.db.timerOmniCC
-							end,
 							disabled = function()
-								return not Gladius.dbi.profile.modules[self.name]
+								return not Gladius.dbi.profile.modules[self.name] or Gladius.db.timerOmniCC
 							end,
-							order = 35,
+							order = 40,
 						},
 						timerMinutesFontSize = {
 							type = "range",
 							name = L["Timer Minutes Size"],
-							desc = L["Text size of the timer when timeleft is greater than 60 seconds but smaller than 2 minutes."],
-							hidden = function ()
-								return Gladius.db.timerOmniCC
-							end,
+							desc = L["Text size of the timer when timeleft is greater than 60 seconds."],
 							disabled = function()
-								return not Gladius.dbi.profile.modules[self.name]
+								return not Gladius.dbi.profile.modules[self.name] or Gladius.db.timerOmniCC
 							end,
 							min = 1,
 							max = 30,
 							step = 1,
-							order = 40,
+							order = 45,
 						},
 							sep5 = {
 							type = "description",
 							name = "",
 							width = "full",
-							order = 43,
+							order = 48,
 						},
-						timerCeilMinutesFontColor = {
+						timerShortFontColor = {
 							type = "color",
-							name = L["Timer Minutes > 2 Color"],
-							desc = L["Color of the timer when timeleft is greater than 2 minutes."],
+							name = L["Timer Short Color"],
+							desc = L["Color of the timer when timeleft is greater than the short format threshold."],
 							get = function(info)
 								return Gladius:GetColorOption(info)
 							end,
@@ -379,27 +378,27 @@ function Timer:GetOptions()
 							end,
 							hasAlpha = false,
 							hidden = function ()
-								return not Gladius.db.timerShort or Gladius.db.timerOmniCC
+								return not Gladius.db.timerShort
 							end,
 							disabled = function()
-								return not Gladius.dbi.profile.modules[self.name]
+								return not Gladius.dbi.profile.modules[self.name] or Gladius.db.timerOmniCC
 							end,
-							order = 45,
+							order = 50,
 						},
-						timerCeilMinutesFontSize = {
+						timerShortFontSize = {
 							type = "range",
-							name = L["Timer Minutes > 2 Size"],
-							desc = L["Text size of the timer when timeleft is greater than 2 minutes."],
+							name = L["Timer Short Size"],
+							desc = L["Text size of the timer when timeleft is greater than the short format threshold."],
 							hidden = function ()
-								return not Gladius.db.timerShort or Gladius.db.timerOmniCC
+								return not Gladius.db.timerShort
 							end,
 							disabled = function()
-								return not Gladius.dbi.profile.modules[self.name]
+								return not Gladius.dbi.profile.modules[self.name] or Gladius.db.timerOmniCC
 							end,
 							min = 1,
 							max = 30,
 							step = 1,
-							order = 50,
+							order = 55,
 						},
 					},
 				},
