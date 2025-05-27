@@ -29,6 +29,7 @@ local Timer = Gladius:NewModule("Timer", false, false, {
 	timerCeilMinutesFontSize = 18,
 	timerCeilMinutesFontColor = {r = 0, g = 1, b = 0, a = 1},
 	timerOmniCC = false,
+	timerShort = true,
 })
 
 
@@ -67,7 +68,7 @@ end
 
 function Timer:SetFormattedNumber(frame, number)
 	local minutes = floor(number / 60)
-	if minutes >= 2 then
+	if minutes >= 2 and Gladius.db.timerShort then
 		local ceilMinutes = ceil(number / 60)
 		frame:SetFont(LSM:Fetch(LSM.MediaType.FONT, Gladius.db.globalFont), Gladius.db.timerCeilMinutesFontSize, "OUTLINE")
 		frame:SetTextColor(Gladius.db.timerCeilMinutesFontColor.r, Gladius.db.timerCeilMinutesFontColor.g, Gladius.db.timerCeilMinutesFontColor.b, Gladius.db.timerCeilMinutesFontColor.a)
@@ -220,13 +221,28 @@ function Timer:GetOptions()
 							disabled = function()
 								return not Gladius.dbi.profile.modules[self.name]
 							end,
-							order = 2,
+							order = 5,
 						},
-						sep = {
+						sep1 = {
 							type = "description",
 							name = "",
 							width = "full",
-							order = 4,
+							order = 8,
+						},
+						timerShort = {
+							type = "toggle",
+							name = L["Timer Use Short Format"],
+							desc = L["The timer module will use the short Xm format for timeleft greater than 2 minutes."],
+							disabled = function()
+								return not Gladius.dbi.profile.modules[self.name]
+							end,
+							order = 10,
+						},
+						sep2 = {
+							type = "description",
+							name = "",
+							width = "full",
+							order = 13,
 						},
 						timerSoonFontColor = {
 							type = "color",
@@ -242,7 +258,7 @@ function Timer:GetOptions()
 							disabled = function()
 								return not Gladius.dbi.profile.modules[self.name]
 							end,
-							order = 5,
+							order = 15,
 						},
 						timerSoonFontSize = {
 							type = "range",
@@ -254,13 +270,13 @@ function Timer:GetOptions()
 							min = 1,
 							max = 30,
 							step = 1,
-							order = 10,
+							order = 20,
 						},
-						sep1 = {
+						sep3 = {
 							type = "description",
 							name = "",
 							width = "full",
-							order = 13,
+							order = 23,
 						},
 						timerSecondsFontColor = {
 							type = "color",
@@ -276,7 +292,7 @@ function Timer:GetOptions()
 							disabled = function()
 								return not Gladius.dbi.profile.modules[self.name]
 							end,
-							order = 15,
+							order = 25,
 						},
 						timerSecondsFontSize = {
 							type = "range",
@@ -288,13 +304,13 @@ function Timer:GetOptions()
 							min = 1,
 							max = 30,
 							step = 1,
-							order = 20,
+							order = 30,
 						},
-						sep2 = {
+						sep4 = {
 							type = "description",
 							name = "",
 							width = "full",
-							order = 23,
+							order = 33,
 						},
 						timerMinutesFontColor = {
 							type = "color",
@@ -308,7 +324,7 @@ function Timer:GetOptions()
 							end,
 							hasAlpha = false,
 							disabled = function() return not Gladius.dbi.profile.modules[self.name] end,
-							order = 25,
+							order = 35,
 						},
 						timerMinutesFontSize = {
 							type = "range",
@@ -320,13 +336,13 @@ function Timer:GetOptions()
 							min = 1,
 							max = 30,
 							step = 1,
-							order = 30,
+							order = 40,
 						},
-							sep3 = {
+							sep5 = {
 							type = "description",
 							name = "",
 							width = "full",
-							order = 33,
+							order = 43,
 						},
 						timerCeilMinutesFontColor = {
 							type = "color",
@@ -339,20 +355,28 @@ function Timer:GetOptions()
 								return Gladius:SetColorOption(info, r, g, b, 1)
 							end,
 							hasAlpha = false,
-							disabled = function() return not Gladius.dbi.profile.modules[self.name] end,
-							order = 35,
+							hidden = function ()
+								return not Gladius.db.timerShort
+							end,
+							disabled = function()
+								return not Gladius.dbi.profile.modules[self.name]
+							end,
+							order = 45,
 						},
 						timerCeilMinutesFontSize = {
 							type = "range",
 							name = L["Timer Minutes > 2 Size"],
 							desc = L["Text size of the timer when timeleft is greater than 2 minutes."],
+							hidden = function ()
+								return not Gladius.db.timerShort
+							end,
 							disabled = function()
-								return not Gladius.dbi.profile.modules[self.name]
+								return not Gladius.dbi.profile.modules[self.name] or not Gladius.db.timerShort
 							end,
 							min = 1,
 							max = 30,
 							step = 1,
-							order = 40,
+							order = 50,
 						},
 					},
 				},
