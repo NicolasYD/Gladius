@@ -8,6 +8,7 @@ local LSM
 -- Global functions
 local _G = _G
 local floor = math.floor
+local ceil = math.ceil
 local pairs = pairs
 local strformat = string.format
 local type = type
@@ -25,6 +26,8 @@ local Timer = Gladius:NewModule("Timer", false, false, {
 	timerSecondsFontColor = {r = 1, g = 1, b = 0, a = 1},
 	timerMinutesFontSize = 14,
 	timerMinutesFontColor = {r = 0, g = 1, b = 0, a = 1},
+	timerCeilMinutesFontSize = 18,
+	timerCeilMinutesFontColor = {r = 0, g = 1, b = 0, a = 1},
 	timerOmniCC = false,
 })
 
@@ -56,9 +59,15 @@ function Timer:GetFrame(unit)
 	return ""
 end
 
+
 function Timer:SetFormattedNumber(frame, number)
 	local minutes = floor(number / 60)
-	if minutes > 0 then
+	if minutes >= 2 then
+		local ceilMinutes = ceil(number / 60)
+		frame:SetFont(LSM:Fetch(LSM.MediaType.FONT, Gladius.db.globalFont), Gladius.db.timerCeilMinutesFontSize, "OUTLINE")
+		frame:SetTextColor(Gladius.db.timerCeilMinutesFontColor.r, Gladius.db.timerCeilMinutesFontColor.g, Gladius.db.timerCeilMinutesFontColor.b, Gladius.db.timerCeilMinutesFontColor.a)
+		frame:SetText(string.format("%dm", ceilMinutes))
+	elseif minutes >= 1 then
 		local seconds = number - minutes * 60
 		frame:SetFont(LSM:Fetch(LSM.MediaType.FONT, Gladius.db.globalFont), Gladius.db.timerMinutesFontSize, "OUTLINE")
 		frame:SetTextColor(Gladius.db.timerMinutesFontColor.r, Gladius.db.timerMinutesFontColor.g, Gladius.db.timerMinutesFontColor.b, Gladius.db.timerMinutesFontColor.a)
@@ -79,6 +88,7 @@ function Timer:SetFormattedNumber(frame, number)
 		end
 	end
 end
+
 
 function Timer:SetTimer(frame, duration, start, callback)
 	if not self.frames or frame == nil then
@@ -282,8 +292,8 @@ function Timer:GetOptions()
 						},
 						timerMinutesFontColor = {
 							type = "color",
-							name = L["Timer Minutes Color"],
-							desc = L["Color of the timer when timeleft is greater than 60 seconds."],
+							name = L["Timer Minutes:Seconds Color"],
+							desc = L["Color of the timer when timeleft is greater than 60 seconds but smaller than 2 minutes."],
 							get = function(info)
 								return Gladius:GetColorOption(info)
 							end,
@@ -296,8 +306,8 @@ function Timer:GetOptions()
 						},
 						timerMinutesFontSize = {
 							type = "range",
-							name = L["Timer Minutes Size"],
-							desc = L["Text size of the timer when timeleft is greater than 60 seconds."],
+							name = L["Timer Minutes:Seconds Size"],
+							desc = L["Text size of the timer when timeleft is greater than 60 seconds but smaller than 2 minutes."],
 							disabled = function()
 								return not Gladius.dbi.profile.modules[self.name]
 							end,
