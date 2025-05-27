@@ -20,16 +20,17 @@ local IsInInstance = IsInInstance
 local COOLDOWN_TYPE_NORMAL = COOLDOWN_TYPE_NORMAL
 
 local Timer = Gladius:NewModule("Timer", false, false, {
-	timerSoonFontSize = 18,
+	timerSoonFontSize = 20,
 	timerSoonFontColor = {r = 1, g = 0, b = 0, a = 1},
 	timerSecondsFontSize = 16,
-	timerSecondsFontColor = {r = 1, g = 1, b = 0, a = 1},
-	timerMinutesFontSize = 14,
-	timerMinutesFontColor = {r = 0, g = 1, b = 0, a = 1},
+	timerSecondsFontColor = {r = 1, g = 1/3, b = 0, a = 1},
+	timerMinutesFontSize = 16,
+	timerMinutesFontColor = {r = 2/3, g = 1, b = 0, a = 1},
 	timerCeilMinutesFontSize = 18,
 	timerCeilMinutesFontColor = {r = 0, g = 1, b = 0, a = 1},
 	timerOmniCC = false,
 })
+
 
 function Timer:OnEnable()
 	LSM = Gladius.LSM
@@ -37,10 +38,12 @@ function Timer:OnEnable()
 	self.frames = self.frames or {}
 end
 
+
 function Timer:OnDisable()
 	self:UnregisterAllEvents()
 	self:Reset()
 end
+
 
 function Timer:Reset()
 	-- It used to be left to each individual module to call
@@ -51,9 +54,11 @@ function Timer:Reset()
 	end
 end
 
+
 function Timer:GetAttachTo()
 	return ""
 end
+
 
 function Timer:GetFrame(unit)
 	return ""
@@ -132,6 +137,7 @@ function Timer:SetTimer(frame, duration, start, callback)
 		end)
 	end
 end
+
 
 function Timer:HideTimer(frame)
 	if not self.frames then
@@ -246,7 +252,7 @@ function Timer:GetOptions()
 								return not Gladius.dbi.profile.modules[self.name]
 							end,
 							min = 1,
-							max = 20,
+							max = 30,
 							step = 1,
 							order = 10,
 						},
@@ -280,7 +286,7 @@ function Timer:GetOptions()
 								return not Gladius.dbi.profile.modules[self.name]
 							end,
 							min = 1,
-							max = 20,
+							max = 30,
 							step = 1,
 							order = 20,
 						},
@@ -292,7 +298,7 @@ function Timer:GetOptions()
 						},
 						timerMinutesFontColor = {
 							type = "color",
-							name = L["Timer Minutes:Seconds Color"],
+							name = L["Timer Minutes Color"],
 							desc = L["Color of the timer when timeleft is greater than 60 seconds but smaller than 2 minutes."],
 							get = function(info)
 								return Gladius:GetColorOption(info)
@@ -306,15 +312,47 @@ function Timer:GetOptions()
 						},
 						timerMinutesFontSize = {
 							type = "range",
-							name = L["Timer Minutes:Seconds Size"],
+							name = L["Timer Minutes Size"],
 							desc = L["Text size of the timer when timeleft is greater than 60 seconds but smaller than 2 minutes."],
 							disabled = function()
 								return not Gladius.dbi.profile.modules[self.name]
 							end,
 							min = 1,
-							max = 20,
+							max = 30,
 							step = 1,
 							order = 30,
+						},
+							sep3 = {
+							type = "description",
+							name = "",
+							width = "full",
+							order = 33,
+						},
+						timerCeilMinutesFontColor = {
+							type = "color",
+							name = L["Timer Minutes > 2 Color"],
+							desc = L["Color of the timer when timeleft is greater than 2 minutes."],
+							get = function(info)
+								return Gladius:GetColorOption(info)
+							end,
+							set = function(info, r, g, b)
+								return Gladius:SetColorOption(info, r, g, b, 1)
+							end,
+							hasAlpha = false,
+							disabled = function() return not Gladius.dbi.profile.modules[self.name] end,
+							order = 35,
+						},
+						timerCeilMinutesFontSize = {
+							type = "range",
+							name = L["Timer Minutes > 2 Size"],
+							desc = L["Text size of the timer when timeleft is greater than 2 minutes."],
+							disabled = function()
+								return not Gladius.dbi.profile.modules[self.name]
+							end,
+							min = 1,
+							max = 30,
+							step = 1,
+							order = 40,
 						},
 					},
 				},
