@@ -73,7 +73,7 @@ local ClassIcon = Gladius:NewModule("ClassIcon", false, true, {
 	classIconCrop = true,
 	classIconCooldown = false,
 	classIconCooldownReverse = false,
-	classIconShowSpec = false,
+	classIconShowSpec = true,
 	classIconDetached = false,
 	classIconAuras = spellTable,
 })
@@ -520,7 +520,7 @@ function ClassIcon:Test(unit)
 
     local spellInfo = GetSpellInfo(data.spellID)
 	local enabled = Gladius.dbi.profile.classIconAuras[data.spellID].enabled
-    if spellInfo.iconID and enabled then
+--[[     if spellInfo.iconID and enabled then
         self:ShowAura(unit, {
 			icon = spellInfo.iconID,
 			duration = data.duration,
@@ -528,7 +528,7 @@ function ClassIcon:Test(unit)
         C_Timer.After(data.duration, function()
             ClassIcon:UNIT_AURA("any", unit)
         end)
-    end
+    end ]]
 end
 
 
