@@ -51,7 +51,7 @@ local Tags = Gladius:NewModule("Tags", false, false, {
 			offsetY = 0,
 			size = 11,
 			color = {r = 1, g = 1, b = 1, a = 1},
-			text = "[spec] [class]",
+			text = "[spec]",
 		},
 		["PowerBar Right Text"] = {
 			attachTo = "PowerBar",
@@ -60,7 +60,7 @@ local Tags = Gladius:NewModule("Tags", false, false, {
 			offsetY = 0,
 			size = 11,
 			color = {r = 1, g = 1, b = 1, a = 1},
-			text = "[power:short]/[maxpower:short]",
+			text = "[power:percentage]",
 		},
 		["TargetBar Left Text"] = {
 			attachTo = "TargetBar",
