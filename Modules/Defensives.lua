@@ -315,7 +315,7 @@ function Defensives:SortIcons(unit, classFile)
                 spellID = spellID,
 				classFile = classFile,
                 frame = frame,
-                priority = priority
+                priority = priority or 0
             })
         end
     end
