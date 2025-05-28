@@ -308,6 +308,7 @@ function Dispel:Update(unit)
 	self.frame[unit]:SetAlpha(0)
 end
 
+
 function Dispel:Show(unit)
 	-- show frame
 	self.frame[unit]:SetAlpha(1)
@@ -315,43 +316,38 @@ function Dispel:Show(unit)
 		self.frame[unit].texture:SetTexture(LSM:Fetch(LSM.MediaType.STATUSBAR, "Minimalist"))
 		self.frame[unit].texture:SetVertexColor(Gladius.db.dispellGridStyleIconColor.r, Gladius.db.dispellGridStyleIconColor.g, Gladius.db.dispellGridStyleIconColor.b, Gladius.db.dispellGridStyleIconColor.a)
 	else
-		local dispellIcon
-		local _, englishClass = UnitClass(unit)
 		local testing = Gladius.test
-		local spec = Gladius.buttons[unit].spec
-		if not testing then
-			if englishClass == "PRIEST" then
-				if spec == "Discipline" or spec == "Holy" then
-					dispellIcon = "Interface\\Icons\\spell_holy_dispelmagic" -- OK
-				end
-			elseif englishClass == "SHAMAN" then
-				dispellIcon = "Interface\\Icons\\ability_shaman_cleansespirit" -- OK
-			elseif englishClass == "PALADIN" then
-				dispellIcon = "Interface\\Icons\\spell_holy_purify" -- OK
-			elseif englishClass == "DRUID" then
-				if spec == "Restoration" then
-					dispellIcon = "Interface\\Icons\\ability_shaman_cleansespirit" -- OK
-				else
-					dispellIcon = "Interface\\Icons\\spell_holy_removecurse" -- OK
-				end
-			elseif englishClass == "MAGE" then
-				dispellIcon = "Interface\\Icons\\spell_nature_removecurse" -- OK
-			elseif englishClass == "MONK" then
-				dispellIcon = "Interface\\Icons\\spell_holy_dispelmagic" -- OK
-			end
+		local class, spec
+		local dispellIcon
+
+		if testing then
+			class = Gladius.testing[unit].unitClass
+			spec = Gladius.testing[unit].unitSpec
 		else
-			if unit == "arena1" then
-				dispellIcon = "Interface\\Icons\\spell_nature_removecurse"
-			elseif unit == "arena2" then
+			_, class = UnitClass(unit)
+			spec = Gladius.buttons[unit].spec
+		end
+
+		if class == "PRIEST" then
+			if spec == "Discipline" or spec == "Holy" then
 				dispellIcon = "Interface\\Icons\\spell_holy_dispelmagic"
-			elseif unit == "arena3" then
-				dispellIcon = "Interface\\Icons\\spell_holy_purify"
-			elseif unit == "arena4" then
-				dispellIcon = "Interface\\Icons\\spell_arcane_massdispel"
-			elseif unit == "arena5" then
+			end
+		elseif class == "SHAMAN" then
+			dispellIcon = "Interface\\Icons\\ability_shaman_cleansespirit"
+		elseif class == "PALADIN" then
+			dispellIcon = "Interface\\Icons\\spell_holy_purify"
+		elseif class == "DRUID" then
+			if spec == "Restoration" then
+				dispellIcon = "Interface\\Icons\\ability_shaman_cleansespirit"
+			else
 				dispellIcon = "Interface\\Icons\\spell_holy_removecurse"
 			end
+		elseif class == "MAGE" then
+			dispellIcon = "Interface\\Icons\\spell_nature_removecurse"
+		elseif class == "MONK" then
+			dispellIcon = "Interface\\Icons\\spell_holy_dispelmagic"
 		end
+
 		if dispellIcon then
 			self.frame[unit].texture:SetTexture(dispellIcon)
 			if Gladius.db.dispellGloss then
@@ -367,6 +363,7 @@ function Dispel:Show(unit)
 		self.frame[unit].texture:SetVertexColor(1, 1, 1, 1)
 	end
 end
+
 
 function Dispel:Reset(unit)
 	if not self.frame[unit] then
