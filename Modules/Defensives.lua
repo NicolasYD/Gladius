@@ -479,12 +479,21 @@ end
 function Defensives:Test(unit)
     local testSpellDelay = 10
     local classFile = Gladius.testing[unit] and Gladius.testing[unit].unitClass
+	local specID = Gladius.testing[unit] and Gladius.testing[unit].unitSpecId
 
     -- Get a list of all spellIDs in the table
     local defensives = {}
     for spellID, spellData in pairs(defaultValues) do
-		if (spellData.class == classFile or spellData.class == nil) then
-			table.insert(defensives, spellID)
+		if defaultValues[spellID]["specID"] then
+			for _, value in pairs(defaultValues[spellID]["specID"]) do
+				if (spellData.class == classFile or spellData.class == nil) and (value == specID or value == nil) then
+					table.insert(defensives, spellID)
+				end
+			end
+		else
+			if (spellData.class == classFile or spellData.class == nil) then
+				table.insert(defensives, spellID)
+			end
 		end
     end
 
