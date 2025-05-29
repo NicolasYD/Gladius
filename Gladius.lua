@@ -409,11 +409,11 @@ function Gladius:OnInitialize()
 	self.test = false
 	self.testCount = 0
 	self.testing = setmetatable({
-		["arena1"] = {health = math.random() * maxHealth, maxHealth = maxHealth, power = math.random() * arena1.maxPower, maxPower = arena1.maxPower, powerType = arena1.powerType, unitClass = arena1.unitClass, unitRace = arena1.unitRace, unitSpec = arena1.unitSpec, unitSpecId = arena1.unitSpecId},
-		["arena2"] = {health = math.random() * maxHealth, maxHealth = maxHealth, power = math.random() * arena2.maxPower, maxPower = arena2.maxPower, powerType = arena2.powerType, unitClass = arena2.unitClass, unitRace = arena2.unitRace, unitSpec = arena2.unitSpec, unitSpecId = arena2.unitSpecId},
-		["arena3"] = {health = math.random() * maxHealth, maxHealth = maxHealth, power = math.random() * arena3.maxPower, maxPower = arena3.maxPower, powerType = arena3.powerType, unitClass = arena3.unitClass, unitRace = arena3.unitRace, unitSpec = arena3.unitSpec, unitSpecId = arena3.unitSpecId},
-		["arena4"] = {health = math.random() * maxHealth, maxHealth = maxHealth, power = math.random() * arena4.maxPower, maxPower = arena4.maxPower, powerType = arena4.powerType, unitClass = arena4.unitClass, unitRace = arena4.unitRace, unitSpec = arena4.unitSpec, unitSpecId = arena4.unitSpecId},
-		["arena5"] = {health = math.random() * maxHealth, maxHealth = maxHealth, power = math.random() * arena5.maxPower, maxPower = arena5.maxPower, powerType = arena5.powerType, unitClass = arena5.unitClass, unitRace = arena5.unitRace, unitSpec = arena5.unitSpec, unitSpecId = arena5.unitSpecId},
+		["arena1"] = {health = (math.random() + 0.5) / 1.5 * maxHealth, maxHealth = maxHealth, power = (math.random() + 0.5) / 1.5 * arena1.maxPower, maxPower = arena1.maxPower, powerType = arena1.powerType, unitClass = arena1.unitClass, unitRace = arena1.unitRace, unitSpec = arena1.unitSpec, unitSpecId = arena1.unitSpecId},
+		["arena2"] = {health = (math.random() + 0.5) / 1.5 * maxHealth, maxHealth = maxHealth, power = (math.random() + 0.5) / 1.5 * arena2.maxPower, maxPower = arena2.maxPower, powerType = arena2.powerType, unitClass = arena2.unitClass, unitRace = arena2.unitRace, unitSpec = arena2.unitSpec, unitSpecId = arena2.unitSpecId},
+		["arena3"] = {health = (math.random() + 0.5) / 1.5 * maxHealth, maxHealth = maxHealth, power = (math.random() + 0.5) / 1.5 * arena3.maxPower, maxPower = arena3.maxPower, powerType = arena3.powerType, unitClass = arena3.unitClass, unitRace = arena3.unitRace, unitSpec = arena3.unitSpec, unitSpecId = arena3.unitSpecId},
+		["arena4"] = {health = (math.random() + 0.5) / 1.5 * maxHealth, maxHealth = maxHealth, power = (math.random() + 0.5) / 1.5 * arena4.maxPower, maxPower = arena4.maxPower, powerType = arena4.powerType, unitClass = arena4.unitClass, unitRace = arena4.unitRace, unitSpec = arena4.unitSpec, unitSpecId = arena4.unitSpecId},
+		["arena5"] = {health = (math.random() + 0.5) / 1.5 * maxHealth, maxHealth = maxHealth, power = (math.random() + 0.5) / 1.5 * arena5.maxPower, maxPower = arena5.maxPower, powerType = arena5.powerType, unitClass = arena5.unitClass, unitRace = arena5.unitRace, unitSpec = arena5.unitSpec, unitSpecId = arena5.unitSpecId},
 	},
 
 	{
