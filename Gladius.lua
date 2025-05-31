@@ -640,6 +640,7 @@ function Gladius:ARENA_OPPONENT_UPDATE(event, unit, type)
 	if specID and specID > 0 then
 		local id, name, description, icon, role, class = GetSpecializationInfoByID(specID)
 		self.buttons[unit].spec = name
+		self.buttons[unit].specID = id
 		self.buttons[unit].specIcon = icon
 		self.buttons[unit].class = class
 	else
@@ -675,6 +676,7 @@ function Gladius:ARENA_PREP_OPPONENT_SPECIALIZATIONS()
 				self:CreateButton(unit)
 			end
 			self.buttons[unit].spec = name
+			self.buttons[unit].specID = id
 			self.buttons[unit].specIcon = icon
 			self.buttons[unit].class = class
 			self:UpdateUnit(unit)
@@ -979,6 +981,7 @@ function Gladius:ResetUnit(unit, module)
 		end
 	end
 	self.buttons[unit].spec = ""
+	self.buttons[unit].specID = nil
 	-- hide the button
 	self.buttons[unit]:SetAlpha(0)
 	-- hide the secure frame
