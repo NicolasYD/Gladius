@@ -7,6 +7,9 @@ end
 local L = Gladius.L
 local LSM
 
+local CDList = LibStub("CDList-1.0")
+local dispellList = CDList:GetDispells()
+
 -- Global functions
 local _G = _G
 local pairs = pairs
@@ -136,7 +139,7 @@ function Dispel:CombatLogEvent(event, timestamp, eventType, hideCaster, sourceGU
 		if not (UnitGUID("arena1") == sourceGUID or UnitGUID("arena2") == sourceGUID or UnitGUID("arena3") == sourceGUID or UnitGUID("arena4") == sourceGUID or UnitGUID("arena5") == sourceGUID) then
 			return
 		end
-		if spellID == 527 or spellID == 4987 or spellID == 77130 or spellID == 88423 or spellID == 115450 or spellID == 2782 or spellID == 51886 or spellID == 475 then
+		if dispellList[spellID] then
 			if UnitGUID("arena1") == sourceGUID then
 				self:UpdateDispel("arena1", 8)
 			elseif UnitGUID("arena2") == sourceGUID then
@@ -331,11 +334,17 @@ function Dispel:Show(unit)
 		if class == "PRIEST" then
 			if spec == "Discipline" or spec == "Holy" then
 				dispellIcon = "Interface\\Icons\\spell_holy_dispelmagic"
+			else
+				dispellIcon = "Interface\\Icons\\spell_holy_nullifydisease"
 			end
 		elseif class == "SHAMAN" then
 			dispellIcon = "Interface\\Icons\\ability_shaman_cleansespirit"
 		elseif class == "PALADIN" then
-			dispellIcon = "Interface\\Icons\\spell_holy_purify"
+			if spec == "Holy" then
+				dispellIcon = "Interface\\Icons\\spell_holy_purify"
+			else
+				dispellIcon = "Interface\\Icons\\spell_holy_renew"
+			end
 		elseif class == "DRUID" then
 			if spec == "Restoration" then
 				dispellIcon = "Interface\\Icons\\ability_shaman_cleansespirit"
@@ -345,7 +354,9 @@ function Dispel:Show(unit)
 		elseif class == "MAGE" then
 			dispellIcon = "Interface\\Icons\\spell_nature_removecurse"
 		elseif class == "MONK" then
-			dispellIcon = "Interface\\Icons\\spell_holy_dispelmagic"
+			dispellIcon = "Interface\\Icons\\ability_rogue_imrovedrecuperate"
+		elseif class == "EVOKER" then
+			dispellIcon =  "Interface\\Icons\\ability_evoker_fontofmagic_green"
 		end
 
 		if dispellIcon then
