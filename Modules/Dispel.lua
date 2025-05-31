@@ -13,6 +13,7 @@ local dispellList = CDList:GetDispells()
 -- Global functions
 local _G = _G
 local pairs = pairs
+local ipairs = ipairs
 local strfind = string.find
 local strformat = string.format
 
@@ -22,6 +23,7 @@ local UnitFactionGroup = UnitFactionGroup
 local UnitGUID = UnitGUID
 local UnitLevel = UnitLevel
 local UnitName = UnitName
+local GetSpellInfo = C_Spell.GetSpellInfo
 
 local Dispel = Gladius:NewModule("Dispel", false, true, {
 	dispellAttachTo = "Frame",
@@ -320,43 +322,29 @@ function Dispel:Show(unit)
 		self.frame[unit].texture:SetVertexColor(Gladius.db.dispellGridStyleIconColor.r, Gladius.db.dispellGridStyleIconColor.g, Gladius.db.dispellGridStyleIconColor.b, Gladius.db.dispellGridStyleIconColor.a)
 	else
 		local testing = Gladius.test
-		local class, spec
+		local class, specID
 		local dispellIcon
 
 		if testing then
 			class = Gladius.testing[unit].unitClass
-			spec = Gladius.testing[unit].unitSpec
+			specID = Gladius.testing[unit].unitSpecId
 		else
 			_, class = UnitClass(unit)
-			spec = Gladius.buttons[unit].spec
+			specID = Gladius.buttons[unit].specID
 		end
 
-		if class == "PRIEST" then
-			if spec == "Discipline" or spec == "Holy" then
-				dispellIcon = "Interface\\Icons\\spell_holy_dispelmagic"
-			else
-				dispellIcon = "Interface\\Icons\\spell_holy_nullifydisease"
+		-- Find the correct dispell icon for the class and spec of "unit"
+		for spellID, spellData in pairs(dispellList) do
+			if spellData.specID then
+				for _, ID in ipairs(spellData.specID) do
+					if spellData.class == class and ID == specID then
+						dispellIcon = GetSpellInfo(spellID).iconID
+						break
+					end
+				end
+			elseif spellData.class == class then
+				dispellIcon = GetSpellInfo(spellID).iconID
 			end
-		elseif class == "SHAMAN" then
-			dispellIcon = "Interface\\Icons\\ability_shaman_cleansespirit"
-		elseif class == "PALADIN" then
-			if spec == "Holy" then
-				dispellIcon = "Interface\\Icons\\spell_holy_purify"
-			else
-				dispellIcon = "Interface\\Icons\\spell_holy_renew"
-			end
-		elseif class == "DRUID" then
-			if spec == "Restoration" then
-				dispellIcon = "Interface\\Icons\\ability_shaman_cleansespirit"
-			else
-				dispellIcon = "Interface\\Icons\\spell_holy_removecurse"
-			end
-		elseif class == "MAGE" then
-			dispellIcon = "Interface\\Icons\\spell_nature_removecurse"
-		elseif class == "MONK" then
-			dispellIcon = "Interface\\Icons\\ability_rogue_imrovedrecuperate"
-		elseif class == "EVOKER" then
-			dispellIcon =  "Interface\\Icons\\ability_evoker_fontofmagic_green"
 		end
 
 		if dispellIcon then
