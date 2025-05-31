@@ -363,10 +363,12 @@ function Dispel:Show(unit)
 			self.frame[unit].texture:SetTexture(dispellIcon)
 			if Gladius.db.dispellGloss then
 				self.frame[unit].normalTexture:Show()
+				self.frame[unit]:SetAlpha(1)
 			end
 		else
 			self.frame[unit].texture:SetTexture("")
 			self.frame[unit].normalTexture:Hide()
+			self.frame[unit]:SetAlpha(0)
 		end
 		if Gladius.db.dispellIconCrop then
 			self.frame[unit].texture:SetTexCoord(0.07, 0.93, 0.07, 0.93)
