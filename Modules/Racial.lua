@@ -1,9 +1,18 @@
+-- @@@@@@@@@@@@@@@@@@@@@@@@@@@ Racial Module @@@@@@@@@@@@@@@@@@@@@@@@@@@@
+-- Originally written by: Resike and Firebunny. Original author: Proditor
+-- Modified by: Pharmac1st
+-- Game Version: 11.1.5
+-- @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
 local Gladius = _G.Gladius
 if not Gladius then
 	DEFAULT_CHAT_FRAME:AddMessage(format("Module %s requires Gladius", "Racial"))
 end
 local L = Gladius.L
 local LSM
+
+local CDList = LibStub("CDList-1.0")
+local racialList = CDList:GetSpellsByCategory("racial")
 
 -- Global functions
 local _G = _G
@@ -36,33 +45,24 @@ local GetUnitDebuff = function(uId, spellName)
 	end
 end
 
-local unitRaceCDs = {
-	["HUMAN"] = { cooldown = 180, spellID = 59752, sharesCD = true },
-	["DWARF"] = { cooldown = 120, spellID = 265221, sharesCD = true },
-	["NIGHTELF"] = { cooldown = 120, spellID = 58984, sharesCD = false },
-	["GNOME"] = { cooldown = 60, spellID = 20589, sharesCD = false },
-	["DRAENEI"] = { cooldown = 180, spellID = 59542, sharesCD = false },
-	["WORGEN"] = { cooldown = 120, spellID = 68992, sharesCD = false },
-	["PANDAREN"] = { cooldown = 120, spellID = 107079, sharesCD = false },
-	["ORC"] = { cooldown = 120, spellID = 33697, sharesCD = false },
-	["SCOURGE"] = { cooldown = 120, spellID = 7744, sharesCD = true },
-	["TAUREN"] = { cooldown = 90, spellID = 20549, sharesCD = false },
-	["TROLL"] = { cooldown = 180, spellID = 26297, sharesCD = false },
-	["BLOODELF"] = { cooldown = 90, spellID = 202719, sharesCD = false },
-	["GOBLIN"] = { cooldown = 90, spellID = 69070, sharesCD = false },
-	["LIGHTFORGEDDRAENEI"] = { cooldown = 150, spellID = 255647, sharesCD = false },
-	["HIGHMOUNTAINTAUREN"] = { cooldown = 120, spellID = 255654, sharesCD = false },
-	["NIGHTBORNE"] = { cooldown = 180, spellID = 260364, sharesCD = false },
-	["MAGHARORC"] = { cooldown = 120, spellID = 274738, sharesCD = false },
-	["DARKIRONDWARF"] = { cooldown = 120, spellID = 265221, sharesCD = true },
-	["ZANDALARITROLL"] = { cooldown = 160, spellID = 291944, sharesCD = false },
-	["VOIDELF"] = { cooldown = 180, spellID = 256948, sharesCD = false },
-	["KULTIRAN"] = { cooldown = 160, spellID = 287712, sharesCD = false },
-	["MECHAGNOME"] = { cooldown = 180, spellID = 312924, sharesCD = false },
-	["VULPERA"] = { cooldown = 90, spellID = 312411, sharesCD = false },
-	["DRACTHYR"] = { cooldown = 90, spellID = 357214, sharesCD = false },
-	["EARTHENDWARF"] = { cooldown = 120, spellID = 436344, sharesCD = false },
-}
+
+-- @@@@@@@@@@@@@@@@@@@@@@@@ Helper Function @@@@@@@@@@@@@@@@@@@@@@@@@@@
+local function CreateRacialTable()
+	local racialTable = {}
+	for spellID, spellData in pairs(racialList) do
+		local unitRace = spellData.unitRace
+		local cooldown = spellData.cooldown or 0
+		local sharesCD = spellData.sharesCD or false
+		if spellID and unitRace then
+			racialTable[unitRace] = {cooldown = cooldown, spellID = spellID, sharesCD = sharesCD}
+		end
+	end
+	return racialTable
+end
+-- @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+
+local unitRaceCDs = CreateRacialTable()
 
 local Racial = Gladius:NewModule("Racial", false, true, {
 	RacialAttachTo = "Frame",
