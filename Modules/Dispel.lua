@@ -8,7 +8,7 @@ local L = Gladius.L
 local LSM
 
 local CDList = LibStub("CDList-1.0")
-local dispellList = CDList:GetDispells()
+local dispellList = CDList:GetSpellsByCategory("dispell")
 
 -- Global functions
 local _G = _G

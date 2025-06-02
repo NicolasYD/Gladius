@@ -35,7 +35,7 @@ end
 
 
 local CDList = LibStub("CDList-1.0")
-local defaultValues = CDList:GetDefensives()
+local defaultValues = CDList:GetSpellsByCategory("defensive")
 local defensivesList = deepcopy(defaultValues)
 
 -- Localizing commonly used global functions
