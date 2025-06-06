@@ -43,6 +43,10 @@ local Dispel = Gladius:NewModule("Dispel", false, true, {
 	dispellCooldown = true,
 	dispellCooldownReverse = false,
 	dispellFaction = false,
+	showCurse = false,
+	showDisease = false,
+	showMagic = true,
+	showPoison = false,
 },
 {
 	"Dispel icon",
@@ -136,30 +140,39 @@ function Dispel:COMBAT_LOG_EVENT_UNFILTERED(event)
 	self:CombatLogEvent(event, CombatLogGetCurrentEventInfo())
 end
 
+
 function Dispel:CombatLogEvent(event, timestamp, eventType, hideCaster, sourceGUID, sourceName, sourceFlags, sourceRaidFlags, destGUID, destName, destFlags, destRaidFlags, spellID, spellName, spellSchool, auraType)
-	if eventType == "SPELL_DISPEL" then
-		if not (UnitGUID("arena1") == sourceGUID or UnitGUID("arena2") == sourceGUID or UnitGUID("arena3") == sourceGUID or UnitGUID("arena4") == sourceGUID or UnitGUID("arena5") == sourceGUID) then
-			return
-		end
-		if dispellList[spellID] then
-			if UnitGUID("arena1") == sourceGUID then
-				self:UpdateDispel("arena1", 8)
-			elseif UnitGUID("arena2") == sourceGUID then
-				self:UpdateDispel("arena2", 8)
-			elseif UnitGUID("arena3") == sourceGUID then
-				self:UpdateDispel("arena3", 8)
-			elseif UnitGUID("arena4") == sourceGUID then
-				self:UpdateDispel("arena4", 8)
-			elseif UnitGUID("arena5") == sourceGUID then
-				self:UpdateDispel("arena5", 8)
-			end
-		end
-		--wotf
-		--[[if spellID == GetSpellInfo(7744) then
-			self:UpdateDispel(unit, 45)
-		end]]
-	end
+    if eventType ~= "SPELL_DISPEL" then return end
+
+    local showType = {
+        curse = Gladius.db.showCurse,
+        disease = Gladius.db.showDisease,
+        magic = Gladius.db.showMagic,
+        poison = Gladius.db.showPoison,
+    }
+
+    local arenaUnit
+    for i = 1, 5 do
+        local unit = "arena" .. i
+        if UnitGUID(unit) == sourceGUID then
+            arenaUnit = unit
+            break
+        end
+    end
+
+    if not arenaUnit then return end
+
+    local spellData = dispellList[spellID]
+    if not spellData then return end
+
+    for _, dispellType in ipairs(spellData.subcategory) do
+        if showType[dispellType] then
+            self:UpdateDispel(arenaUnit, 8)
+            break
+        end
+    end
 end
+
 
 function Dispel:UpdateDispel(unit, duration)
 	if not unit or not self.frame[unit] or not duration then
@@ -334,17 +347,23 @@ function Dispel:Show(unit)
 		end
 
 		-- Find the correct dispell icon for the class and spec of "unit"
+		local showType = {
+			curse = Gladius.db.showCurse,
+			disease = Gladius.db.showDisease,
+			magic = Gladius.db.showMagic,
+			poison = Gladius.db.showPoison,
+		}
+
 		for spellID, spellData in pairs(dispellList) do
-			if spellData.specID then
-				for _, ID in ipairs(spellData.specID) do
-					if spellData.class == class and ID == specID then
-						dispellIcon = GetSpellInfo(spellID).iconID
+			for _, dispellType in ipairs(spellData.subcategory) do
+				if showType[dispellType] then
+					if spellData.class == class and (not spellData.specID or tContains(spellData.specID, specID)) then
+						dispellIcon = GetSpellInfo(spellID).originalIconID
 						break
 					end
 				end
-			elseif spellData.class == class then
-				dispellIcon = GetSpellInfo(spellID).iconID
 			end
+			if dispellIcon then break end
 		end
 
 		if dispellIcon then
@@ -421,12 +440,57 @@ function Dispel:GetOptions()
 			name = L["General"],
 			order = 1,
 			args = {
+				dispells = {
+					type = "group",
+					name = L["Dispell Tracking"],
+					desc = L["Dispell Tracking settings"],
+					inline = true,
+					order = 1,
+					args = {
+						showCurse = {
+							type = "toggle",
+							name = L["Curse Dispells"],
+							desc = L["Toggle if you want to track dispells that remove Curse effects"],
+							disabled = function()
+								return not Gladius.dbi.profile.modules[self.name]
+							end,
+							order = 45,
+						},
+						showDisease = {
+							type = "toggle",
+							name = L["Disease Dispells"],
+							desc = L["Toggle if you want to track dispells that remove Disease effects"],
+							disabled = function()
+								return not Gladius.dbi.profile.modules[self.name]
+							end,
+							order = 50,
+						},
+						showMagic = {
+							type = "toggle",
+							name = L["Magic Dispells"],
+							desc = L["Toggle if you want to track dispells that remove Magic effects"],
+							disabled = function()
+								return not Gladius.dbi.profile.modules[self.name]
+							end,
+							order = 55,
+						},
+						showPoison = {
+							type = "toggle",
+							name = L["Poison Dispells"],
+							desc = L["Toggle if you want to track dispells that remove Poison effects"],
+							disabled = function()
+								return not Gladius.dbi.profile.modules[self.name]
+							end,
+							order = 60,
+						},
+					}
+				},
 				widget = {
 					type = "group",
 					name = L["Widget"],
 					desc = L["Widget settings"],
 					inline = true,
-					order = 1,
+					order = 2,
 					args = {
 						dispellGridStyleIcon = {
 							type = "toggle",
@@ -569,7 +633,7 @@ function Dispel:GetOptions()
 							end,
 							order = 40,
 						},
-						sep3 = {
+						sep4 = {
 							type = "description",
 							name = "",
 							width = "full",
@@ -598,7 +662,7 @@ function Dispel:GetOptions()
 					name = L["Size"],
 					desc = L["Size settings"],
 					inline = true,
-					order = 2,
+					order = 3,
 					args = {
 						dispellAdjustSize = {
 							type = "toggle",
@@ -628,7 +692,7 @@ function Dispel:GetOptions()
 						name = L["Position"],
 						desc = L["Position settings"],
 						inline = true,
-						order = 3,
+						order = 4,
 						args = {
 						dispellAttachTo = {
 							type = "select",
