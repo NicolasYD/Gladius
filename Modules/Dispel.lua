@@ -34,7 +34,7 @@ local Dispel = Gladius:NewModule("Dispel", false, true, {
 	dispellGridStyleIconUsedColor = {r = 1, g = 0, b = 0, a = 1},
 	dispellAdjustSize = false,
 	dispellSize = 50,
-	dispellOffsetX = 0,
+	dispellOffsetX = 5,
 	dispellOffsetY = 0,
 	dispellFrameLevel = 1,
 	dispellIconCrop = true,
