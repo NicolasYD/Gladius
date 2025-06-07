@@ -32,9 +32,7 @@ local Trinket = Gladius:NewModule("Trinket", false, true, {
 	trinketOffsetX = 1,
 	trinketOffsetY = 0,
 	trinketFrameLevel = 1,
-	trinketIconCrop = false,
-	trinketGloss = false,
-	trinketGlossColor = {r = 1, g = 1, b = 1, a = 0.4},
+	trinketIconCrop = true,
 	trinketCooldown = true,
 	trinketCooldownReverse = false,
 	trinketCooldownEdge = false,
@@ -283,10 +281,6 @@ function Trinket:CreateFrame(unit)
 	self.frame[unit].cooldown = CreateFrame("Cooldown", frameName .. "Cooldown", self.frame[unit], "CooldownFrameTemplate")
 	self.frame[unit].cooldown:SetAllPoints() -- Makes it cover the texture frame
 
-	-- Optional styling
-	self.frame[unit].cooldown:SetDrawEdge(Gladius.db.trinketCooldownEdge)
-	self.frame[unit].cooldown:SetSwipeColor(0, 0, 0, Gladius.db.trinketCooldownSwipeAlpha)
-
 	-- secure
 	local secure = CreateFrame("Button", "Gladius"..self.name.."SecureButton"..unit, button, "SecureActionButtonTemplate")
 	secure:RegisterForClicks("AnyUp", "AnyDown")
@@ -321,12 +315,7 @@ function Trinket:Update(unit)
 	if Gladius.db.trinketAdjustSize then
 		if self:GetAttachTo() == "Frame" then
 			local height = false
-			-- need to rethink that
-			--[[for _, module in pairs(Gladius.modules) do
-				if (module:GetAttachTo() == self.name) then
-					height = false
-				end
-			end]]
+
 			if height then
 				unitFrame:SetWidth(Gladius.buttons[unit].height)
 				unitFrame:SetHeight(Gladius.buttons[unit].height)
@@ -350,17 +339,7 @@ function Trinket:Update(unit)
 		else
 			right = - unitFrame:GetWidth() + - Gladius.db.trinketOffsetX
 		end
-		-- search for an attached frame
-		--[[for _, module in pairs(Gladius.modules) do
-			if module.attachTo and module:GetAttachTo() == self.name and module.frame and module.frame[unit] then
-				local attachedPoint = module.frame[unit]:GetPoint()
-				if strfind(Gladius.db.trinketRelativePoint, "LEFT" and (not attachedPoint or (attachedPoint and strfind(attachedPoint, "RIGHT")))) then
-					left = left - module.frame[unit]:GetWidth()
-				elseif strfind(Gladius.db.trinketRelativePoint, "RIGHT" and (not attachedPoint or (attachedPoint and strfind(attachedPoint, "LEFT")))) then
-					right = right - module.frame[unit]:GetWidth()
-				end
-			end
-		end]]
+
 		-- top / bottom
 		if (unitFrame:GetHeight() > Gladius.buttons[unit]:GetHeight()) then
 			bottom = -(unitFrame:GetHeight() - Gladius.buttons[unit]:GetHeight()) + Gladius.db.trinketOffsetY
@@ -368,10 +347,7 @@ function Trinket:Update(unit)
 		Gladius.buttons[unit]:SetHitRectInsets(left, right, 0, 0)
 		Gladius.buttons[unit].secure:SetHitRectInsets(left, right, 0, 0)
 	end
-	-- style action button
-	unitFrame.texture:ClearAllPoints()
-	unitFrame.texture:SetPoint("TOPLEFT", unitFrame, "TOPLEFT")
-	unitFrame.texture:SetPoint("BOTTOMRIGHT", unitFrame, "BOTTOMRIGHT")
+
 	if not Gladius.db.trinketIconCrop and not Gladius.db.trinketGridStyleIcon then
 		unitFrame.texture:SetTexCoord(0, 1, 0, 1)
 	else
@@ -379,7 +355,10 @@ function Trinket:Update(unit)
 	end
 
 	-- cooldown
+	-- Optional styling
+	self.frame[unit].cooldown:SetDrawEdge(Gladius.db.trinketCooldownEdge)
 	self.frame[unit].cooldown:SetDrawSwipe(Gladius.db.trinketCooldown)
+	self.frame[unit].cooldown:SetSwipeColor(0, 0, 0, Gladius.db.trinketCooldownSwipeAlpha)
 	unitFrame.cooldown.isDisabled = not Gladius.db.trinketCooldown
 	unitFrame.cooldown:SetReverse(Gladius.db.trinketCooldownReverse)
 	Gladius:Call(Gladius.modules.Timer, "RegisterTimer", unitFrame, Gladius.db.trinketCooldown)
@@ -598,12 +577,15 @@ function Trinket:GetOptions()
 							type = "description",
 							name = "",
 							width = "full",
+							hidden = function()
+								return not Gladius.db.advancedOptions
+							end,
 							order = 23,
 						},
-						trinketGloss = {
+						trinketCooldownEdge = {
 							type = "toggle",
-							name = L["Trinket Gloss"],
-							desc = L["Toggle gloss on the trinket icon"],
+							name = L["Trinket Cooldown Edge"],
+							desc = L["Display the edge texture for the cooldown spiral"],
 							disabled = function()
 								return not Gladius.dbi.profile.modules[self.name]
 							end,
@@ -612,25 +594,6 @@ function Trinket:GetOptions()
 							end,
 							order = 25,
 						},
-						trinketGlossColor = {
-							type = "color",
-							name = L["Trinket Gloss Color"],
-							desc = L["Color of the trinket icon gloss"],
-							get = function(info)
-								return Gladius:GetColorOption(info)
-							end,
-							set = function(info, r, g, b, a)
-								return Gladius:SetColorOption(info, r, g, b, a)
-							end,
-							hasAlpha = true,
-							disabled = function()
-								return not Gladius.dbi.profile.modules[self.name]
-							end,
-							hidden = function()
-								return not Gladius.db.advancedOptions
-							end,
-							order = 30,
-						},
 						sep3 = {
 							type = "description",
 							name = "",
@@ -638,7 +601,7 @@ function Trinket:GetOptions()
 							hidden = function()
 								return not Gladius.db.advancedOptions
 							end,
-							order = 33,
+							order = 28,
 						},
 						trinketIconCrop = {
 							type = "toggle",
@@ -647,7 +610,7 @@ function Trinket:GetOptions()
 							disabled = function()
 								return not Gladius.dbi.profile.modules[self.name]
 							end,
-							order = 35,
+							order = 30,
 						},
 						trinketFaction = {
 							type = "toggle",
@@ -656,12 +619,40 @@ function Trinket:GetOptions()
 							disabled = function()
 								return not Gladius.dbi.profile.modules[self.name]
 							end,
-							order = 40,
+							order = 35,
 						},
-						sep3 = {
+						sep4 = {
 							type = "description",
 							name = "",
 							width = "full",
+							hidden = function()
+								return not Gladius.db.advancedOptions
+							end,
+							order = 38,
+						},
+						trinketCooldownSwipeAlpha = {
+							type = "range",
+							name = L["Trinket Cooldown Swipe Alpha"],
+							desc = L["Set the darkness of the cooldown swipe animation"],
+							disabled = function()
+								return not Gladius.dbi.profile.modules[self.name]
+							end,
+							hidden = function()
+								return not Gladius.db.advancedOptions
+							end,
+							min = 0.5,
+							max = 1,
+							step = 0.1,
+							width = "double",
+							order = 40,
+						},
+						sep5 = {
+							type = "description",
+							name = "",
+							width = "full",
+							hidden = function()
+								return not Gladius.db.advancedOptions
+							end,
 							order = 43,
 						},
 						trinketFrameLevel = {
