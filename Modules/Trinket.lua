@@ -21,7 +21,7 @@ local UnitLevel = UnitLevel
 local UnitName = UnitName
 
 local Trinket = Gladius:NewModule("Trinket", false, true, {
-	trinketAttachTo = "Frame",
+	trinketAttachTo = "HealthBar",
 	trinketAnchor = "TOPLEFT",
 	trinketRelativePoint = "TOPRIGHT",
 	trinketGridStyleIcon = false,
@@ -29,16 +29,16 @@ local Trinket = Gladius:NewModule("Trinket", false, true, {
 	trinketGridStyleIconUsedColor = {r = 1, g = 0, b = 0, a = 1},
 	trinketAdjustSize = false,
 	trinketSize = 50,
-	trinketOffsetX = 1,
+	trinketOffsetX = 0,
 	trinketOffsetY = 0,
 	trinketFrameLevel = 1,
 	trinketIconCrop = true,
 	trinketCooldown = true,
 	trinketCooldownReverse = false,
-	trinketCooldownEdge = false,
 	trinketCooldownSwipeAlpha = 1,
+	trinketCooldownEdge = false,
 	trinketFaction = false,
-	trinketDetached = false
+	trinketDetached = true
 },
 {
 	"Trinket icon", "Grid style health bar", "Grid style power bar"
@@ -235,8 +235,12 @@ function Trinket:UpdateTrinket(unit, duration)
 		end
 	end
 
-	self.frame[unit].cooldown:SetCooldown(GetTime(), duration)
-	Gladius:Call(Gladius.modules.Timer, "SetTimer", self.frame[unit], duration)
+	if not Gladius.db.modules["Timer"] then
+		self.frame[unit].cooldown:SetHideCountdownNumbers(false)
+		self.frame[unit].cooldown:SetCooldown(GetTime(), duration)
+	else
+		Gladius:Call(Gladius.modules.Timer, "SetTimer", self.frame[unit], duration)
+	end
 end
 
 function Trinket:IsHealer(unit)
@@ -356,8 +360,8 @@ function Trinket:Update(unit)
 
 	-- cooldown
 	-- Optional styling
-	self.frame[unit].cooldown:SetDrawEdge(Gladius.db.trinketCooldownEdge)
 	self.frame[unit].cooldown:SetDrawSwipe(Gladius.db.trinketCooldown)
+	self.frame[unit].cooldown:SetDrawEdge(Gladius.db.trinketCooldownEdge)
 	self.frame[unit].cooldown:SetSwipeColor(0, 0, 0, Gladius.db.trinketCooldownSwipeAlpha)
 	unitFrame.cooldown.isDisabled = not Gladius.db.trinketCooldown
 	unitFrame.cooldown:SetReverse(Gladius.db.trinketCooldownReverse)
@@ -571,6 +575,7 @@ function Trinket:GetOptions()
 							hidden = function()
 								return not Gladius.db.advancedOptions
 							end,
+							width = "full",
 							order = 20,
 						},
 						sep2 = {
@@ -610,6 +615,7 @@ function Trinket:GetOptions()
 							disabled = function()
 								return not Gladius.dbi.profile.modules[self.name]
 							end,
+							width = "full",
 							order = 30,
 						},
 						trinketFaction = {
