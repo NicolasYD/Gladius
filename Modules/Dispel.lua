@@ -26,7 +26,7 @@ local UnitName = UnitName
 local GetSpellInfo = C_Spell.GetSpellInfo
 
 local Dispel = Gladius:NewModule("Dispel", false, true, {
-	dispellAttachTo = "Frame",
+	dispellAttachTo = "Racial",
 	dispellAnchor = "TOPLEFT",
 	dispellRelativePoint = "TOPRIGHT",
 	dispellGridStyleIcon = false,
@@ -34,14 +34,14 @@ local Dispel = Gladius:NewModule("Dispel", false, true, {
 	dispellGridStyleIconUsedColor = {r = 1, g = 0, b = 0, a = 1},
 	dispellAdjustSize = false,
 	dispellSize = 50,
-	dispellOffsetX = 100,
+	dispellOffsetX = 0,
 	dispellOffsetY = 0,
 	dispellFrameLevel = 1,
-	dispellIconCrop = false,
-	dispellGloss = false,
-	dispellGlossColor = {r = 1, g = 1, b = 1, a = 0.4},
+	dispellIconCrop = true,
 	dispellCooldown = true,
 	dispellCooldownReverse = false,
+	dispellCooldownSwipeAlpha = 1,
+	dispellCooldownEdge = false,
 	dispellFaction = false,
 	showCurse = false,
 	showDisease = false,
@@ -86,52 +86,6 @@ function Dispel:GetFrame(unit)
 	return self.frame[unit]
 end
 
---[[function Dispel:SetTemplate(template)
-	if template == 1 then
-		-- reset width
-		if (Gladius.db.targetBarAttachTo == "HealthBar" and not Gladius.db.healthBarAdjustWidth) then
-			Gladius.db.healthBarAdjustWidth = true
-		end
-		-- reset to default
-		for k, v in pairs(self.defaults) do
-			Gladius.db[k] = v
-		end
-	elseif template == 2 then
-		if Gladius.db.modules["HealthBar"] then
-			if (Gladius.db.healthBarAdjustWidth) then
-				Gladius.db.healthBarAdjustWidth = false
-				Gladius.db.healthBarWidth = Gladius.db.barWidth - Gladius.db.healthBarHeight
-			else
-				Gladius.db.healthBarWidth = Gladius.db.healthBarWidth - Gladius.db.healthBarHeight
-			end
-			Gladius.db.dispellGridStyleIcon = true
-			Gladius.db.dispellAdjustHeight = false
-			Gladius.db.dispellHeight = Gladius.db.healthBarHeight
-			Gladius.db.dispellAttachTo = "HealthBar"
-			Gladius.db.dispellAnchor = "TOPLEFT"
-			Gladius.db.dispellRelativePoint = "TOPRIGHT"
-			Gladius.db.dispellOffsetX = 52
-			Gladius.db.dispellOffsetY = 0
-		end
-	else
-		if Gladius.db.modules["PowerBar"] then
-			if (Gladius.db.powerBarAdjustWidth) then
-				Gladius.db.powerBarAdjustWidth = false
-				Gladius.db.powerBarWidth = Gladius.db.powerBarWidth - Gladius.db.powerBarHeight
-			else
-				Gladius.db.powerBarWidth = Gladius.db.powerBarWidth - Gladius.db.powerBarHeight
-			end
-			Gladius.db.dispellGridStyleIcon = true
-			Gladius.db.dispellAdjustHeight = false
-			Gladius.db.dispellHeight = Gladius.db.powerBarHeight
-			Gladius.db.dispellAttachTo = "PowerBar"
-			Gladius.db.dispellAnchor = "TOPLEFT"
-			Gladius.db.dispellRelativePoint = "TOPRIGHT"
-			Gladius.db.dispellOffsetX = 52
-			Gladius.db.dispellOffsetY = 0
-		end
-	end
-end]]
 
 function Dispel:COMBAT_LOG_EVENT_UNFILTERED(event)
 	if not IsActiveBattlefieldArena() then
@@ -204,14 +158,18 @@ function Dispel:UpdateDispel(unit, duration)
 		end)
 	end
 	-- cooldown
-	Gladius:Call(Gladius.modules.Timer, "SetTimer", self.frame[unit], duration)
+	if not Gladius.db.modules["Timer"] then
+		self.frame[unit].cooldown:SetHideCountdownNumbers(false)
+		self.frame[unit].cooldown:SetCooldown(GetTime(), duration)
+	else
+		Gladius:Call(Gladius.modules.Timer, "SetTimer", self.frame[unit], duration)
+	end
 end
 
 function Dispel:UpdateColors(unit)
 	if Gladius.db.dispellGridStyleIcon then
 		self.frame[unit].texture:SetVertexColor(Gladius.db.dispellGridStyleIconUsedColor.r, Gladius.db.dispellGridStyleIconUsedColor.g, Gladius.db.dispellGridStyleIconUsedColor.b, Gladius.db.dispellGridStyleIconUsedColor.a)
 	end
-	self.frame[unit].normalTexture:SetVertexColor(Gladius.db.dispellGlossColor.r, Gladius.db.dispellGlossColor.g, Gladius.db.dispellGlossColor.b, Gladius.db.dispellGloss and Gladius.db.dispellGlossColor.a or 0)
 end
 
 function Dispel:CreateFrame(unit)
@@ -219,16 +177,29 @@ function Dispel:CreateFrame(unit)
 	if not button then
 		return
 	end
-	-- create frame
-	self.frame[unit] = CreateFrame("CheckButton", "Gladius"..self.name.."Frame"..unit, button, "ActionButtonTemplate")
-	self.frame[unit]:EnableMouse(false)
-	self.frame[unit]:SetNormalTexture("Interface\\AddOns\\Gladius\\Images\\Gloss")
-	self.frame[unit].texture = _G[self.frame[unit]:GetName().."Icon"]
-	self.frame[unit].normalTexture = _G[self.frame[unit]:GetName().."NormalTexture"]
-	self.frame[unit].cooldown = _G[self.frame[unit]:GetName().."Cooldown"]
-	self.frame[unit].IconMask:Hide()
 
+	-- Create a parent frame
+	self.frame[unit] = CreateFrame("CheckButton", "Gladius"..self.name.."Frame"..unit, button)
+	local frameName = self.frame[unit]:GetName()
+
+	self.frame[unit]:EnableMouse(false)
+	self.frame[unit]:SetSize(Gladius.db.dispellSize, Gladius.db.dispellSize)
+	self.frame[unit]:SetPoint("CENTER")
+
+	-- Create a texture frame
+	self.frame[unit].texture = self.frame[unit]:CreateTexture(frameName .. "Icon", "BACKGROUND")
+	self.frame[unit].texture:SetAllPoints() -- Makes it cover the frame
+
+	-- Create a cooldown frame on top of the texture frame
+	self.frame[unit].cooldown = CreateFrame("Cooldown", frameName .. "Cooldown", self.frame[unit], "CooldownFrameTemplate")
+	self.frame[unit].cooldown:SetAllPoints() -- Makes it cover the texture frame
+
+	-- secure
+	local secure = CreateFrame("Button", "Gladius"..self.name.."SecureButton"..unit, button, "SecureActionButtonTemplate")
+	secure:RegisterForClicks("AnyUp", "AnyDown")
+	self.frame[unit].secure = secure
 end
+
 
 function Dispel:Update(unit)
 	-- create frame
@@ -281,17 +252,7 @@ function Dispel:Update(unit)
 	else
 		right = - self.frame[unit]:GetWidth() + - Gladius.db.dispellOffsetX
 	end
-	-- search for an attached frame
-	--[[for _, module in pairs(Gladius.modules) do
-		if module.attachTo and module:GetAttachTo() == self.name and module.frame and module.frame[unit] then
-			local attachedPoint = module.frame[unit]:GetPoint()
-			if strfind(Gladius.db.trinketRelativePoint, "LEFT" and (not attachedPoint or (attachedPoint and strfind(attachedPoint, "RIGHT")))) then
-				left = left - module.frame[unit]:GetWidth()
-			elseif strfind(Gladius.db.trinketRelativePoint, "RIGHT" and (not attachedPoint or (attachedPoint and strfind(attachedPoint, "LEFT")))) then
-				right = right - module.frame[unit]:GetWidth()
-			end
-		end
-	end]]
+
 	-- top / bottom
 	if self.frame[unit]:GetHeight() > Gladius.buttons[unit]:GetHeight() then
 		bottom = - (self.frame[unit]:GetHeight() - Gladius.buttons[unit]:GetHeight()) + Gladius.db.dispellOffsetY
@@ -299,22 +260,18 @@ function Dispel:Update(unit)
 		Gladius.buttons[unit]:SetHitRectInsets(left, right, 0, 0)
 		Gladius.buttons[unit].secure:SetHitRectInsets(left, right, 0, 0)
 	end
-	-- style action button
-	self.frame[unit].normalTexture:SetHeight(self.frame[unit]:GetHeight() + self.frame[unit]:GetHeight() * 0.4)
-	self.frame[unit].normalTexture:SetWidth(self.frame[unit]:GetWidth() + self.frame[unit]:GetWidth() * 0.4)
-	self.frame[unit].normalTexture:ClearAllPoints()
-	self.frame[unit].normalTexture:SetPoint("CENTER", 0, 0)
-	self.frame[unit]:SetNormalTexture("Interface\\AddOns\\Gladius\\Images\\Gloss")
-	self.frame[unit].texture:ClearAllPoints()
-	self.frame[unit].texture:SetPoint("TOPLEFT", self.frame[unit], "TOPLEFT")
-	self.frame[unit].texture:SetPoint("BOTTOMRIGHT", self.frame[unit], "BOTTOMRIGHT")
+
 	if not Gladius.db.dispellIconCrop and not Gladius.db.dispellGridStyleIcon then
 		self.frame[unit].texture:SetTexCoord(0, 1, 0, 1)
 	else
 		self.frame[unit].texture:SetTexCoord(0.07, 0.93, 0.07, 0.93)
 	end
-	self.frame[unit].normalTexture:SetVertexColor(Gladius.db.dispellGlossColor.r, Gladius.db.dispellGlossColor.g, Gladius.db.dispellGlossColor.b, Gladius.db.dispellGloss and Gladius.db.dispellGlossColor.a or 0)
+
 	-- cooldown
+	-- Optional styling
+	self.frame[unit].cooldown:SetDrawSwipe(Gladius.db.dispellCooldown)
+	self.frame[unit].cooldown:SetDrawEdge(Gladius.db.dispellCooldownEdge)
+	self.frame[unit].cooldown:SetSwipeColor(0, 0, 0, Gladius.db.dispellCooldownSwipeAlpha)
 	if Gladius.db.dispellCooldown then
 		self.frame[unit].cooldown:Show()
 	else
@@ -368,13 +325,8 @@ function Dispel:Show(unit)
 
 		if dispellIcon then
 			self.frame[unit].texture:SetTexture(dispellIcon)
-			if Gladius.db.dispellGloss then
-				self.frame[unit].normalTexture:Show()
-				self.frame[unit]:SetAlpha(1)
-			end
 		else
 			self.frame[unit].texture:SetTexture("")
-			self.frame[unit].normalTexture:Hide()
 			self.frame[unit]:SetAlpha(0)
 		end
 		if Gladius.db.dispellIconCrop then
@@ -567,18 +519,22 @@ function Dispel:GetOptions()
 							hidden = function()
 								return not Gladius.db.advancedOptions
 							end,
+							width = "full",
 							order = 20,
 						},
 						sep2 = {
 							type = "description",
 							name = "",
 							width = "full",
+							hidden = function()
+								return not Gladius.db.advancedOptions
+							end,
 							order = 23,
 						},
-						dispellGloss = {
+						dispellCooldownEdge = {
 							type = "toggle",
-							name = L["Dispel Gloss"],
-							desc = L["Toggle gloss on the dispel icon"],
+							name = L["Dispell Cooldown Edge"],
+							desc = L["Display the edge texture for the cooldown spiral"],
 							disabled = function()
 								return not Gladius.dbi.profile.modules[self.name]
 							end,
@@ -587,25 +543,6 @@ function Dispel:GetOptions()
 							end,
 							order = 25,
 						},
-						dispellGlossColor = {
-							type = "color",
-							name = L["Dispel Gloss Color"],
-							desc = L["Color of the dispel icon gloss"],
-							get = function(info)
-								return Gladius:GetColorOption(info)
-							end,
-							set = function(info, r, g, b, a)
-								return Gladius:SetColorOption(info, r, g, b, a)
-							end,
-							hasAlpha = true,
-							disabled = function()
-								return not Gladius.dbi.profile.modules[self.name]
-							end,
-							hidden = function()
-								return not Gladius.db.advancedOptions
-							end,
-							order = 30,
-						},
 						sep3 = {
 							type = "description",
 							name = "",
@@ -613,7 +550,7 @@ function Dispel:GetOptions()
 							hidden = function()
 								return not Gladius.db.advancedOptions
 							end,
-							order = 33,
+							order = 28,
 						},
 						dispellIconCrop = {
 							type = "toggle",
@@ -622,7 +559,8 @@ function Dispel:GetOptions()
 							disabled = function()
 								return not Gladius.dbi.profile.modules[self.name]
 							end,
-							order = 35,
+							width = "full",
+							order = 30,
 						},
 						dispellFaction = {
 							type = "toggle",
@@ -631,12 +569,40 @@ function Dispel:GetOptions()
 							disabled = function()
 								return not Gladius.dbi.profile.modules[self.name]
 							end,
-							order = 40,
+							order = 35,
 						},
 						sep4 = {
 							type = "description",
 							name = "",
 							width = "full",
+							hidden = function()
+								return not Gladius.db.advancedOptions
+							end,
+							order = 38,
+						},
+						dispellCooldownSwipeAlpha = {
+							type = "range",
+							name = L["Dispell Cooldown Swipe Alpha"],
+							desc = L["Set the darkness of the cooldown swipe animation"],
+							disabled = function()
+								return not Gladius.dbi.profile.modules[self.name]
+							end,
+							hidden = function()
+								return not Gladius.db.advancedOptions
+							end,
+							min = 0.5,
+							max = 1,
+							step = 0.1,
+							width = "double",
+							order = 40,
+						},
+						sep5 = {
+							type = "description",
+							name = "",
+							width = "full",
+							hidden = function()
+								return not Gladius.db.advancedOptions
+							end,
 							order = 43,
 						},
 						dispellFrameLevel = {
