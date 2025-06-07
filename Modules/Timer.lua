@@ -113,11 +113,6 @@ function Timer:SetTimer(frame, duration, start, callback)
 
 	local cooldown = _G[frameName.."Cooldown"]
 	cooldown:SetAlpha(self.frames[frameName].showSpiral and 1 or 0)
-	cooldown:SetEdgeTexture("Interface\\Cooldown\\edge")
-	cooldown:SetSwipeColor(0, 0, 0)
-	cooldown:SetDrawEdge(false)
-	cooldown:SetDrawBling(false)
-	--cooldown.currentCooldownType = COOLDOWN_TYPE_NORMAL
 
 	if not cooldown.isDisabled then
 		cooldown:SetCooldown(start, duration)
