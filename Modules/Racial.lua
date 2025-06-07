@@ -237,7 +237,7 @@ function Racial:CreateFrame(unit)
 	local frameName = self.frame[unit]:GetName()
 
 	self.frame[unit]:EnableMouse(false)
-	self.frame[unit]:SetSize(Gladius.db.trinketSize, Gladius.db.trinketSize)
+	self.frame[unit]:SetSize(Gladius.db.RacialSize, Gladius.db.RacialSize)
 	self.frame[unit]:SetPoint("CENTER")
 
 	-- Create a texture frame
@@ -455,7 +455,7 @@ function Racial:GetOptions()
 						},
 						RacialCooldownEdge = {
 							type = "toggle",
-							name = L["Trinket Cooldown Edge"],
+							name = L["Racial Cooldown Edge"],
 							desc = L["Display the edge texture for the cooldown spiral"],
 							disabled = function()
 								return not Gladius.dbi.profile.modules[self.name]
@@ -494,7 +494,7 @@ function Racial:GetOptions()
 						},
 						RacialCooldownSwipeAlpha = {
 							type = "range",
-							name = L["Trinket Cooldown Swipe Alpha"],
+							name = L["Racial Cooldown Swipe Alpha"],
 							desc = L["Set the darkness of the cooldown swipe animation"],
 							disabled = function()
 								return not Gladius.dbi.profile.modules[self.name]
