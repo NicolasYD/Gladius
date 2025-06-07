@@ -22,7 +22,7 @@ local HealthBar = Gladius:NewModule("HealthBar", true, true, {
 	healthBarAttachTo = "Frame",
 	healthBarHeight = 35,
 	healthBarAdjustWidth = true,
-	healthBarWidth = 150,
+	healthBarWidth = 170,
 	healthBarInverse = false,
 	healthBarColor = {r = 1, g = 1, b = 1, a = 1},
 	healthBarClassColor = true,

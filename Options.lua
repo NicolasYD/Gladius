@@ -29,11 +29,11 @@ Gladius.defaults = {
 		advancedOptions = true,
 		backgroundColor = {r = 0, g = 0, b = 0, a = 0.4},
 		backgroundPadding = 0,
-		bottomMargin = 30,
+		bottomMargin = 70,
 		useGlobalFontSize = true,
 		globalFontSize = 11,
 		globalFont = "Friz Quadrata TT",
-		barWidth = 160,
+		barWidth = 170,
 		frameScale = 1,
 	},
 }

@@ -18,9 +18,11 @@ local UnitPowerType = UnitPowerType
 
 local PowerBar = Gladius:NewModule("PowerBar", true, true, {
 	powerBarAttachTo = "HealthBar",
+	powerBarAnchor = "TOPLEFT",
+	powerBarRelativePoint = "BOTTOMLEFT",
 	powerBarHeight = 15,
 	powerBarAdjustWidth = true,
-	powerBarWidth = 150,
+	powerBarWidth = 170,
 	powerBarInverse = false,
 	powerBarColor = {r = 1, g = 1, b = 1, a = 1},
 	powerBarDefaultColor = true,
@@ -28,8 +30,6 @@ local PowerBar = Gladius:NewModule("PowerBar", true, true, {
 	powerBarTexture = "Clean",
 	powerBarOffsetX = 0,
 	powerBarOffsetY = 0,
-	powerBarAnchor = "TOPLEFT",
-	powerBarRelativePoint = "BOTTOMLEFT",
 	powerBarUseDefaultColorMana = false,
 	powerBarColorMana = {r = 0.18, g = 0.44, b = 0.75, a = 1},
 	powerBarUseDefaultColorRage = false,

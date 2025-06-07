@@ -55,11 +55,11 @@ local GetSpellByID = C_TooltipInfo.GetSpellByID
 
 
 local Defensives = Gladius:NewModule("Defensives", false, true, {
-	DefensivesAttachTo = "ClassIcon",
+	DefensivesAttachTo = "CastBar",
 	DefensivesAnchor = "TOPLEFT",
-	DefensivesRelativePoint = "BOTTOMLEFT",
+	DefensivesRelativePoint = "TOPRIGHT",
 	DefensivesAdjustSize = false,
-	DefensivesMargin = 0,
+	DefensivesMargin = 5,
 	DefensivesSize = 40,
 	DefensivesOffsetX = 0,
 	DefensivesOffsetY = 0,

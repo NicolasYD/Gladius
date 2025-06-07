@@ -50,8 +50,8 @@ local Highlight = Gladius:NewModule("Highlight", false, false, {
 	highlightRaidIcon8 = false,
 	highlightRaidIcon8Color = {r = 1, g = 1, b = 1, a = 1},
 	highlightRaidIcon8Priority = 1,
-	highlightWidth = 1,
-	highlightInset = true
+	highlightWidth = 2,
+	highlightInset = false
 })
 
 function Highlight:OnEnable()
