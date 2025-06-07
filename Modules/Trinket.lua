@@ -37,6 +37,8 @@ local Trinket = Gladius:NewModule("Trinket", false, true, {
 	trinketGlossColor = {r = 1, g = 1, b = 1, a = 0.4},
 	trinketCooldown = true,
 	trinketCooldownReverse = false,
+	trinketCooldownEdge = false,
+	trinketCooldownSwipeAlpha = 1,
 	trinketFaction = false,
 	trinketDetached = false
 },
@@ -111,52 +113,7 @@ function Trinket:GetFrame(unit)
 	return self.frame[unit]
 end
 
---[[function Trinket:SetTemplate(template)
-	if template == 1 then
-		-- reset width
-		if Gladius.db.targetBarAttachTo == "HealthBar" and not Gladius.db.healthBarAdjustWidth then
-			Gladius.db.healthBarAdjustWidth = true
-		end
-		-- reset to default
-		for k, v in pairs(self.defaults) do
-			Gladius.db[k] = v
-		end
-	elseif template == 2 then
-		if Gladius.db.modules["HealthBar"] then
-			if (Gladius.db.healthBarAdjustWidth) then
-				Gladius.db.healthBarAdjustWidth = false
-				Gladius.db.healthBarWidth = Gladius.db.barWidth - Gladius.db.healthBarHeight
-			else
-				Gladius.db.healthBarWidth = Gladius.db.healthBarWidth - Gladius.db.healthBarHeight
-			end
-			Gladius.db.trinketGridStyleIcon = true
-			Gladius.db.trinketAdjustHeight = false
-			Gladius.db.trinketHeight = Gladius.db.healthBarHeight
-			Gladius.db.trinketAttachTo = "HealthBar"
-			Gladius.db.trinketAnchor = "TOPLEFT"
-			Gladius.db.trinketRelativePoint = "TOPRIGHT"
-			Gladius.db.trinketOffsetX = 0
-			Gladius.db.trinketOffsetY = 0
-		end
-	else
-		if Gladius.db.modules["PowerBar"] then
-			if (Gladius.db.powerBarAdjustWidth) then
-				Gladius.db.powerBarAdjustWidth = false
-				Gladius.db.powerBarWidth = Gladius.db.powerBarWidth - Gladius.db.powerBarHeight
-			else
-				Gladius.db.powerBarWidth = Gladius.db.powerBarWidth - Gladius.db.powerBarHeight
-			end
-			Gladius.db.trinketGridStyleIcon = true
-			Gladius.db.trinketAdjustHeight = false
-			Gladius.db.trinketHeight = Gladius.db.powerBarHeight
-			Gladius.db.trinketAttachTo = "PowerBar"
-			Gladius.db.trinketAnchor = "TOPLEFT"
-			Gladius.db.trinketRelativePoint = "TOPRIGHT"
-			Gladius.db.trinketOffsetX = 0
-			Gladius.db.trinketOffsetY = 0
-		end
-	end
-end]]
+
 function Trinket:ARENA_CROWD_CONTROL_SPELL_UPDATE(event, unit, spellID)
 	if Gladius.db.trinketFaction then return end
 	-- Find Correct Icon ty blizzard
@@ -280,6 +237,7 @@ function Trinket:UpdateTrinket(unit, duration)
 		end
 	end
 
+	self.frame[unit].cooldown:SetCooldown(GetTime(), duration)
 	Gladius:Call(Gladius.modules.Timer, "SetTimer", self.frame[unit], duration)
 end
 
@@ -308,13 +266,26 @@ function Trinket:CreateFrame(unit)
 	if not button then
 		return
 	end
-	-- create frame
-	self.frame[unit] = CreateFrame("CheckButton", "Gladius"..self.name.."Frame"..unit, button, "ActionButtonTemplate")
+
+	-- Create a parent frame
+	self.frame[unit] = CreateFrame("CheckButton", "Gladius"..self.name.."Frame"..unit, button)
+	local frameName = self.frame[unit]:GetName()
+
 	self.frame[unit]:EnableMouse(false)
-	self.frame[unit]:SetNormalTexture("Interface\\AddOns\\Gladius\\Images\\Gloss")
-	self.frame[unit].texture = _G[self.frame[unit]:GetName().."Icon"]
-	self.frame[unit].normalTexture = _G[self.frame[unit]:GetName().."NormalTexture"]
-	self.frame[unit].cooldown = _G[self.frame[unit]:GetName().."Cooldown"]
+	self.frame[unit]:SetSize(Gladius.db.trinketSize, Gladius.db.trinketSize)
+	self.frame[unit]:SetPoint("CENTER")
+
+	-- Create a texture frame
+	self.frame[unit].texture = self.frame[unit]:CreateTexture(frameName .. "Icon", "BACKGROUND")
+	self.frame[unit].texture:SetAllPoints() -- Makes it cover the frame
+
+	-- Create a cooldown frame on top of the texture frame
+	self.frame[unit].cooldown = CreateFrame("Cooldown", frameName .. "Cooldown", self.frame[unit], "CooldownFrameTemplate")
+	self.frame[unit].cooldown:SetAllPoints() -- Makes it cover the texture frame
+
+	-- Optional styling
+	self.frame[unit].cooldown:SetDrawEdge(Gladius.db.trinketCooldownEdge)
+	self.frame[unit].cooldown:SetSwipeColor(0, 0, 0, Gladius.db.trinketCooldownSwipeAlpha)
 
 	-- secure
 	local secure = CreateFrame("Button", "Gladius"..self.name.."SecureButton"..unit, button, "SecureActionButtonTemplate")
@@ -330,7 +301,6 @@ function Trinket:UpdateColors(unit)
 			self.frame[unit].texture:SetVertexColor(Gladius.db.trinketGridStyleIconUsedColor.r, Gladius.db.trinketGridStyleIconUsedColor.g, Gladius.db.trinketGridStyleIconUsedColor.b, Gladius.db.trinketGridStyleIconUsedColor.a)
 		end
 	end
-	self.frame[unit].normalTexture:SetVertexColor(Gladius.db.trinketGlossColor.r, Gladius.db.trinketGlossColor.g, Gladius.db.trinketGlossColor.b, Gladius.db.trinketGloss and Gladius.db.trinketGlossColor.a or 0)
 end
 
 function Trinket:Update(unit)
@@ -399,11 +369,6 @@ function Trinket:Update(unit)
 		Gladius.buttons[unit].secure:SetHitRectInsets(left, right, 0, 0)
 	end
 	-- style action button
-	unitFrame.normalTexture:SetHeight(unitFrame:GetHeight() + unitFrame:GetHeight() * 0.4)
-	unitFrame.normalTexture:SetWidth(unitFrame:GetWidth() + unitFrame:GetWidth() * 0.4)
-	unitFrame.normalTexture:ClearAllPoints()
-	unitFrame.normalTexture:SetPoint("CENTER", 0, 0)
-	unitFrame:SetNormalTexture("Interface\\AddOns\\Gladius\\Images\\Gloss")
 	unitFrame.texture:ClearAllPoints()
 	unitFrame.texture:SetPoint("TOPLEFT", unitFrame, "TOPLEFT")
 	unitFrame.texture:SetPoint("BOTTOMRIGHT", unitFrame, "BOTTOMRIGHT")
@@ -412,9 +377,9 @@ function Trinket:Update(unit)
 	else
 		unitFrame.texture:SetTexCoord(0.07, 0.93, 0.07, 0.93)
 	end
-	unitFrame.normalTexture:SetVertexColor(Gladius.db.trinketGlossColor.r, Gladius.db.trinketGlossColor.g, Gladius.db.trinketGlossColor.b, Gladius.db.trinketGloss and Gladius.db.trinketGlossColor.a or 0)
 
 	-- cooldown
+	self.frame[unit].cooldown:SetDrawSwipe(Gladius.db.trinketCooldown)
 	unitFrame.cooldown.isDisabled = not Gladius.db.trinketCooldown
 	unitFrame.cooldown:SetReverse(Gladius.db.trinketCooldownReverse)
 	Gladius:Call(Gladius.modules.Timer, "RegisterTimer", unitFrame, Gladius.db.trinketCooldown)
