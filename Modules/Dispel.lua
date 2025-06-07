@@ -206,13 +206,16 @@ function Dispel:Update(unit)
 	if not self.frame[unit] then
 		self:CreateFrame(unit)
 	end
+
+	local unitFrame = self.frame[unit]
+
 	-- update frame
-	self.frame[unit]:ClearAllPoints()
+	unitFrame:ClearAllPoints()
 	-- anchor point
 	local parent = Gladius:GetParent(unit, Gladius.db.dispellAttachTo)
-	self.frame[unit]:SetPoint(Gladius.db.dispellAnchor, parent, Gladius.db.dispellRelativePoint, Gladius.db.dispellOffsetX, Gladius.db.dispellOffsetY)
+	unitFrame:SetPoint(Gladius.db.dispellAnchor, parent, Gladius.db.dispellRelativePoint, Gladius.db.dispellOffsetX, Gladius.db.dispellOffsetY)
 	-- frame level
-	self.frame[unit]:SetFrameLevel(Gladius.db.dispellFrameLevel)
+	unitFrame:SetFrameLevel(Gladius.db.dispellFrameLevel)
 	if Gladius.db.dispellAdjustSize then
 		if self:GetAttachTo() == "Frame" then
 			local height = false
@@ -223,11 +226,11 @@ function Dispel:Update(unit)
 				end
 			end]]
 			if height then
-				self.frame[unit]:SetWidth(Gladius.buttons[unit].height)
-				self.frame[unit]:SetHeight(Gladius.buttons[unit].height)
+				unitFrame:SetWidth(Gladius.buttons[unit].height)
+				unitFrame:SetHeight(Gladius.buttons[unit].height)
 			else
-				self.frame[unit]:SetWidth(Gladius.buttons[unit].frameHeight)
-				self.frame[unit]:SetHeight(Gladius.buttons[unit].frameHeight)
+				unitFrame:SetWidth(Gladius.buttons[unit].frameHeight)
+				unitFrame:SetHeight(Gladius.buttons[unit].frameHeight)
 			end
 		else
 			local defaultValue = nil
@@ -236,35 +239,35 @@ function Dispel:Update(unit)
 			else
 				defaultValue = 1
 			end
-			
-			self.frame[unit]:SetWidth(defaultValue)
-			self.frame[unit]:SetHeight(defaultValue)
+
+			unitFrame:SetWidth(defaultValue)
+			unitFrame:SetHeight(defaultValue)
 		end
 	else
-		self.frame[unit]:SetWidth(Gladius.db.dispellSize)
-		self.frame[unit]:SetHeight(Gladius.db.dispellSize)
+		unitFrame:SetWidth(Gladius.db.dispellSize)
+		unitFrame:SetHeight(Gladius.db.dispellSize)
 	end
 	-- set frame mouse-interactable area
 	if self:GetAttachTo() == "Frame" then
 	local left, right, top, bottom = Gladius.buttons[unit]:GetHitRectInsets()
 	if strfind(Gladius.db.dispellRelativePoint, "LEFT") then
-		left = - self.frame[unit]:GetWidth() + Gladius.db.dispellOffsetX
+		left = - unitFrame:GetWidth() + Gladius.db.dispellOffsetX
 	else
-		right = - self.frame[unit]:GetWidth() + - Gladius.db.dispellOffsetX
+		right = - unitFrame:GetWidth() + - Gladius.db.dispellOffsetX
 	end
 
 	-- top / bottom
-	if self.frame[unit]:GetHeight() > Gladius.buttons[unit]:GetHeight() then
-		bottom = - (self.frame[unit]:GetHeight() - Gladius.buttons[unit]:GetHeight()) + Gladius.db.dispellOffsetY
+	if unitFrame:GetHeight() > Gladius.buttons[unit]:GetHeight() then
+		bottom = - (unitFrame:GetHeight() - Gladius.buttons[unit]:GetHeight()) + Gladius.db.dispellOffsetY
 	end
 		Gladius.buttons[unit]:SetHitRectInsets(left, right, 0, 0)
 		Gladius.buttons[unit].secure:SetHitRectInsets(left, right, 0, 0)
 	end
 
 	if not Gladius.db.dispellIconCrop and not Gladius.db.dispellGridStyleIcon then
-		self.frame[unit].texture:SetTexCoord(0, 1, 0, 1)
+		unitFrame.texture:SetTexCoord(0, 1, 0, 1)
 	else
-		self.frame[unit].texture:SetTexCoord(0.07, 0.93, 0.07, 0.93)
+		unitFrame.texture:SetTexCoord(0.07, 0.93, 0.07, 0.93)
 	end
 
 	-- cooldown
@@ -273,14 +276,15 @@ function Dispel:Update(unit)
 	self.frame[unit].cooldown:SetDrawEdge(Gladius.db.dispellCooldownEdge)
 	self.frame[unit].cooldown:SetSwipeColor(0, 0, 0, Gladius.db.dispellCooldownSwipeAlpha)
 	if Gladius.db.dispellCooldown then
-		self.frame[unit].cooldown:Show()
+		unitFrame.cooldown:Show()
 	else
-		self.frame[unit].cooldown:Hide()
+		unitFrame.cooldown:Hide()
 	end
-	self.frame[unit].cooldown:SetReverse(Gladius.db.dispellCooldownReverse)
-	Gladius:Call(Gladius.modules.Timer, "RegisterTimer", self.frame[unit], Gladius.db.dispellCooldown)
+	unitFrame.cooldown:SetReverse(Gladius.db.dispellCooldownReverse)
+	Gladius:Call(Gladius.modules.Timer, "RegisterTimer", unitFrame, Gladius.db.dispellCooldown)
+
 	-- hide
-	self.frame[unit]:SetAlpha(0)
+	unitFrame:SetAlpha(0)
 end
 
 
