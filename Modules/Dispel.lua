@@ -33,7 +33,7 @@ local Dispel = Gladius:NewModule("Dispel", false, true, {
 	dispellGridStyleIconColor = {r = 0, g = 1, b = 0, a = 1},
 	dispellGridStyleIconUsedColor = {r = 1, g = 0, b = 0, a = 1},
 	dispellAdjustSize = false,
-	dispellSize = 50,
+	dispellSize = 40,
 	dispellOffsetX = 5,
 	dispellOffsetY = 0,
 	dispellFrameLevel = 1,
@@ -331,6 +331,7 @@ function Dispel:Show(unit)
 			self.frame[unit].texture:SetTexture(dispellIcon)
 		else
 			self.frame[unit].texture:SetTexture("")
+			self.frame[unit].cooldown:SetDrawBling(false)
 			self.frame[unit]:SetAlpha(0)
 		end
 		if Gladius.db.dispellIconCrop then

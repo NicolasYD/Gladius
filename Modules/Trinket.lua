@@ -28,7 +28,7 @@ local Trinket = Gladius:NewModule("Trinket", false, true, {
 	trinketGridStyleIconColor = {r = 0, g = 1, b = 0, a = 1},
 	trinketGridStyleIconUsedColor = {r = 1, g = 0, b = 0, a = 1},
 	trinketAdjustSize = false,
-	trinketSize = 50,
+	trinketSize = 40,
 	trinketOffsetX = 5,
 	trinketOffsetY = 0,
 	trinketFrameLevel = 1,
