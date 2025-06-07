@@ -270,7 +270,6 @@ function CastBar:CreateBar(unit)
 	-- create bar + text
 	self.frame[unit] = CreateFrame("StatusBar", "Gladius"..self.name..unit, button)
 	self.frame[unit].background = self.frame[unit]:CreateTexture("Gladius"..self.name..unit.."Background", "BACKGROUND")
-	self.frame[unit].highlight = self.frame[unit]:CreateTexture("Gladius"..self.name.."Highlight"..unit, "OVERLAY")
 	self.frame[unit].castText = self.frame[unit]:CreateFontString("Gladius"..self.name.."CastText"..unit, "OVERLAY")
 	self.frame[unit].timeText = self.frame[unit]:CreateFontString("Gladius"..self.name.."TimeText"..unit, "OVERLAY")
 	self.frame[unit].icon = self.frame[unit]:CreateTexture("Gladius"..self.name.."IconFrame"..unit, "ARTWORK")
@@ -441,12 +440,6 @@ function CastBar:Update(unit)
 	-- disable tileing
 	self.frame[unit].background:SetHorizTile(false)
 	self.frame[unit].background:SetVertTile(false)
-	-- update highlight texture
-	self.frame[unit].highlight:SetAllPoints(self.frame[unit])
-	self.frame[unit].highlight:SetTexture([=[Interface\QuestFrame\UI-QuestTitleHighlight]=])
-	self.frame[unit].highlight:SetBlendMode("ADD")
-	self.frame[unit].highlight:SetVertexColor(1.0, 1.0, 1.0, 1.0)
-	self.frame[unit].highlight:SetAlpha(0)
 	-- hide
 	self.frame[unit]:SetAlpha(0)
 end
