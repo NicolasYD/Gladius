@@ -65,20 +65,20 @@ end
 local unitRaceCDs = CreateRacialTable()
 
 local Racial = Gladius:NewModule("Racial", false, true, {
-	RacialAttachTo = "Frame",
+	RacialAttachTo = "Trinket",
 	RacialAnchor = "TOPLEFT",
 	RacialRelativePoint = "TOPRIGHT",
 	RacialAdjustSize = false,
 	RacialSize = 50,
-	RacialOffsetX = 50,
+	RacialOffsetX = 0,
 	RacialOffsetY = 0,
 	RacialFrameLevel = 1,
-	RacialIconCrop = false,
-	RacialGloss = false,
-	RacialGlossColor = {r = 1, g = 1, b = 1, a = 0.4},
+	RacialIconCrop = true,
 	RacialCooldown = true,
 	RacialCooldownReverse = false,
-	RacialDetached = false
+	RacialCooldownSwipeAlpha = 1,
+	RacialCooldownEdge = false,
+	RacialDetached = true
 },
 {
 	"Racial icon", "Grid style health bar", "Grid style power bar"
@@ -217,31 +217,43 @@ function Racial:UpdateRacial(unit, duration)
 		end)
 	end
 	-- cooldown
-	Gladius:Call(Gladius.modules.Timer, "SetTimer", self.frame[unit], duration)
+	if not Gladius.db.modules["Timer"] then
+		self.frame[unit].cooldown:SetHideCountdownNumbers(false)
+		self.frame[unit].cooldown:SetCooldown(GetTime(), duration)
+	else
+		Gladius:Call(Gladius.modules.Timer, "SetTimer", self.frame[unit], duration)
+	end
 end
+
 
 function Racial:CreateFrame(unit)
 	local button = Gladius.buttons[unit]
 	if not button then
 		return
 	end
-	-- create frame
-	self.frame[unit] = CreateFrame("CheckButton", "Gladius"..self.name.."Frame"..unit, button, "ActionButtonTemplate")
+
+	-- Create a parent frame
+	self.frame[unit] = CreateFrame("CheckButton", "Gladius"..self.name.."Frame"..unit, button)
+	local frameName = self.frame[unit]:GetName()
+
 	self.frame[unit]:EnableMouse(false)
-	self.frame[unit]:SetNormalTexture("Interface\\AddOns\\Gladius\\Images\\Gloss")
-	self.frame[unit].texture = _G[self.frame[unit]:GetName().."Icon"]
-	self.frame[unit].normalTexture = _G[self.frame[unit]:GetName().."NormalTexture"]
-	self.frame[unit].cooldown = _G[self.frame[unit]:GetName().."Cooldown"]
+	self.frame[unit]:SetSize(Gladius.db.trinketSize, Gladius.db.trinketSize)
+	self.frame[unit]:SetPoint("CENTER")
+
+	-- Create a texture frame
+	self.frame[unit].texture = self.frame[unit]:CreateTexture(frameName .. "Icon", "BACKGROUND")
+	self.frame[unit].texture:SetAllPoints() -- Makes it cover the frame
+
+	-- Create a cooldown frame on top of the texture frame
+	self.frame[unit].cooldown = CreateFrame("Cooldown", frameName .. "Cooldown", self.frame[unit], "CooldownFrameTemplate")
+	self.frame[unit].cooldown:SetAllPoints() -- Makes it cover the texture frame
 
 	-- secure
 	local secure = CreateFrame("Button", "Gladius"..self.name.."SecureButton"..unit, button, "SecureActionButtonTemplate")
-	secure:RegisterForClicks("AnyUp")
+	secure:RegisterForClicks("AnyUp", "AnyDown")
 	self.frame[unit].secure = secure
 end
 
-function Racial:UpdateColors(unit)
-	self.frame[unit].normalTexture:SetVertexColor(Gladius.db.RacialGlossColor.r, Gladius.db.RacialGlossColor.g, Gladius.db.RacialGlossColor.b, Gladius.db.RacialGloss and Gladius.db.RacialGlossColor.a or 0)
-end
 
 function Racial:Update(unit)
 	-- create frame
@@ -261,12 +273,7 @@ function Racial:Update(unit)
 	if Gladius.db.RacialAdjustSize then
 		if self:GetAttachTo() == "Frame" then
 			local height = false
-			-- need to rethink that
-			--[[for _, module in pairs(Gladius.modules) do
-				if (module:GetAttachTo() == self.name) then
-					height = false
-				end
-			end]]
+
 			if height then
 				unitFrame:SetWidth(Gladius.buttons[unit].height)
 				unitFrame:SetHeight(Gladius.buttons[unit].height)
@@ -290,17 +297,7 @@ function Racial:Update(unit)
 		else
 			right = - unitFrame:GetWidth() + - Gladius.db.RacialOffsetX
 		end
-		-- search for an attached frame
-		--[[for _, module in pairs(Gladius.modules) do
-			if module.attachTo and module:GetAttachTo() == self.name and module.frame and module.frame[unit] then
-				local attachedPoint = module.frame[unit]:GetPoint()
-				if strfind(Gladius.db.RacialRelativePoint, "LEFT" and (not attachedPoint or (attachedPoint and strfind(attachedPoint, "RIGHT")))) then
-					left = left - module.frame[unit]:GetWidth()
-				elseif strfind(Gladius.db.RacialRelativePoint, "RIGHT" and (not attachedPoint or (attachedPoint and strfind(attachedPoint, "LEFT")))) then
-					right = right - module.frame[unit]:GetWidth()
-				end
-			end
-		end]]
+
 		-- top / bottom
 		if (unitFrame:GetHeight() > Gladius.buttons[unit]:GetHeight()) then
 			bottom = -(unitFrame:GetHeight() - Gladius.buttons[unit]:GetHeight()) + Gladius.db.RacialOffsetY
@@ -308,23 +305,18 @@ function Racial:Update(unit)
 		Gladius.buttons[unit]:SetHitRectInsets(left, right, 0, 0)
 		Gladius.buttons[unit].secure:SetHitRectInsets(left, right, 0, 0)
 	end
-	-- style action button
-	unitFrame.normalTexture:SetHeight(unitFrame:GetHeight() + unitFrame:GetHeight() * 0.4)
-	unitFrame.normalTexture:SetWidth(unitFrame:GetWidth() + unitFrame:GetWidth() * 0.4)
-	unitFrame.normalTexture:ClearAllPoints()
-	unitFrame.normalTexture:SetPoint("CENTER", 0, 0)
-	unitFrame:SetNormalTexture("Interface\\AddOns\\Gladius\\Images\\Gloss")
-	unitFrame.texture:ClearAllPoints()
-	unitFrame.texture:SetPoint("TOPLEFT", unitFrame, "TOPLEFT")
-	unitFrame.texture:SetPoint("BOTTOMRIGHT", unitFrame, "BOTTOMRIGHT")
+
 	if not Gladius.db.RacialIconCrop then
 		unitFrame.texture:SetTexCoord(0, 1, 0, 1)
 	else
 		unitFrame.texture:SetTexCoord(0.07, 0.93, 0.07, 0.93)
 	end
-	unitFrame.normalTexture:SetVertexColor(Gladius.db.RacialGlossColor.r, Gladius.db.RacialGlossColor.g, Gladius.db.RacialGlossColor.b, Gladius.db.RacialGloss and Gladius.db.RacialGlossColor.a or 0)
 
 	-- cooldown
+	-- Optional styling
+	self.frame[unit].cooldown:SetDrawSwipe(Gladius.db.RacialCooldown)
+	self.frame[unit].cooldown:SetDrawEdge(Gladius.db.RacialCooldownEdge)
+	self.frame[unit].cooldown:SetSwipeColor(0, 0, 0, Gladius.db.RacialCooldownSwipeAlpha)
 	unitFrame.cooldown.isDisabled = not Gladius.db.RacialCooldown
 	unitFrame.cooldown:SetReverse(Gladius.db.RacialCooldownReverse)
 	Gladius:Call(Gladius.modules.Timer, "RegisterTimer", unitFrame, Gladius.db.RacialCooldown)
@@ -437,7 +429,7 @@ function Racial:GetOptions()
 							hidden = function()
 								return not Gladius.db.advancedOptions
 							end,
-							order = 15,
+							order = 5,
 						},
 						RacialCooldownReverse = {
 							type = "toggle",
@@ -450,59 +442,37 @@ function Racial:GetOptions()
 								return not Gladius.db.advancedOptions
 							end,
 							width = "full",
-							order = 44,
+							order = 10,
 						},
-						sep2 = {
+						sep = {
 							type = "description",
 							name = "",
 							width = "full",
-							order = 45,
+							hidden = function()
+								return not Gladius.db.advancedOptions
+							end,
+							order = 13,
 						},
-						sep2 = {
-							type = "description",
-							name = "",
-							width = "full",
-							order = 23,
-						},
-						RacialGloss = {
+						RacialCooldownEdge = {
 							type = "toggle",
-							name = L["Racial Gloss"],
-							desc = L["Toggle gloss on the Racial icon"],
+							name = L["Trinket Cooldown Edge"],
+							desc = L["Display the edge texture for the cooldown spiral"],
 							disabled = function()
 								return not Gladius.dbi.profile.modules[self.name]
 							end,
 							hidden = function()
 								return not Gladius.db.advancedOptions
 							end,
-							order = 25,
+							order = 15,
 						},
-						RacialGlossColor = {
-							type = "color",
-							name = L["Racial Gloss Color"],
-							desc = L["Color of the Racial icon gloss"],
-							get = function(info)
-								return Gladius:GetColorOption(info)
-							end,
-							set = function(info, r, g, b, a)
-								return Gladius:SetColorOption(info, r, g, b, a)
-							end,
-							hasAlpha = true,
-							disabled = function()
-								return not Gladius.dbi.profile.modules[self.name]
-							end,
-							hidden = function()
-								return not Gladius.db.advancedOptions
-							end,
-							order = 30,
-						},
-						sep3 = {
+						sep2 = {
 							type = "description",
 							name = "",
 							width = "full",
 							hidden = function()
 								return not Gladius.db.advancedOptions
 							end,
-							order = 33,
+							order = 18,
 						},
 						RacialIconCrop = {
 							type = "toggle",
@@ -511,13 +481,41 @@ function Racial:GetOptions()
 							disabled = function()
 								return not Gladius.dbi.profile.modules[self.name]
 							end,
-							order = 35,
+							order = 20,
 						},
 						sep3 = {
 							type = "description",
 							name = "",
 							width = "full",
-							order = 43,
+							hidden = function()
+								return not Gladius.db.advancedOptions
+							end,
+							order = 23,
+						},
+						RacialCooldownSwipeAlpha = {
+							type = "range",
+							name = L["Trinket Cooldown Swipe Alpha"],
+							desc = L["Set the darkness of the cooldown swipe animation"],
+							disabled = function()
+								return not Gladius.dbi.profile.modules[self.name]
+							end,
+							hidden = function()
+								return not Gladius.db.advancedOptions
+							end,
+							min = 0.5,
+							max = 1,
+							step = 0.1,
+							width = "double",
+							order = 25,
+						},
+						sep5 = {
+							type = "description",
+							name = "",
+							width = "full",
+							hidden = function()
+								return not Gladius.db.advancedOptions
+							end,
+							order = 28,
 						},
 						RacialFrameLevel = {
 							type = "range",
@@ -533,7 +531,7 @@ function Racial:GetOptions()
 							max = 5,
 							step = 1,
 							width = "double",
-							order = 46,
+							order = 30,
 						},
 					},
 				},
