@@ -324,7 +324,10 @@ function Dispel:Show(unit)
 					end
 				end
 			end
-			if dispellIcon then break end
+			if dispellIcon then
+				self.frame[unit].cooldown:SetDrawBling(true)
+				break
+			end
 		end
 
 		if dispellIcon then

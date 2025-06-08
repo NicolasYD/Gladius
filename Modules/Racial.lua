@@ -146,7 +146,7 @@ function Racial:UNIT_AURA(event, unit)
 	if instanceType ~= "arena" or not strfind(unit, "arena") or strfind(unit, "pet") then
 		return
 	end
-	local race = (self.frame[unit].race or string.upper(select(2, UnitRace(unit))))
+	local race = self.frame[unit] and (self.frame[unit].race or string.upper(select(2, UnitRace(unit))))
 	-- Set Racial CD on Adaptation
 	if GetUnitDebuff(unit, "Adapted") then
 		local _, _, _, _, _, t = GetUnitDebuff(unit, "Adapted")
@@ -164,7 +164,7 @@ function Racial:UNIT_SPELLCAST_SUCCEEDED(event, unit, spellLineID, spell)
 	if instanceType ~= "arena" or not strfind(unit, "arena") or strfind(unit, "pet") then
 		return
 	end
-	local race = (self.frame[unit].race or string.upper(select(2, UnitRace(unit))))
+	local race = self.frame[unit] and (self.frame[unit].race or string.upper(select(2, UnitRace(unit))))
 	if unitRaceCDs[race].sharesCD then
 		local cd = self:GetRacialCD(unit)
 		local sharedCD = (race == 'HUMAN' and 90) or 30

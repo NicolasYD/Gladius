@@ -195,8 +195,16 @@ end
 
 function Trinket:GetTrinketCD(unit)
 	local cd = 0
-	local startTime, duration = self.frame[unit].cooldown:GetCooldownTimes()
-	cd = ((startTime + duration)/1000 - GetTime())
+	local startTime, duration
+
+	if self.frame[unit] and self.frame[unit].cooldown then
+		startTime, duration = self.frame[unit].cooldown:GetCooldownTimes()
+	end
+
+	if duration then
+		cd = ((startTime + duration)/1000 - GetTime())
+	end
+
 	return cd
 end
 

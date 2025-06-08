@@ -457,6 +457,7 @@ function CastBar:Show(unit)
 end
 
 function CastBar:Reset(unit)
+	self.frame[unit] = self.frame[unit] or {}
 	-- reset bar
 	self.frame[unit]:SetMinMaxValues(0, 1)
 	self.frame[unit]:SetValue(0)
