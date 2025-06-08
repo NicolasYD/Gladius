@@ -18,7 +18,6 @@ local strfind = string.find
 local strformat = string.format
 
 local CreateFrame = CreateFrame
-local GetSpellInfo = C_Spell.GetSpellInfo
 local GetSpellTexture = C_Spell.GetSpellTexture
 local IsInInstance = IsInInstance
 local UnitClass = UnitClass
@@ -41,10 +40,10 @@ local Trinket = Gladius:NewModule("Trinket", false, true, {
 	trinketIconCrop = true,
 	trinketCooldown = true,
 	trinketCooldownReverse = false,
-	trinketCooldownSwipeAlpha = 1,
-	trinketCooldownEdge = false,
+	trinketCooldownSwipeAlpha = 0.8,
+	trinketCooldownEdge = true,
 	trinketFaction = false,
-	trinketDetached = true
+	trinketDetached = false
 },
 {
 	"Trinket icon", "Grid style health bar", "Grid style power bar"
@@ -512,22 +511,42 @@ function Trinket:GetOptions()
 					name = L["Widget"],
 					desc = L["Widget settings"],
 					inline = true,
+					hidden = function ()
+						return not Gladius.db.advancedOptions
+					end,
 					order = 1,
 					args = {
+						trinketFaction = {
+							type = "toggle",
+							name = L["Trinket Icon Faction"],
+							desc = L["Toggle if the trinket icon should be changing based on the opponents faction"],
+							disabled = function()
+								return not Gladius.dbi.profile.modules[self.name] or Gladius.db.trinketGridStyleIcon
+							end,
+							width = "double",
+							order = 5,
+						},
+						sep1 = {
+							type = "description",
+							name = "",
+							width = "full",
+							order = 8,
+						},
 						trinketGridStyleIcon = {
 							type = "toggle",
 							name = L["Trinket Grid Style Icon"],
 							desc = L["Toggle trinket grid style icon"],
 							disabled = function()
-								return not Gladius.dbi.profile.modules[self.name]
+								return not Gladius.dbi.profile.modules[self.name] or Gladius.db.trinketFaction
 							end,
-							order = 5,
+							width = "double",
+							order = 10,
 						},
-						sep = {
+						sep2 = {
 							type = "description",
 							name = "",
 							width = "full",
-							order = 7,
+							order = 13,
 						},
 						trinketGridStyleIconColor = {
 							type = "color",
@@ -543,7 +562,7 @@ function Trinket:GetOptions()
 							disabled = function()
 								return not Gladius.dbi.profile.trinketGridStyleIcon or not Gladius.dbi.profile.modules[self.name]
 							end,
-							order = 10,
+							order = 15,
 						},
 						trinketGridStyleIconUsedColor = {
 							type = "color",
@@ -559,13 +578,29 @@ function Trinket:GetOptions()
 							disabled = function()
 								return not Gladius.dbi.profile.trinketGridStyleIcon or not Gladius.dbi.profile.modules[self.name]
 							end,
-							order = 12,
+							order = 20,
 						},
-						sep1 = {
+						sep3 = {
 							type = "description",
 							name = "",
 							width = "full",
-							order = 13,
+							order = 23,
+						},
+						trinketIconCrop = {
+							type = "toggle",
+							name = L["Trinket Icon Border Crop"],
+							desc = L["Toggle if the borders of the trinket icon should be cropped"],
+							disabled = function()
+								return not Gladius.dbi.profile.modules[self.name]
+							end,
+							width = "double",
+							order = 25,
+						},
+						sep4 = {
+							type = "description",
+							name = "",
+							width = "full",
+							order = 28,
 						},
 						trinketCooldown = {
 							type = "toggle",
@@ -577,103 +612,68 @@ function Trinket:GetOptions()
 							hidden = function()
 								return not Gladius.db.advancedOptions
 							end,
-							order = 15,
+							width = "double",
+							order = 30,
+						},
+						sep5 = {
+							type = "description",
+							name = "",
+							width = "full",
+							order = 33,
 						},
 						trinketCooldownReverse = {
 							type = "toggle",
 							name = L["Trinket Cooldown Reverse"],
 							desc = L["Invert the dark/bright part of the cooldown spiral"],
 							disabled = function()
-								return not Gladius.dbi.profile.modules[self.name]
+								return not Gladius.dbi.profile.modules[self.name] or not Gladius.db.trinketCooldown
 							end,
 							hidden = function()
 								return not Gladius.db.advancedOptions
 							end,
-							width = "full",
-							order = 20,
+							width = "double",
+							order = 35,
 						},
-						sep2 = {
+						sep6 = {
 							type = "description",
 							name = "",
 							width = "full",
-							hidden = function()
-								return not Gladius.db.advancedOptions
-							end,
-							order = 23,
+							order = 38,
 						},
 						trinketCooldownEdge = {
 							type = "toggle",
 							name = L["Trinket Cooldown Edge"],
 							desc = L["Display the edge texture for the cooldown spiral"],
 							disabled = function()
-								return not Gladius.dbi.profile.modules[self.name]
+								return not Gladius.dbi.profile.modules[self.name] or not Gladius.db.trinketCooldown
 							end,
-							hidden = function()
-								return not Gladius.db.advancedOptions
-							end,
-							order = 25,
+							width = "double",
+							order = 40,
 						},
-						sep3 = {
+						sep7 = {
 							type = "description",
 							name = "",
 							width = "full",
-							hidden = function()
-								return not Gladius.db.advancedOptions
-							end,
-							order = 28,
-						},
-						trinketIconCrop = {
-							type = "toggle",
-							name = L["Trinket Icon Border Crop"],
-							desc = L["Toggle if the borders of the trinket icon should be cropped"],
-							disabled = function()
-								return not Gladius.dbi.profile.modules[self.name]
-							end,
-							width = "full",
-							order = 30,
-						},
-						trinketFaction = {
-							type = "toggle",
-							name = L["Trinket Icon Faction"],
-							desc = L["Toggle if the trinket icon should be changing based on the opponents faction"],
-							disabled = function()
-								return not Gladius.dbi.profile.modules[self.name]
-							end,
-							order = 35,
-						},
-						sep4 = {
-							type = "description",
-							name = "",
-							width = "full",
-							hidden = function()
-								return not Gladius.db.advancedOptions
-							end,
-							order = 38,
+							order = 43,
 						},
 						trinketCooldownSwipeAlpha = {
 							type = "range",
 							name = L["Trinket Cooldown Swipe Alpha"],
 							desc = L["Set the darkness of the cooldown swipe animation"],
 							disabled = function()
-								return not Gladius.dbi.profile.modules[self.name]
-							end,
-							hidden = function()
-								return not Gladius.db.advancedOptions
+								return not Gladius.dbi.profile.modules[self.name] or not Gladius.db.trinketCooldown
 							end,
 							min = 0.5,
 							max = 1,
 							step = 0.1,
 							width = "double",
-							order = 40,
+							order = 45,
 						},
-						sep5 = {
+						sep8 = {
 							type = "description",
 							name = "",
 							width = "full",
-							hidden = function()
-								return not Gladius.db.advancedOptions
-							end,
-							order = 43,
+							order = 48,
 						},
 						trinketFrameLevel = {
 							type = "range",
@@ -689,7 +689,7 @@ function Trinket:GetOptions()
 							max = 5,
 							step = 1,
 							width = "double",
-							order = 45,
+							order = 50,
 						},
 					},
 				},
@@ -730,28 +730,6 @@ function Trinket:GetOptions()
 					inline = true,
 					order = 3,
 					args = {
-						trinketAttachTo = {
-							type = "select",
-							name = L["Trinket Attach To"],
-							desc = L["Attach trinket to the given frame"],
-							values = function()
-								return Gladius:GetModules(self.name)
-							end,
-							disabled = function()
-								return not Gladius.dbi.profile.modules[self.name]
-							end,
-							arg = "general",
-							order = 5,
-						},
-						trinketDetached = {
-							type = "toggle",
-							name = L["Detached from frame"],
-							desc = L["Detach the module from the frame itself"],
-							disabled = function()
-								return not Gladius.dbi.profile.modules[self.name]
-							end,
-							order = 6,
-						},
 						trinketPosition = {
 							type = "select",
 							name = L["Trinket Position"],
@@ -773,16 +751,44 @@ function Trinket:GetOptions()
 							disabled = function()
 								return not Gladius.dbi.profile.modules[self.name]
 							end,
-							hidden = function()
-								return Gladius.db.advancedOptions
-							end,
-							order = 7,
+							order = 5,
 						},
-						sep = {
+						sep1 = {
 							type = "description",
 							name = "",
 							width = "full",
 							order = 8,
+						},
+						trinketAttachTo = {
+							type = "select",
+							name = L["Trinket Attach To"],
+							desc = L["Attach trinket to the given frame"],
+							values = function()
+								return Gladius:GetModules(self.name)
+							end,
+							disabled = function()
+								return not Gladius.dbi.profile.modules[self.name]
+							end,
+							arg = "general",
+							order = 10,
+						},
+						trinketDetached = {
+							type = "toggle",
+							name = L["Detached from frame"],
+							desc = L["Detach the module from the frame itself"],
+							disabled = function()
+								return not Gladius.dbi.profile.modules[self.name]
+							end,
+							hidden = function ()
+								return Gladius.db.trinketAttachTo ~= "Frame"
+							end,
+							order = 15,
+						},
+						sep2 = {
+							type = "description",
+							name = "",
+							width = "full",
+							order = 18,
 						},
 						trinketAnchor = {
 							type = "select",
@@ -794,10 +800,7 @@ function Trinket:GetOptions()
 							disabled = function()
 								return not Gladius.dbi.profile.modules[self.name]
 							end,
-							hidden = function()
-								return not Gladius.db.advancedOptions
-							end,
-							order = 10,
+							order = 20,
 						},
 						trinketRelativePoint = {
 							type = "select",
@@ -809,16 +812,13 @@ function Trinket:GetOptions()
 							disabled = function()
 								return not Gladius.dbi.profile.modules[self.name]
 							end,
-							hidden = function()
-								return not Gladius.db.advancedOptions
-							end,
-							order = 15,
+							order = 25,
 						},
-						sep2 = {
+						sep3 = {
 							type = "description",
 							name = "",
 							width = "full",
-							order = 17,
+							order = 28,
 						},
 						trinketOffsetX = {
 							type = "range",
@@ -830,7 +830,7 @@ function Trinket:GetOptions()
 							disabled = function()
 								return not Gladius.dbi.profile.modules[self.name]
 							end,
-							order = 20,
+							order = 30,
 						},
 						trinketOffsetY = {
 							type = "range",
@@ -842,7 +842,7 @@ function Trinket:GetOptions()
 							min = - 50,
 							max = 50,
 							step = 1,
-							order = 25,
+							order = 35,
 						},
 					},
 				},
