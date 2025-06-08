@@ -787,33 +787,6 @@ function ClassIcon:GetOptions()
 					inline = true,
 					order = 3,
 					args = {
-						classIconAttachTo = {
-							type = "select",
-							name = L["Class Icon Attach To"],
-							desc = L["Attach class icon to given frame"],
-							values = function()
-								return Gladius:GetModules(self.name)
-							end,
-							disabled = function()
-								return not Gladius.dbi.profile.modules[self.name]
-							end,
-							hidden = function()
-								return not Gladius.db.advancedOptions
-							end,
-							order = 5,
-						},
-						classIconDetached = {
-							type = "toggle",
-							name = L["Detached from frame"],
-							desc = L["Detach the cast bar from the frame itself"],
-							disabled = function()
-								return not Gladius.dbi.profile.modules[self.name]
-							end,
-							hidden = function()
-								return Gladius.db.classIconAttachTo ~= "Frame"
-							end,
-							order = 6,
-						},
 						classIconPosition = {
 							type = "select",
 							name = L["Class Icon Position"],
@@ -835,16 +808,43 @@ function ClassIcon:GetOptions()
 							disabled = function()
 								return not Gladius.dbi.profile.modules[self.name]
 							end,
-							hidden = function()
-								return Gladius.db.advancedOptions
-							end,
-							order = 7,
+							order = 5,
 						},
-						sep = {
+						sep1 = {
 							type = "description",
 							name = "",
 							width = "full",
 							order = 8,
+						},
+						classIconAttachTo = {
+							type = "select",
+							name = L["Class Icon Attach To"],
+							desc = L["Attach class icon to given frame"],
+							values = function()
+								return Gladius:GetModules(self.name)
+							end,
+							disabled = function()
+								return not Gladius.dbi.profile.modules[self.name]
+							end,
+							order = 10,
+						},
+						classIconDetached = {
+							type = "toggle",
+							name = L["Detached from frame"],
+							desc = L["Detach the cast bar from the frame itself"],
+							disabled = function()
+								return not Gladius.dbi.profile.modules[self.name]
+							end,
+							hidden = function()
+								return Gladius.db.classIconAttachTo ~= "Frame"
+							end,
+							order = 15,
+						},
+						sep2 = {
+							type = "description",
+							name = "",
+							width = "full",
+							order = 18,
 						},
 						classIconAnchor = {
 							type = "select",
@@ -856,10 +856,7 @@ function ClassIcon:GetOptions()
 							disabled = function()
 								return not Gladius.dbi.profile.modules[self.name]
 							end,
-							hidden = function()
-								return not Gladius.db.advancedOptions
-							end,
-							order = 10,
+							order = 20,
 						},
 						classIconRelativePoint = {
 							type = "select",
@@ -871,16 +868,13 @@ function ClassIcon:GetOptions()
 							disabled = function()
 								return not Gladius.dbi.profile.modules[self.name]
 							end,
-							hidden = function()
-								return not Gladius.db.advancedOptions
-							end,
-						order = 15,
+						order = 25,
 						},
-						sep2 = {
+						sep3 = {
 							type = "description",
 							name = "",
 							width = "full",
-							order = 17,
+							order = 28,
 						},
 						classIconOffsetX = {
 							type = "range",
@@ -890,7 +884,7 @@ function ClassIcon:GetOptions()
 							disabled = function()
 								return not Gladius.dbi.profile.modules[self.name]
 							end,
-							order = 20,
+							order = 30,
 						},
 						classIconOffsetY = {
 							type = "range",
@@ -902,7 +896,7 @@ function ClassIcon:GetOptions()
 							min = - 50,
 							max = 50,
 							step = 1,
-							order = 25,
+							order = 35,
 						},
 					},
 				},
