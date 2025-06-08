@@ -422,7 +422,6 @@ function ClassIcon:Update(unit)
 	self.frame[unit].cooldown:SetDrawSwipe(Gladius.db.classIconCooldown)
 	self.frame[unit].cooldown:SetSwipeColor(0, 0, 0, Gladius.db.classIconCooldownSwipeAlpha)
 	self.frame[unit].cooldown:SetDrawEdge(Gladius.db.classIconCooldownEdge)
-	unitFrame.cooldown.isDisabled = not Gladius.db.classIconCooldown
 	unitFrame.cooldown:SetReverse(Gladius.db.classIconCooldownReverse)
 	Gladius:Call(Gladius.modules.Timer, "RegisterTimer", unitFrame, Gladius.db.classIconCooldown)
 
@@ -454,14 +453,8 @@ function ClassIcon:Update(unit)
 		Gladius.buttons[unit].secure:SetHitRectInsets(left, right, 0, 0)
 	end
 
-	-- cooldown
-	unitFrame.cooldown.isDisabled = not Gladius.db.classIconCooldown
-	unitFrame.cooldown:SetReverse(Gladius.db.classIconCooldownReverse)
-	Gladius:Call(Gladius.modules.Timer, "RegisterTimer", unitFrame, Gladius.db.classIconCooldown)
-
 	-- hide
 	unitFrame:SetAlpha(0)
-	self.frame[unit] = unitFrame
 end
 
 
@@ -831,7 +824,7 @@ function ClassIcon:GetOptions()
 						classIconDetached = {
 							type = "toggle",
 							name = L["Detached from frame"],
-							desc = L["Detach the cast bar from the frame itself"],
+							desc = L["Detach the class icon from the frame itself"],
 							disabled = function()
 								return not Gladius.dbi.profile.modules[self.name]
 							end,
