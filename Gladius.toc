@@ -19,7 +19,7 @@ Modules/CastBar.lua
 Modules/ClassIcon.lua
 Modules/Clicks.lua
 Modules/Defensives.lua
-Modules/Dispel.lua
+Modules/Dispell.lua
 Modules/DRTracker.lua
 Modules/HealthBar.lua
 Modules/Highlight.lua
