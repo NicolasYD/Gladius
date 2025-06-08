@@ -78,7 +78,7 @@ local Racial = Gladius:NewModule("Racial", false, true, {
 	RacialCooldownReverse = false,
 	RacialCooldownSwipeAlpha = 0.8,
 	RacialCooldownEdge = true,
-	RacialDetached = true
+	RacialDetached = false
 },
 {
 	"Racial icon", "Grid style health bar", "Grid style power bar"
@@ -417,6 +417,9 @@ function Racial:GetOptions()
 					name = L["Widget"],
 					desc = L["Widget settings"],
 					inline = true,
+					hidden = function()
+						return not Gladius.db.advancedOptions
+					end,
 					order = 1,
 					args = {
 						RacialIconCrop = {
@@ -429,6 +432,12 @@ function Racial:GetOptions()
 							width = "double",
 							order = 5,
 						},
+						sep1 = {
+							type = "description",
+							name = "",
+							width = "full",
+							order = 8,
+						},
 						RacialCooldown = {
 							type = "toggle",
 							name = L["Racial Cooldown Spiral"],
@@ -436,11 +445,14 @@ function Racial:GetOptions()
 							disabled = function()
 								return not Gladius.dbi.profile.modules[self.name]
 							end,
-							hidden = function()
-								return not Gladius.db.advancedOptions
-							end,
 							width = "double",
 							order = 10,
+						},
+						sep2 = {
+							type = "description",
+							name = "",
+							width = "full",
+							order = 13,
 						},
 						RacialCooldownReverse = {
 							type = "toggle",
@@ -449,11 +461,14 @@ function Racial:GetOptions()
 							disabled = function()
 								return not Gladius.dbi.profile.modules[self.name] or not Gladius.db.RacialCooldown
 							end,
-							hidden = function()
-								return not Gladius.db.advancedOptions
-							end,
 							width = "double",
 							order = 15,
+						},
+						sep3 = {
+							type = "description",
+							name = "",
+							width = "full",
+							order = 18,
 						},
 						RacialCooldownEdge = {
 							type = "toggle",
@@ -462,11 +477,14 @@ function Racial:GetOptions()
 							disabled = function()
 								return not Gladius.dbi.profile.modules[self.name] or not Gladius.db.RacialCooldown
 							end,
-							hidden = function()
-								return not Gladius.db.advancedOptions
-							end,
 							width = "double",
 							order = 20,
+						},
+						sep4 = {
+							type = "description",
+							name = "",
+							width = "full",
+							order = 23,
 						},
 						RacialCooldownSwipeAlpha = {
 							type = "range",
@@ -475,14 +493,17 @@ function Racial:GetOptions()
 							disabled = function()
 								return not Gladius.dbi.profile.modules[self.name] or not Gladius.db.RacialCooldown
 							end,
-							hidden = function()
-								return not Gladius.db.advancedOptions
-							end,
 							min = 0.5,
 							max = 1,
 							step = 0.1,
 							width = "double",
 							order = 25,
+						},
+						sep5 = {
+							type = "description",
+							name = "",
+							width = "full",
+							order = 28,
 						},
 						RacialFrameLevel = {
 							type = "range",
@@ -490,9 +511,6 @@ function Racial:GetOptions()
 							desc = L["Frame level of the Racial"],
 							disabled = function()
 								return not Gladius.dbi.profile.modules[self.name]
-							end,
-							hidden = function()
-								return not Gladius.db.advancedOptions
 							end,
 							min = 1,
 							max = 5,
@@ -558,6 +576,9 @@ function Racial:GetOptions()
 							desc = L["Detach the module from the frame itself"],
 							disabled = function()
 								return not Gladius.dbi.profile.modules[self.name]
+							end,
+							hidden = function()
+								return Gladius.db.RacialAttachTo ~= "Frame"
 							end,
 							order = 6,
 						},
