@@ -615,6 +615,9 @@ function ClassIcon:GetOptions()
 					name = L["Widget"],
 					desc = L["Widget settings"],
 					inline = true,
+					hidden = function()
+						return not Gladius.db.advancedOptions
+					end,
 					order = 1,
 					args = {
 						classIconImportantAuras = {
@@ -627,6 +630,12 @@ function ClassIcon:GetOptions()
 							width = "double",
 							order = 5,
 						},
+						sep1 = {
+							type = "description",
+							name = "",
+							width = "full",
+							order = 8,
+						},
 						classIconShowSpec = {
 							type = "toggle",
 							name = L["Class Icon Spec Icon"],
@@ -634,11 +643,14 @@ function ClassIcon:GetOptions()
 							disabled = function()
 								return not Gladius.dbi.profile.modules[self.name]
 							end,
-							hidden = function()
-								return not Gladius.db.advancedOptions
-							end,
 							width = "double",
 							order = 10,
+						},
+						sep2 = {
+							type = "description",
+							name = "",
+							width = "full",
+							order = 13,
 						},
 						classIconCrop = {
 							type = "toggle",
@@ -647,11 +659,14 @@ function ClassIcon:GetOptions()
 							disabled = function()
 								return not Gladius.dbi.profile.modules[self.name]
 							end,
-							hidden = function()
-								return not Gladius.db.advancedOptions
-							end,
 							width = "double",
 							order = 15,
+						},
+						sep3 = {
+							type = "description",
+							name = "",
+							width = "full",
+							order = 18,
 						},
 						classIconCooldown = {
 							type = "toggle",
@@ -660,11 +675,14 @@ function ClassIcon:GetOptions()
 							disabled = function()
 								return not Gladius.dbi.profile.modules[self.name]
 							end,
-							hidden = function()
-								return not Gladius.db.advancedOptions
-							end,
 							width = "double",
 							order = 20,
+						},
+						sep4 = {
+							type = "description",
+							name = "",
+							width = "full",
+							order = 23,
 						},
 						classIconCooldownReverse = {
 							type = "toggle",
@@ -673,11 +691,14 @@ function ClassIcon:GetOptions()
 							disabled = function()
 								return not Gladius.dbi.profile.modules[self.name] or not Gladius.db.classIconCooldown
 							end,
-							hidden = function()
-								return not Gladius.db.advancedOptions
-							end,
 							width = "double",
 							order = 25,
+						},
+						sep5 = {
+							type = "description",
+							name = "",
+							width = "full",
+							order = 28,
 						},
 						classIconCooldownEdge = {
 							type = "toggle",
@@ -686,11 +707,14 @@ function ClassIcon:GetOptions()
 							disabled = function()
 								return not Gladius.dbi.profile.modules[self.name] or not Gladius.db.classIconCooldown
 							end,
-							hidden = function()
-								return not Gladius.db.advancedOptions
-							end,
 							width = "double",
 							order = 30,
+						},
+						sep6 = {
+							type = "description",
+							name = "",
+							width = "full",
+							order = 33,
 						},
 						classIconCooldownSwipeAlpha = {
 							type = "range",
@@ -699,14 +723,17 @@ function ClassIcon:GetOptions()
 							disabled = function()
 								return not Gladius.dbi.profile.modules[self.name] or not Gladius.db.classIconCooldown
 							end,
-							hidden = function()
-								return not Gladius.db.advancedOptions
-							end,
 							min = 0.5,
 							max = 1,
 							step = 0.1,
 							width = "double",
 							order = 35,
+						},
+						sep7 = {
+							type = "description",
+							name = "",
+							width = "full",
+							order = 38,
 						},
 						classIconFrameLevel = {
 							type = "range",
@@ -714,9 +741,6 @@ function ClassIcon:GetOptions()
 							desc = L["Frame level of the class icon"],
 							disabled = function()
 								return not Gladius.dbi.profile.modules[self.name]
-							end,
-							hidden = function()
-								return not Gladius.db.advancedOptions
 							end,
 							min = 1,
 							max = 5,
@@ -784,6 +808,9 @@ function ClassIcon:GetOptions()
 							desc = L["Detach the cast bar from the frame itself"],
 							disabled = function()
 								return not Gladius.dbi.profile.modules[self.name]
+							end,
+							hidden = function()
+								return Gladius.db.classIconAttachTo ~= "Frame"
 							end,
 							order = 6,
 						},
