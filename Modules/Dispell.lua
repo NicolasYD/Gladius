@@ -1,5 +1,9 @@
---Dispell Module for Gladius
---Mavvo
+-- @@@@@@@@@@@@@@@@@@@@@@@@@@@ Dispell Module @@@@@@@@@@@@@@@@@@@@@@@@@@@
+-- Originally written by: Mavvo
+-- Modified by: Pharmac1st
+-- Game Version: 11.1.5
+-- @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
 local Gladius = _G.Gladius
 if not Gladius then
 	DEFAULT_CHAT_FRAME:AddMessage(format("Module %s requires Gladius", "Dispell"))
