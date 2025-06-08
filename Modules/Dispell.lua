@@ -721,7 +721,7 @@ function Dispell:GetOptions()
 						dispellDetached = {
 							type = "toggle",
 							name = L["Detached from frame"],
-							desc = L["Detach the dispell icon from the frame itself"],
+							desc = L["Detach the module from the frame itself"],
 							disabled = function()
 								return not Gladius.dbi.profile.modules[self.name]
 							end,
