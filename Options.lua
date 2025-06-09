@@ -87,6 +87,7 @@ SlashCmdList["GLADIUS"] = function(msg)
 					test = 3
 				end
 			end
+			Gladius:BuildTestEnvironment()
 			Gladius.testCount = test
 			Gladius.test = true
 			Gladius:HideFrame()

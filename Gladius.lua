@@ -264,163 +264,6 @@ function Gladius:OnInitialize()
 	self.LSM:Register(self.LSM.MediaType.STATUSBAR, "Minimalist", "Interface\\AddOns\\Gladius\\Images\\Minimalist")
 	self.LSM:Register(self.LSM.MediaType.STATUSBAR, "Smooth", "Interface\\AddOns\\Gladius\\Images\\Smooth")
 
-
-	local function getRandomRaceAndClass()
-		-- Index = raceID, values = available classes
-		local raceIDToClasses = {
-			[1]  = {[1] = {71, 72, 73}, [2] ={65, 66, 70}, [3] = {253, 254, 255}, [4] = {259, 260, 261}, [5] = {256, 257, 258}, [6] = {250, 251, 252}, 						  [8] = {62, 63, 64}, [9] = {265, 266, 267}, [10] = {268, 269, 270}}, -- Human
-			[2]  = {[1] = {71, 72, 73}, 				   [3] = {253, 254, 255}, [4] = {259, 260, 261}, [5] = {256, 257, 258}, [6] = {250, 251, 252}, [7] = {262, 263, 264}, [8] = {62, 63, 64}, [9] = {265, 266, 267}, [10] = {268, 269, 270},}, -- Orc
-			[3]  = {[1] = {71, 72, 73}, [2] ={65, 66, 70}, [3] = {253, 254, 255}, [4] = {259, 260, 261}, [5] = {256, 257, 258}, [6] = {250, 251, 252}, [7] = {262, 263, 264}, [8] = {62, 63, 64}, [9] = {265, 266, 267}, [10] = {268, 269, 270}}, -- Dwarf
-			[4]  = {[1] = {71, 72, 73}, 				   [3] = {253, 254, 255}, [4] = {259, 260, 261}, [5] = {256, 257, 258}, [6] = {250, 251, 252}, 						  [8] = {62, 63, 64}, [9] = {265, 266, 267}, [10] = {268, 269, 270}, [11] = {102, 103, 104, 105}, [12] = {577, 581}}, -- Night Elf
-			[5]  = {[1] = {71, 72, 73}, 				   [3] = {253, 254, 255}, [4] = {259, 260, 261}, [5] = {256, 257, 258}, [6] = {250, 251, 252}, 						  [8] = {62, 63, 64}, [9] = {265, 266, 267}, [10] = {268, 269, 270}}, -- Undead
-			[6]  = {[1] = {71, 72, 73}, [2] ={65, 66, 70}, [3] = {253, 254, 255}, [4] = {259, 260, 261}, [5] = {256, 257, 258}, [6] = {250, 251, 252}, [7] = {262, 263, 264}, [8] = {62, 63, 64}, [9] = {265, 266, 267}, [10] = {268, 269, 270}, [11] = {102, 103, 104, 105}}, -- Tauren
-			[7]  = {[1] = {71, 72, 73}, 				   [3] = {253, 254, 255}, [4] = {259, 260, 261}, [5] = {256, 257, 258}, [6] = {250, 251, 252}, 						  [8] = {62, 63, 64}, [9] = {265, 266, 267}, [10] = {268, 269, 270}}, -- Gnome
-			[8]  = {[1] = {71, 72, 73}, 				   [3] = {253, 254, 255}, [4] = {259, 260, 261}, [5] = {256, 257, 258}, [6] = {250, 251, 252}, [7] = {262, 263, 264}, [8] = {62, 63, 64}, [9] = {265, 266, 267}, [10] = {268, 269, 270}, [11] = {102, 103, 104, 105}}, -- Troll
-			[9]  = {[1] = {71, 72, 73}, 				   [3] = {253, 254, 255}, [4] = {259, 260, 261}, [5] = {256, 257, 258}, [6] = {250, 251, 252}, [7] = {262, 263, 264}, [8] = {62, 63, 64}, [9] = {265, 266, 267}, [10] = {268, 269, 270}}, -- Goblin
-			[10] = {[1] = {71, 72, 73}, [2] ={65, 66, 70}, [3] = {253, 254, 255}, [4] = {259, 260, 261}, [5] = {256, 257, 258}, [6] = {250, 251, 252}, 						  [8] = {62, 63, 64}, [9] = {265, 266, 267}, [10] = {268, 269, 270}, 							  [12] = {577, 581}}, -- Blood Elf
-			[11] = {[1] = {71, 72, 73}, [2] ={65, 66, 70}, [3] = {253, 254, 255}, [4] = {259, 260, 261}, [5] = {256, 257, 258}, [6] = {250, 251, 252}, [7] = {262, 263, 264}, [8] = {62, 63, 64}, [9] = {265, 266, 267}, [10] = {268, 269, 270}}, -- Draenei
-			[22] = {[1] = {71, 72, 73}, 				   [3] = {253, 254, 255}, [4] = {259, 260, 261}, [5] = {256, 257, 258}, [6] = {250, 251, 252}, 						  [8] = {62, 63, 64}, [9] = {265, 266, 267}, [10] = {268, 269, 270}, [11] = {102, 103, 104, 105}}, -- Worgen
-			[25] = {[1] = {71, 72, 73}, 				   [3] = {253, 254, 255}, [4] = {259, 260, 261}, [5] = {256, 257, 258}, [6] = {250, 251, 252}, [7] = {262, 263, 264}, [8] = {62, 63, 64}, [9] = {265, 266, 267}, [10] = {268, 269, 270}}, -- Pandaren (Alliance)
-			[26] = {[1] = {71, 72, 73}, 				   [3] = {253, 254, 255}, [4] = {259, 260, 261}, [5] = {256, 257, 258}, [6] = {250, 251, 252}, [7] = {262, 263, 264}, [8] = {62, 63, 64}, [9] = {265, 266, 267}, [10] = {268, 269, 270}}, -- Pandaren (Horde)
-			[27] = {[1] = {71, 72, 73}, 				   [3] = {253, 254, 255}, [4] = {259, 260, 261}, [5] = {256, 257, 258}, [6] = {250, 251, 252}, 						  [8] = {62, 63, 64}, [9] = {265, 266, 267}, [10] = {268, 269, 270},}, -- Nightborne
-			[28] = {[1] = {71, 72, 73}, 				   [3] = {253, 254, 255}, [4] = {259, 260, 261}, [5] = {256, 257, 258}, [6] = {250, 251, 252}, [7] = {262, 263, 264}, [8] = {62, 63, 64}, [9] = {265, 266, 267}, [10] = {268, 269, 270}, [11] = {102, 103, 104, 105}}, -- Highmountain Tauren
-			[29] = {[1] = {71, 72, 73}, 				   [3] = {253, 254, 255}, [4] = {259, 260, 261}, [5] = {256, 257, 258}, [6] = {250, 251, 252}, 						  [8] = {62, 63, 64}, [9] = {265, 266, 267}, [10] = {268, 269, 270},}, -- Void Elf
-			[30] = {[1] = {71, 72, 73}, [2] ={65, 66, 70}, [3] = {253, 254, 255}, [4] = {259, 260, 261}, [5] = {256, 257, 258}, [6] = {250, 251, 252}, 						  [8] = {62, 63, 64}, [9] = {265, 266, 267}, [10] = {268, 269, 270},}, -- Lightforged Draenei
-			[31] = {[1] = {71, 72, 73}, [2] ={65, 66, 70}, [3] = {253, 254, 255}, [4] = {259, 260, 261}, [5] = {256, 257, 258}, [6] = {250, 251, 252}, [7] = {262, 263, 264}, [8] = {62, 63, 64}, [9] = {265, 266, 267}, [10] = {268, 269, 270}, [11] = {102, 103, 104, 105}}, -- Zandalari Troll
-			[32] = {[1] = {71, 72, 73}, 				   [3] = {253, 254, 255}, [4] = {259, 260, 261}, [5] = {256, 257, 258}, [6] = {250, 251, 252}, [7] = {262, 263, 264}, [8] = {62, 63, 64}, [9] = {265, 266, 267}, [10] = {268, 269, 270}, [11] = {102, 103, 104, 105}}, -- Kul Tiran
-			[34] = {[1] = {71, 72, 73}, [2] ={65, 66, 70}, [3] = {253, 254, 255}, [4] = {259, 260, 261}, [5] = {256, 257, 258}, [6] = {250, 251, 252}, [7] = {262, 263, 264}, [8] = {62, 63, 64}, [9] = {265, 266, 267}, [10] = {268, 269, 270}}, -- Dark Iron Dwarf
-			[35] = {[1] = {71, 72, 73}, 				   [3] = {253, 254, 255}, [4] = {259, 260, 261}, [5] = {256, 257, 258}, [6] = {250, 251, 252}, [7] = {262, 263, 264}, [8] = {62, 63, 64}, [9] = {265, 266, 267}, [10] = {268, 269, 270}}, -- Vulpera
-			[36] = {[1] = {71, 72, 73}, 				   [3] = {253, 254, 255}, [4] = {259, 260, 261}, [5] = {256, 257, 258}, [6] = {250, 251, 252}, [7] = {262, 263, 264}, [8] = {62, 63, 64}, [9] = {265, 266, 267}, [10] = {268, 269, 270}}, -- Mag'har Orc
-			[37] = {[1] = {71, 72, 73}, 				   [3] = {253, 254, 255}, [4] = {259, 260, 261}, [5] = {256, 257, 258}, [6] = {250, 251, 252}, 						  [8] = {62, 63, 64}, [9] = {265, 266, 267}, [10] = {268, 269, 270}}, -- Mechagnome
-			[52] = {[1] = {71, 72, 73}, 				   [3] = {253, 254, 255}, [4] = {259, 260, 261}, [5] = {256, 257, 258}, 											  [8] = {62, 63, 64}, [9] = {265, 266, 267}, 																		 [13] = {1467, 1468, 1473}}, -- Dracthyr (Alliance)
-			[70] = {[1] = {71, 72, 73}, 				   [3] = {253, 254, 255}, [4] = {259, 260, 261}, [5] = {256, 257, 258}, 											  [8] = {62, 63, 64}, [9] = {265, 266, 267}, 																		 [13] = {1467, 1468, 1473}}, -- Dracthyr (Horde)
-			[84] = {[1] = {71, 72, 73}, [2] ={65, 66, 70}, [3] = {253, 254, 255}, [4] = {259, 260, 261}, [5] = {256, 257, 258}, 					   [7] = {262, 263, 264}, [8] = {62, 63, 64}, [9] = {265, 266, 267}, [10] = {268, 269, 270}}, -- Earthen (Horde)
-			[85] = {[1] = {71, 72, 73}, [2] ={65, 66, 70}, [3] = {253, 254, 255}, [4] = {259, 260, 261}, [5] = {256, 257, 258}, 					   [7] = {262, 263, 264}, [8] = {62, 63, 64}, [9] = {265, 266, 267}, [10] = {268, 269, 270}}, -- Earthen (Alliance)
-		}
-
-		-- Index = specID
-		local specIDToPower = {
-			-- Mage
-			[62] = {powerType = 0, maxPower = 2500000}, -- Arcane
-			[63] = {powerType = 0, maxPower = 2500000}, -- Fire
-			[64] = {powerType = 0, maxPower = 2500000}, -- Frost
-			-- Paladin
-			[65] = {powerType = 0, maxPower = 2500000}, -- Holy
-			[66] = {powerType = 0, maxPower = 2500000}, -- Protection
-			[70] = {powerType = 0, maxPower = 2500000}, -- Retribution
-			-- Warrior
-			[71] = {powerType = 1, maxPower = 100}, -- Arms
-			[72] = {powerType = 1, maxPower = 100}, -- Fury
-			[73] = {powerType = 1, maxPower = 100}, -- Protection
-			-- Druid
-			[102] = {powerType = 8, maxPower = 100}, -- Balance
-			[103] = {powerType = 3, maxPower = 100}, -- Feral
-			[104] = {powerType = 1, maxPower = 100}, -- Guardian
-			[105] = {powerType = 0, maxPower = 2500000}, -- Restoration
-			-- Death Knight
-			[250] = {powerType = 6, maxPower = 100}, -- Blood
-			[251] = {powerType = 6, maxPower = 100}, -- Frost
-			[252] = {powerType = 6, maxPower = 100}, -- Unholy
-			-- Hunter
-			[253] = {powerType = 2, maxPower = 100}, -- Beast Mastery
-			[254] = {powerType = 2, maxPower = 100}, -- Marksmanship
-			[255] = {powerType = 2, maxPower = 100}, -- Survival
-			-- Priest
-			[256] = {powerType = 0, maxPower = 2500000}, -- Discipline
-			[257] = {powerType = 0, maxPower = 2500000}, -- Holy
-			[258] = {powerType = 0, maxPower = 2500000}, -- Shadow
-			-- Rogue
-			[259] = {powerType = 3, maxPower = 100}, -- Assassination
-			[260] = {powerType = 3, maxPower = 100}, -- Outlaw
-			[261] = {powerType = 3, maxPower = 100}, -- Subtlety
-			-- Shaman
-			[262] = {powerType = 11, maxPower = 100}, -- Elemental
-			[263] = {powerType = 11, maxPower = 150}, -- Enhancement
-			[264] = {powerType = 0, maxPower = 2500000}, -- Restoration
-			-- Warlock
-			[265] = {powerType = 0, maxPower = 2500000}, --Affliction
-			[266] = {powerType = 0, maxPower = 2500000}, -- Demonology
-			[267] = {powerType = 0, maxPower = 2500000}, -- Destruction
-			-- Monk
-			[268] = {powerType = 3, maxPower = 100}, -- Brewmaster
-			[269] = {powerType = 3, maxPower = 100}, -- Windwalker
-			[270] = {powerType = 0, maxPower = 2500000}, -- Mistweaver
-			-- Demon Hunter
-			[577] = {powerType = 17, maxPower = 100}, -- Havoc
-			[581] = {powerType = 18, maxPower = 100}, -- Vengeance
-			-- Evoker
-			[1467] = {powerType = 0, maxPower = 2500000}, -- Devastation
-			[1468] = {powerType = 0, maxPower = 2500000}, -- Preservation
-			[1473] = {powerType = 0, maxPower = 2500000}, -- Augmentation
-		}
-
-		-- Create a list of race IDs
-		local raceKeys = {}
-		for raceID in pairs(raceIDToClasses) do
-			table.insert(raceKeys, raceID)
-		end
-
-		-- Pick a random race
-		local randomRace = raceKeys[math.random(#raceKeys)]
-
-		-- Get the class table for the selected race
-		local classTable = raceIDToClasses[randomRace]
-
-		-- Create a list of class IDs
-		local classKeys = {}
-		for classID in pairs(classTable) do
-			table.insert(classKeys, classID)
-		end
-
-		-- Pick a random class
-		local randomClass = classKeys[math.random(#classKeys)]
-
-		-- Get the spec list for that class
-		local specList = classTable[randomClass]
-		local randomSpec = specList[math.random(#specList)]
-
-		-- Get API data
-		local raceInfo = C_CreatureInfo.GetRaceInfo(randomRace)
-		local classInfo = C_CreatureInfo.GetClassInfo(randomClass)
-		local specID, specName = GetSpecializationInfoByID(randomSpec)
-		local powerType = specIDToPower[specID].powerType
-		local maxPower = specIDToPower[specID].maxPower
-
-		return {
-			unitRace = raceInfo.clientFileString,
-			unitClass = classInfo.classFile,
-			unitSpec = specName,
-			unitSpecId = specID,
-			powerType = powerType,
-			maxPower = maxPower
-		}
-	end
-
-
-	-- test environment
-	local arena1 = getRandomRaceAndClass()
-	local arena2 = getRandomRaceAndClass()
-	local arena3 = getRandomRaceAndClass()
-	local arena4 = getRandomRaceAndClass()
-	local arena5 = getRandomRaceAndClass()
-
-	local maxHealth = 10000000
-
-	self.test = false
-	self.testCount = 0
-	self.testing = setmetatable({
-		["arena1"] = {health = math.floor((math.random() + 0.5) / 1.5 * maxHealth), maxHealth = maxHealth, power = math.floor((math.random() + 0.5) / 1.5 * arena1.maxPower), maxPower = arena1.maxPower, powerType = arena1.powerType, unitClass = arena1.unitClass, unitRace = arena1.unitRace, unitSpec = arena1.unitSpec, unitSpecId = arena1.unitSpecId},
-		["arena2"] = {health = math.floor((math.random() + 0.5) / 1.5 * maxHealth), maxHealth = maxHealth, power = math.floor((math.random() + 0.5) / 1.5 * arena2.maxPower), maxPower = arena2.maxPower, powerType = arena2.powerType, unitClass = arena2.unitClass, unitRace = arena2.unitRace, unitSpec = arena2.unitSpec, unitSpecId = arena2.unitSpecId},
-		["arena3"] = {health = math.floor((math.random() + 0.5) / 1.5 * maxHealth), maxHealth = maxHealth, power = math.floor((math.random() + 0.5) / 1.5 * arena3.maxPower), maxPower = arena3.maxPower, powerType = arena3.powerType, unitClass = arena3.unitClass, unitRace = arena3.unitRace, unitSpec = arena3.unitSpec, unitSpecId = arena3.unitSpecId},
-		["arena4"] = {health = math.floor((math.random() + 0.5) / 1.5 * maxHealth), maxHealth = maxHealth, power = math.floor((math.random() + 0.5) / 1.5 * arena4.maxPower), maxPower = arena4.maxPower, powerType = arena4.powerType, unitClass = arena4.unitClass, unitRace = arena4.unitRace, unitSpec = arena4.unitSpec, unitSpecId = arena4.unitSpecId},
-		["arena5"] = {health = math.floor((math.random() + 0.5) / 1.5 * maxHealth), maxHealth = maxHealth, power = math.floor((math.random() + 0.5) / 1.5 * arena5.maxPower), maxPower = arena5.maxPower, powerType = arena5.powerType, unitClass = arena5.unitClass, unitRace = arena5.unitRace, unitSpec = arena5.unitSpec, unitSpecId = arena5.unitSpecId},
-	},
-
-	{
-		__index = function(t, k)
-			return t["arena1"]
-		end
-	})
 	-- buttons
 	self.buttons = { }
 	if IsWrathClassic then
@@ -1116,4 +959,163 @@ function Gladius:IsValidUnit(unit)
 
 	local unitID = strmatch(unit, "arena(%d+)")
 	return unitID and tonumber(unitID) <= 5
+end
+
+
+function Gladius:BuildTestEnvironment()
+	local function getRandomRaceAndClass()
+		-- Index = raceID, values = available classes
+		local raceIDToClasses = {
+			[1]  = {[1] = {71, 72, 73}, [2] ={65, 66, 70}, [3] = {253, 254, 255}, [4] = {259, 260, 261}, [5] = {256, 257, 258}, [6] = {250, 251, 252}, 						  [8] = {62, 63, 64}, [9] = {265, 266, 267}, [10] = {268, 269, 270}}, -- Human
+			[2]  = {[1] = {71, 72, 73}, 				   [3] = {253, 254, 255}, [4] = {259, 260, 261}, [5] = {256, 257, 258}, [6] = {250, 251, 252}, [7] = {262, 263, 264}, [8] = {62, 63, 64}, [9] = {265, 266, 267}, [10] = {268, 269, 270},}, -- Orc
+			[3]  = {[1] = {71, 72, 73}, [2] ={65, 66, 70}, [3] = {253, 254, 255}, [4] = {259, 260, 261}, [5] = {256, 257, 258}, [6] = {250, 251, 252}, [7] = {262, 263, 264}, [8] = {62, 63, 64}, [9] = {265, 266, 267}, [10] = {268, 269, 270}}, -- Dwarf
+			[4]  = {[1] = {71, 72, 73}, 				   [3] = {253, 254, 255}, [4] = {259, 260, 261}, [5] = {256, 257, 258}, [6] = {250, 251, 252}, 						  [8] = {62, 63, 64}, [9] = {265, 266, 267}, [10] = {268, 269, 270}, [11] = {102, 103, 104, 105}, [12] = {577, 581}}, -- Night Elf
+			[5]  = {[1] = {71, 72, 73}, 				   [3] = {253, 254, 255}, [4] = {259, 260, 261}, [5] = {256, 257, 258}, [6] = {250, 251, 252}, 						  [8] = {62, 63, 64}, [9] = {265, 266, 267}, [10] = {268, 269, 270}}, -- Undead
+			[6]  = {[1] = {71, 72, 73}, [2] ={65, 66, 70}, [3] = {253, 254, 255}, [4] = {259, 260, 261}, [5] = {256, 257, 258}, [6] = {250, 251, 252}, [7] = {262, 263, 264}, [8] = {62, 63, 64}, [9] = {265, 266, 267}, [10] = {268, 269, 270}, [11] = {102, 103, 104, 105}}, -- Tauren
+			[7]  = {[1] = {71, 72, 73}, 				   [3] = {253, 254, 255}, [4] = {259, 260, 261}, [5] = {256, 257, 258}, [6] = {250, 251, 252}, 						  [8] = {62, 63, 64}, [9] = {265, 266, 267}, [10] = {268, 269, 270}}, -- Gnome
+			[8]  = {[1] = {71, 72, 73}, 				   [3] = {253, 254, 255}, [4] = {259, 260, 261}, [5] = {256, 257, 258}, [6] = {250, 251, 252}, [7] = {262, 263, 264}, [8] = {62, 63, 64}, [9] = {265, 266, 267}, [10] = {268, 269, 270}, [11] = {102, 103, 104, 105}}, -- Troll
+			[9]  = {[1] = {71, 72, 73}, 				   [3] = {253, 254, 255}, [4] = {259, 260, 261}, [5] = {256, 257, 258}, [6] = {250, 251, 252}, [7] = {262, 263, 264}, [8] = {62, 63, 64}, [9] = {265, 266, 267}, [10] = {268, 269, 270}}, -- Goblin
+			[10] = {[1] = {71, 72, 73}, [2] ={65, 66, 70}, [3] = {253, 254, 255}, [4] = {259, 260, 261}, [5] = {256, 257, 258}, [6] = {250, 251, 252}, 						  [8] = {62, 63, 64}, [9] = {265, 266, 267}, [10] = {268, 269, 270}, 							  [12] = {577, 581}}, -- Blood Elf
+			[11] = {[1] = {71, 72, 73}, [2] ={65, 66, 70}, [3] = {253, 254, 255}, [4] = {259, 260, 261}, [5] = {256, 257, 258}, [6] = {250, 251, 252}, [7] = {262, 263, 264}, [8] = {62, 63, 64}, [9] = {265, 266, 267}, [10] = {268, 269, 270}}, -- Draenei
+			[22] = {[1] = {71, 72, 73}, 				   [3] = {253, 254, 255}, [4] = {259, 260, 261}, [5] = {256, 257, 258}, [6] = {250, 251, 252}, 						  [8] = {62, 63, 64}, [9] = {265, 266, 267}, [10] = {268, 269, 270}, [11] = {102, 103, 104, 105}}, -- Worgen
+			[25] = {[1] = {71, 72, 73}, 				   [3] = {253, 254, 255}, [4] = {259, 260, 261}, [5] = {256, 257, 258}, [6] = {250, 251, 252}, [7] = {262, 263, 264}, [8] = {62, 63, 64}, [9] = {265, 266, 267}, [10] = {268, 269, 270}}, -- Pandaren (Alliance)
+			[26] = {[1] = {71, 72, 73}, 				   [3] = {253, 254, 255}, [4] = {259, 260, 261}, [5] = {256, 257, 258}, [6] = {250, 251, 252}, [7] = {262, 263, 264}, [8] = {62, 63, 64}, [9] = {265, 266, 267}, [10] = {268, 269, 270}}, -- Pandaren (Horde)
+			[27] = {[1] = {71, 72, 73}, 				   [3] = {253, 254, 255}, [4] = {259, 260, 261}, [5] = {256, 257, 258}, [6] = {250, 251, 252}, 						  [8] = {62, 63, 64}, [9] = {265, 266, 267}, [10] = {268, 269, 270},}, -- Nightborne
+			[28] = {[1] = {71, 72, 73}, 				   [3] = {253, 254, 255}, [4] = {259, 260, 261}, [5] = {256, 257, 258}, [6] = {250, 251, 252}, [7] = {262, 263, 264}, [8] = {62, 63, 64}, [9] = {265, 266, 267}, [10] = {268, 269, 270}, [11] = {102, 103, 104, 105}}, -- Highmountain Tauren
+			[29] = {[1] = {71, 72, 73}, 				   [3] = {253, 254, 255}, [4] = {259, 260, 261}, [5] = {256, 257, 258}, [6] = {250, 251, 252}, 						  [8] = {62, 63, 64}, [9] = {265, 266, 267}, [10] = {268, 269, 270},}, -- Void Elf
+			[30] = {[1] = {71, 72, 73}, [2] ={65, 66, 70}, [3] = {253, 254, 255}, [4] = {259, 260, 261}, [5] = {256, 257, 258}, [6] = {250, 251, 252}, 						  [8] = {62, 63, 64}, [9] = {265, 266, 267}, [10] = {268, 269, 270},}, -- Lightforged Draenei
+			[31] = {[1] = {71, 72, 73}, [2] ={65, 66, 70}, [3] = {253, 254, 255}, [4] = {259, 260, 261}, [5] = {256, 257, 258}, [6] = {250, 251, 252}, [7] = {262, 263, 264}, [8] = {62, 63, 64}, [9] = {265, 266, 267}, [10] = {268, 269, 270}, [11] = {102, 103, 104, 105}}, -- Zandalari Troll
+			[32] = {[1] = {71, 72, 73}, 				   [3] = {253, 254, 255}, [4] = {259, 260, 261}, [5] = {256, 257, 258}, [6] = {250, 251, 252}, [7] = {262, 263, 264}, [8] = {62, 63, 64}, [9] = {265, 266, 267}, [10] = {268, 269, 270}, [11] = {102, 103, 104, 105}}, -- Kul Tiran
+			[34] = {[1] = {71, 72, 73}, [2] ={65, 66, 70}, [3] = {253, 254, 255}, [4] = {259, 260, 261}, [5] = {256, 257, 258}, [6] = {250, 251, 252}, [7] = {262, 263, 264}, [8] = {62, 63, 64}, [9] = {265, 266, 267}, [10] = {268, 269, 270}}, -- Dark Iron Dwarf
+			[35] = {[1] = {71, 72, 73}, 				   [3] = {253, 254, 255}, [4] = {259, 260, 261}, [5] = {256, 257, 258}, [6] = {250, 251, 252}, [7] = {262, 263, 264}, [8] = {62, 63, 64}, [9] = {265, 266, 267}, [10] = {268, 269, 270}}, -- Vulpera
+			[36] = {[1] = {71, 72, 73}, 				   [3] = {253, 254, 255}, [4] = {259, 260, 261}, [5] = {256, 257, 258}, [6] = {250, 251, 252}, [7] = {262, 263, 264}, [8] = {62, 63, 64}, [9] = {265, 266, 267}, [10] = {268, 269, 270}}, -- Mag'har Orc
+			[37] = {[1] = {71, 72, 73}, 				   [3] = {253, 254, 255}, [4] = {259, 260, 261}, [5] = {256, 257, 258}, [6] = {250, 251, 252}, 						  [8] = {62, 63, 64}, [9] = {265, 266, 267}, [10] = {268, 269, 270}}, -- Mechagnome
+			[52] = {[1] = {71, 72, 73}, 				   [3] = {253, 254, 255}, [4] = {259, 260, 261}, [5] = {256, 257, 258}, 											  [8] = {62, 63, 64}, [9] = {265, 266, 267}, 																		 [13] = {1467, 1468, 1473}}, -- Dracthyr (Alliance)
+			[70] = {[1] = {71, 72, 73}, 				   [3] = {253, 254, 255}, [4] = {259, 260, 261}, [5] = {256, 257, 258}, 											  [8] = {62, 63, 64}, [9] = {265, 266, 267}, 																		 [13] = {1467, 1468, 1473}}, -- Dracthyr (Horde)
+			[84] = {[1] = {71, 72, 73}, [2] ={65, 66, 70}, [3] = {253, 254, 255}, [4] = {259, 260, 261}, [5] = {256, 257, 258}, 					   [7] = {262, 263, 264}, [8] = {62, 63, 64}, [9] = {265, 266, 267}, [10] = {268, 269, 270}}, -- Earthen (Horde)
+			[85] = {[1] = {71, 72, 73}, [2] ={65, 66, 70}, [3] = {253, 254, 255}, [4] = {259, 260, 261}, [5] = {256, 257, 258}, 					   [7] = {262, 263, 264}, [8] = {62, 63, 64}, [9] = {265, 266, 267}, [10] = {268, 269, 270}}, -- Earthen (Alliance)
+		}
+
+		-- Index = specID
+		local specIDToPower = {
+			-- Mage
+			[62] = {powerType = 0, maxPower = 2500000}, -- Arcane
+			[63] = {powerType = 0, maxPower = 2500000}, -- Fire
+			[64] = {powerType = 0, maxPower = 2500000}, -- Frost
+			-- Paladin
+			[65] = {powerType = 0, maxPower = 2500000}, -- Holy
+			[66] = {powerType = 0, maxPower = 2500000}, -- Protection
+			[70] = {powerType = 0, maxPower = 2500000}, -- Retribution
+			-- Warrior
+			[71] = {powerType = 1, maxPower = 100}, -- Arms
+			[72] = {powerType = 1, maxPower = 100}, -- Fury
+			[73] = {powerType = 1, maxPower = 100}, -- Protection
+			-- Druid
+			[102] = {powerType = 8, maxPower = 100}, -- Balance
+			[103] = {powerType = 3, maxPower = 100}, -- Feral
+			[104] = {powerType = 1, maxPower = 100}, -- Guardian
+			[105] = {powerType = 0, maxPower = 2500000}, -- Restoration
+			-- Death Knight
+			[250] = {powerType = 6, maxPower = 100}, -- Blood
+			[251] = {powerType = 6, maxPower = 100}, -- Frost
+			[252] = {powerType = 6, maxPower = 100}, -- Unholy
+			-- Hunter
+			[253] = {powerType = 2, maxPower = 100}, -- Beast Mastery
+			[254] = {powerType = 2, maxPower = 100}, -- Marksmanship
+			[255] = {powerType = 2, maxPower = 100}, -- Survival
+			-- Priest
+			[256] = {powerType = 0, maxPower = 2500000}, -- Discipline
+			[257] = {powerType = 0, maxPower = 2500000}, -- Holy
+			[258] = {powerType = 0, maxPower = 2500000}, -- Shadow
+			-- Rogue
+			[259] = {powerType = 3, maxPower = 100}, -- Assassination
+			[260] = {powerType = 3, maxPower = 100}, -- Outlaw
+			[261] = {powerType = 3, maxPower = 100}, -- Subtlety
+			-- Shaman
+			[262] = {powerType = 11, maxPower = 100}, -- Elemental
+			[263] = {powerType = 11, maxPower = 150}, -- Enhancement
+			[264] = {powerType = 0, maxPower = 2500000}, -- Restoration
+			-- Warlock
+			[265] = {powerType = 0, maxPower = 2500000}, --Affliction
+			[266] = {powerType = 0, maxPower = 2500000}, -- Demonology
+			[267] = {powerType = 0, maxPower = 2500000}, -- Destruction
+			-- Monk
+			[268] = {powerType = 3, maxPower = 100}, -- Brewmaster
+			[269] = {powerType = 3, maxPower = 100}, -- Windwalker
+			[270] = {powerType = 0, maxPower = 2500000}, -- Mistweaver
+			-- Demon Hunter
+			[577] = {powerType = 17, maxPower = 100}, -- Havoc
+			[581] = {powerType = 18, maxPower = 100}, -- Vengeance
+			-- Evoker
+			[1467] = {powerType = 0, maxPower = 2500000}, -- Devastation
+			[1468] = {powerType = 0, maxPower = 2500000}, -- Preservation
+			[1473] = {powerType = 0, maxPower = 2500000}, -- Augmentation
+		}
+
+		-- Create a list of race IDs
+		local raceKeys = {}
+		for raceID in pairs(raceIDToClasses) do
+			table.insert(raceKeys, raceID)
+		end
+
+		-- Pick a random race
+		local randomRace = raceKeys[math.random(#raceKeys)]
+
+		-- Get the class table for the selected race
+		local classTable = raceIDToClasses[randomRace]
+
+		-- Create a list of class IDs
+		local classKeys = {}
+		for classID in pairs(classTable) do
+			table.insert(classKeys, classID)
+		end
+
+		-- Pick a random class
+		local randomClass = classKeys[math.random(#classKeys)]
+
+		-- Get the spec list for that class
+		local specList = classTable[randomClass]
+		local randomSpec = specList[math.random(#specList)]
+
+		-- Get API data
+		local raceInfo = C_CreatureInfo.GetRaceInfo(randomRace)
+		local classInfo = C_CreatureInfo.GetClassInfo(randomClass)
+		local specID, specName = GetSpecializationInfoByID(randomSpec)
+		local powerType = specIDToPower[specID].powerType
+		local maxPower = specIDToPower[specID].maxPower
+
+		return {
+			unitRace = raceInfo.clientFileString,
+			unitClass = classInfo.classFile,
+			unitSpec = specName,
+			unitSpecId = specID,
+			powerType = powerType,
+			maxPower = maxPower
+		}
+	end
+
+
+	-- test environment
+	local arena1 = getRandomRaceAndClass()
+	local arena2 = getRandomRaceAndClass()
+	local arena3 = getRandomRaceAndClass()
+	local arena4 = getRandomRaceAndClass()
+	local arena5 = getRandomRaceAndClass()
+
+	local maxHealth = 10000000
+
+	self.test = false
+	self.testCount = 0
+	self.testing = setmetatable({
+		["arena1"] = {health = math.floor((math.random() + 0.5) / 1.5 * maxHealth), maxHealth = maxHealth, power = math.floor((math.random() + 0.5) / 1.5 * arena1.maxPower), maxPower = arena1.maxPower, powerType = arena1.powerType, unitClass = arena1.unitClass, unitRace = arena1.unitRace, unitSpec = arena1.unitSpec, unitSpecId = arena1.unitSpecId},
+		["arena2"] = {health = math.floor((math.random() + 0.5) / 1.5 * maxHealth), maxHealth = maxHealth, power = math.floor((math.random() + 0.5) / 1.5 * arena2.maxPower), maxPower = arena2.maxPower, powerType = arena2.powerType, unitClass = arena2.unitClass, unitRace = arena2.unitRace, unitSpec = arena2.unitSpec, unitSpecId = arena2.unitSpecId},
+		["arena3"] = {health = math.floor((math.random() + 0.5) / 1.5 * maxHealth), maxHealth = maxHealth, power = math.floor((math.random() + 0.5) / 1.5 * arena3.maxPower), maxPower = arena3.maxPower, powerType = arena3.powerType, unitClass = arena3.unitClass, unitRace = arena3.unitRace, unitSpec = arena3.unitSpec, unitSpecId = arena3.unitSpecId},
+		["arena4"] = {health = math.floor((math.random() + 0.5) / 1.5 * maxHealth), maxHealth = maxHealth, power = math.floor((math.random() + 0.5) / 1.5 * arena4.maxPower), maxPower = arena4.maxPower, powerType = arena4.powerType, unitClass = arena4.unitClass, unitRace = arena4.unitRace, unitSpec = arena4.unitSpec, unitSpecId = arena4.unitSpecId},
+		["arena5"] = {health = math.floor((math.random() + 0.5) / 1.5 * maxHealth), maxHealth = maxHealth, power = math.floor((math.random() + 0.5) / 1.5 * arena5.maxPower), maxPower = arena5.maxPower, powerType = arena5.powerType, unitClass = arena5.unitClass, unitRace = arena5.unitRace, unitSpec = arena5.unitSpec, unitSpecId = arena5.unitSpecId},
+	},
+	{
+	__index = function(t, k)
+		return t["arena1"]
+	end
+	})
 end
