@@ -65,8 +65,8 @@ local Defensives = Gladius:NewModule("Defensives", false, true, {
 	DefensivesOffsetY = 0,
 	DefensivesFrameLevel = 1,
 	DefensivesCooldown = true,
-	DefensivesCooldownReverse = true,
-	DefensivesCooldownSwipeAlpha = 0.8,
+	DefensivesCooldownReverse = false,
+	DefensivesCooldownSwipeAlpha = 0.5,
 	DefensivesCooldownEdge = true,
 	DefensivesFontSize = 10,
 	DefensivesFontColor = {r = 0, g = 1, b = 0, a = 1},
@@ -301,7 +301,19 @@ function Defensives:DefensiveUsed(unit, spell)
 	Gladius:Call(Gladius.modules.Timer, "RegisterTimer", frame, Gladius.db.DefensivesCooldown)
 
 	local cooldown = CDList:GetCooldownNumber(spell, specID)
+	frame.timeLeft = cooldown
 	Gladius:Call(Gladius.modules.Timer, "SetTimer", frame, cooldown)
+	frame:SetScript("OnUpdate", function(f, elapsed)
+		f.timeLeft = f.timeLeft - elapsed
+		if f.timeLeft <= 0 then
+			f.active = false
+			Gladius:Call(Gladius.modules.Timer, "HideTimer", f)
+			-- position icons
+			self:SortIcons(unit)
+			-- reset script
+			frame:SetScript("OnUpdate", nil)
+		end
+	end)
 
 	frame.active = true
 	self:SortIcons(unit)
@@ -312,11 +324,11 @@ function Defensives:SortIcons(unit)
 	local lastFrame = self.frame[unit]
 	for spell, frame in pairs(self.frame[unit].spells) do
 		frame:ClearAllPoints()
-		--frame:SetAlpha(0)
+		frame:SetAlpha(0)
 		if frame.active then
 			frame:SetPoint(Gladius.db.DefensivesAnchor, lastFrame, lastFrame == self.frame[unit] and Gladius.db.DefensivesAnchor or Gladius.db.DefensivesRelativePoint, strfind(Gladius.db.DefensivesAnchor,"LEFT") and Gladius.db.DefensivesMargin or - Gladius.db.DefensivesMargin, 0)
 			lastFrame = frame
-			--frame:SetAlpha(1)
+			frame:SetAlpha(1)
 		end
 	end
 end
