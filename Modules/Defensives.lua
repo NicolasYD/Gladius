@@ -64,8 +64,6 @@ local Defensives = Gladius:NewModule("Defensives", false, true, {
 	DefensivesOffsetX = 0,
 	DefensivesOffsetY = 0,
 	DefensivesFrameLevel = 1,
-	DefensivesGloss = false,
-	DefensivesGlossColor = {r = 1, g = 1, b = 1, a = 0.4},
 	DefensivesCooldown = false,
 	DefensivesCooldownReverse = false,
 	DefensivesFontSize = 10,
@@ -149,6 +147,7 @@ end
 
 function Defensives:OnEnable()
 	self:RegisterEvent("UNIT_SPELLCAST_SUCCEEDED")
+	self:RegisterEvent("GROUP_ROSTER_UPDATE")
 	LSM = Gladius.LSM
 	if not self.frame then
 		self.frame = { }
@@ -186,12 +185,19 @@ function Defensives:GetFrame(unit)
 end
 
 
-function Defensives:UpdateColors(unit)
-	for spell, frame in pairs(self.frame[unit].tracker) do
-		local tracked = self.frame[unit].tracker[spell]
-		tracked.normalTexture:SetVertexColor(Gladius.db.DefensivesGlossColor.r, Gladius.db.DefensivesGlossColor.g, Gladius.db.DefensivesGlossColor.b, Gladius.db.DefensivesGloss and Gladius.db.DefensivesGlossColor.a or 0)
-		tracked.text:SetTextColor(Gladius.db.DefensivesColor.r, Gladius.db.DefensivesFontColor.g, Gladius.db.DefensivesFontColor.b, Gladius.db.DefensivesFontColor.a)
+function Defensives:UNIT_SPELLCAST_SUCCEEDED(event, unit, _, spellID)
+	if not unit then
+		return
 	end
+
+	if defaultValues[spellID] and (unit == "arena1" or unit == "arena2" or unit == "arena3") then
+		self:DefensiveUsed(unit, spellID)
+	end
+end
+
+
+function Defensives:GROUP_ROSTER_UPDATE()
+	self:ResetDefensivesShuffle()
 end
 
 
@@ -201,11 +207,9 @@ function Defensives:UpdateIcon(unit, spell)
 	tracked.reset = 0
 	tracked:SetWidth(self.frame[unit]:GetHeight())
 	tracked:SetHeight(self.frame[unit]:GetHeight())
-	tracked:SetNormalTexture("Interface\\AddOns\\Gladius\\Images\\Gloss")
 	tracked.texture = _G[tracked:GetName().."Icon"]
-	tracked.normalTexture = _G[tracked:GetName().."NormalTexture"]
 
-	tracked.cooldown = _G[tracked:GetName().."Cooldown"]
+	tracked.cooldown = tracked:GetName().."Cooldown"
 	tracked.cooldown.isDisabled = not Gladius.db.DefensivesCooldown
 	tracked.cooldown:SetReverse(Gladius.db.DefensivesCooldownReverse)
 	Gladius:Call(Gladius.modules.Timer, "RegisterTimer", tracked, Gladius.db.DefensivesCooldown)
@@ -219,17 +223,6 @@ function Defensives:UpdateIcon(unit, spell)
 	tracked.text:SetPoint("BOTTOMRIGHT", tracked, -2, 0)
 	tracked.text:SetFont(LSM:Fetch(LSM.MediaType.FONT, Gladius.db.globalFont), Gladius.db.DefensivesFontSize, "OUTLINE")
 	tracked.text:SetTextColor(Gladius.db.DefensivesFontColor.r, Gladius.db.DefensivesFontColor.g, Gladius.db.DefensivesFontColor.b, Gladius.db.DefensivesFontColor.a)
-	-- style action button
-	tracked.normalTexture:SetHeight(self.frame[unit]:GetHeight() + self.frame[unit]:GetHeight() * 0.4)
-	tracked.normalTexture:SetWidth(self.frame[unit]:GetWidth() + self.frame[unit]:GetWidth() * 0.4)
-	tracked.normalTexture:ClearAllPoints()
-	tracked.normalTexture:SetPoint("CENTER", 0, 0)
-	tracked:SetNormalTexture("Interface\\AddOns\\Gladius\\Images\\Gloss")
-	tracked.texture:ClearAllPoints()
-	tracked.texture:SetPoint("TOPLEFT", tracked, "TOPLEFT")
-	tracked.texture:SetPoint("BOTTOMRIGHT", tracked, "BOTTOMRIGHT")
-	tracked.texture:SetTexCoord(0.07, 0.93, 0.07, 0.93)
-	tracked.normalTexture:SetVertexColor(Gladius.db.DefensivesGlossColor.r, Gladius.db.DefensivesGlossColor.g, Gladius.db.DefensivesGlossColor.b, Gladius.db.DefensivesGloss and Gladius.db.DefensivesGlossColor.a or 0)
 end
 
 
@@ -252,105 +245,53 @@ function Defensives:DefensiveUsed(unit, spell)
         specID = GetArenaOpponentSpec(number)
     end
 
-	if not Gladius.dbi.profile.defensives[spell]
-		or not Gladius.dbi.profile.defensives[spell].enabled
-		or Gladius.dbi.profile.defensives[spell].deleted then
+    -- Check if this spell is configured and enabled
+    local spellConfig = Gladius.dbi.profile.defensives[spell]
+    if not spellConfig or not spellConfig.enabled or spellConfig.deleted then
         return
     end
 
-    local unitFrame = self.frame[unit]
-    if not unitFrame then
-		return
-	end
-
-    local tracker = unitFrame.tracker[spell]
-    if not tracker then
-        tracker = CreateFrame("CheckButton", "Gladius"..self.name.."FrameCat"..spell..unit, unitFrame, "ActionButtonTemplate")
-        tracker.IconMask:Hide()
-        unitFrame.tracker[spell] = tracker
-        self:UpdateIcon(unit, spell)
+    -- Make sure the unit frame structure exists
+    if not self.frame[unit] or not self.frame[unit].anchor or not self.frame[unit].spells then
+        return
     end
 
-    local cooldown = CDList:GetCooldownNumber(spell, specID)
+    local spells = self.frame[unit].spells
+    local anchor = self.frame[unit].anchor
+    local frame = spells[spell]
+
+    if not frame then
+        -- Create new spell frame
+        frame = CreateFrame("Frame", "Gladius"..self.name.."SpellFrame"..unit..spell, anchor)
+        frame:SetSize(Gladius.db.trinketSize, Gladius.db.trinketSize)
+
+		local frameName = frame:GetName()
+
+        -- Position the frame relative to the anchor (stack horizontally)
+        local index = 0
+        for _ in pairs(spells) do index = index + 1 end
+        local spacing = Gladius.db.trinketSize + 2 -- 2px padding
+        frame:SetPoint("LEFT", anchor, "LEFT", index * spacing, 0)
+
+        -- Create icon texture
+        frame.texture = frame:CreateTexture(nil, "BACKGROUND")
+        frame.texture:SetAllPoints()
+
+        -- Create cooldown overlay
+        frame.cooldown = CreateFrame("Cooldown", frameName .. "Cooldown", frame, "CooldownFrameTemplate")
+        frame.cooldown:SetAllPoints()
+
+        spells[spell] = frame
+    end
+
+    -- Set texture and cooldown
     local icon = GetSpellTexture(spell)
+    local cooldown = CDList:GetCooldownNumber(spell, specID)
 
-    tracker.active = true
-    tracker.timeLeft = cooldown
-    tracker.texture:SetTexture(icon)
+    frame.texture:SetTexture(icon)
+    frame:SetAlpha(1)
 
-    Gladius:Call(Gladius.modules.Timer, "SetTimer", tracker, cooldown)
-
-    tracker:SetAlpha(1)
-    self:SortIcons(unit, classFile)
-
-    -- Only use OnUpdate for this tracker (not the whole frame)
-    tracker:SetScript("OnUpdate", function(f, elapsed)
-        f.timeLeft = f.timeLeft - elapsed
-        if f.timeLeft <= 0 then
-            f.active = false
-            Gladius:Call(Gladius.modules.Timer, "HideTimer", f)
-            f:SetScript("OnUpdate", nil)  -- Stop this tracker's update loop
-            self:SortIcons(unit, classFile)
-        end
-    end)
-end
-
-
-function Defensives:SortIcons(unit, classFile)
-	if Gladius.test then
-		classFile = Gladius.testing[unit].unitClass
-	end
-
-    local margin = Gladius.db.DefensivesMargin
-    local baseFrame = self.frame[unit]
-    local lastFrame = baseFrame
-
-    -- Collect active icons
-    local activeIcons = {}
-    for spellID, frame in pairs(self.frame[unit].tracker) do
-		local config = Gladius.dbi.profile.defensives[spellID]
-		local priority = config and config.priority ~= nil and config.priority or defensivesList[spellID] and defensivesList[spellID].priority
-        if frame.active then
-            table.insert(activeIcons, {
-                spellID = spellID,
-				classFile = classFile,
-                frame = frame,
-                priority = priority or 0
-            })
-        end
-    end
-
-    -- Step 2: Sort icons by descending priority
-    table.sort(activeIcons, function(a, b)
-        return a.priority > b.priority
-    end)
-
-    -- Step 3: Reposition and show icons
-    for _, data in ipairs(activeIcons) do
-        local frame = data.frame
-        frame:ClearAllPoints()
-        frame:SetPoint("LEFT", lastFrame, lastFrame == baseFrame and "LEFT" or "RIGHT", margin, 0)
-        lastFrame = frame
-        frame:SetAlpha(1)
-    end
-
-    -- Hide inactive icons
-    for spellID, frame in pairs(self.frame[unit].tracker) do
-        if not frame.active then
-            frame:SetAlpha(0)
-        end
-    end
-end
-
-
-function Defensives:UNIT_SPELLCAST_SUCCEEDED(event, unit, _, spellID)
-	if not unit then
-		return
-	end
-
-	if defaultValues[spellID] and (unit == "arena1" or unit == "arena2" or unit == "arena3") then
-		self:DefensiveUsed(unit, spellID)
-	end
+    Gladius:Call(Gladius.modules.Timer, "SetTimer", frame, cooldown)
 end
 
 
@@ -359,67 +300,119 @@ function Defensives:CreateFrame(unit)
 	if not button then
 		return
 	end
-	-- create frame
-	self.frame[unit] = CreateFrame("CheckButton", "Gladius"..self.name.."Frame"..unit, button)
-	self.frame[unit]:EnableMouse(false)
-	self.frame[unit]:SetNormalTexture("Interface\\COMMON\\spacer")
+
+	self.frame[unit] = self.frame[unit] or {}
+
+	if not self.frame[unit].anchor then
+		-- Create a parent frame
+		local anchor = CreateFrame("CheckButton", "Gladius"..self.name.."AnchorFrame"..unit, button)
+		anchor:SetSize(Gladius.db.trinketSize, Gladius.db.trinketSize)
+		anchor:SetPoint("CENTER")
+		anchor:EnableMouse(false)
+
+		local frameName = anchor:GetName()
+
+		-- Create a texture frame
+		anchor.texture = anchor:CreateTexture(frameName .. "Icon", "BACKGROUND")
+		anchor.texture:SetAllPoints() -- Makes it cover the frame
+
+		-- Create a cooldown frame on top of the texture frame
+		anchor.cooldown = CreateFrame("Cooldown", frameName .. "Cooldown", anchor, "CooldownFrameTemplate")
+		anchor.cooldown:SetAllPoints() -- Makes it cover the texture frame
+
+		-- secure
+		anchor.secure = CreateFrame("Button", "Gladius"..self.name.."SecureButton"..unit, button, "SecureActionButtonTemplate")
+		anchor.secure:RegisterForClicks("AnyUp", "AnyDown")
+
+		-- Store the anchor frame
+		self.frame[unit].anchor = anchor
+	end
+
+	-- Prepare a table to hold per-spell frames if it doesn't exist
+    self.frame[unit].spells = self.frame[unit].spells or {}
 end
 
 
 function Defensives:Update(unit)
-	-- create frame
-	if not self.frame[unit] then
-		self:CreateFrame(unit)
-	end
-	-- update frame
-	self.frame[unit]:ClearAllPoints()
-	-- anchor point
-	local parent = Gladius:GetParent(unit, Gladius.db.DefensivesAttachTo)
-	self.frame[unit]:SetPoint(Gladius.db.DefensivesAnchor, parent, Gladius.db.DefensivesRelativePoint, Gladius.db.DefensivesOffsetX, Gladius.db.DefensivesOffsetY)
-	-- frame level
-	self.frame[unit]:SetFrameLevel(Gladius.db.DefensivesFrameLevel)
-	-- when the attached module is disabled
-	if not Gladius:GetModule(self:GetAttachTo()) then
-		Gladius.db.DefensivesAttachTo = "Frame"
-	end
-	if Gladius.db.DefensivesAdjustSize then
-		if self:GetAttachTo() == "Frame" then
-			local height = false
-			if height then
-				self.frame[unit]:SetWidth(Gladius.buttons[unit].height)
-				self.frame[unit]:SetHeight(Gladius.buttons[unit].height)
-			else
-				self.frame[unit]:SetWidth(Gladius.buttons[unit].frameHeight)
-				self.frame[unit]:SetHeight(Gladius.buttons[unit].frameHeight)
-			end
-		else
-			self.frame[unit]:SetWidth(Gladius:GetModule(self:GetAttachTo()).frame[unit]:GetHeight() or 1)
-			self.frame[unit]:SetHeight(Gladius:GetModule(self:GetAttachTo()).frame[unit]:GetHeight() or 1)
-		end
-	else
-		self.frame[unit]:SetWidth(Gladius.db.DefensivesSize)
-		self.frame[unit]:SetHeight(Gladius.db.DefensivesSize)
-	end
-	-- update icons
-	if not self.frame[unit].tracker then
-		self.frame[unit].tracker = { }
-	else
-		for spell, frame in pairs(self.frame[unit].tracker) do
-			frame:SetWidth(self.frame[unit]:GetHeight())
-			frame:SetHeight(self.frame[unit]:GetHeight())
-			frame.normalTexture:SetHeight(self.frame[unit]:GetHeight() + self.frame[unit]:GetHeight() * 0.4)
-			frame.normalTexture:SetWidth(self.frame[unit]:GetWidth() + self.frame[unit]:GetWidth() * 0.4)
-			self:UpdateIcon(unit, spell)
-		end
-		self:SortIcons(unit)
-	end
-	-- hide
-	self.frame[unit]:SetAlpha(0)
+    -- Create frame table if not already existing
+    if not self.frame[unit] then
+        self:CreateFrame(unit)
+    end
+
+	local unitFrames = self.frame[unit]
+	local unitFrame = unitFrames.anchor
+
+	-- Safety check
+    if not unitFrame then return end
+
+	-- Clear old position
+	unitFrame:ClearAllPoints()
+
+	-- Get the parent frame to attach to
+    local parent = Gladius:GetParent(unit, Gladius.db.DefensivesAttachTo)
+    unitFrame:SetPoint(
+        Gladius.db.DefensivesAnchor,
+        parent,
+        Gladius.db.DefensivesRelativePoint,
+        Gladius.db.DefensivesOffsetX,
+        Gladius.db.DefensivesOffsetY
+    )
+
+	-- Set frame level
+	unitFrame:SetFrameLevel(Gladius.db.DefensivesFrameLevel)
+
+    -- If attached module is disabled, fall back
+    if not Gladius:GetModule(self:GetAttachTo()) then
+        Gladius.db.DefensivesAttachTo = "Frame"
+    end
+
+	-- Adjust size
+    if Gladius.db.DefensivesAdjustSize then
+        if self:GetAttachTo() == "Frame" then
+            -- Use button size
+            local height = false
+            if height then
+                unitFrame:SetSize(Gladius.buttons[unit].height, Gladius.buttons[unit].height)
+            else
+                unitFrame:SetSize(Gladius.buttons[unit].frameHeight, Gladius.buttons[unit].frameHeight)
+            end
+        else
+            local attachedModule = Gladius:GetModule(self:GetAttachTo())
+            local attachedFrame = attachedModule and attachedModule.frame[unit]
+            local height = attachedFrame and attachedFrame:GetHeight() or 1
+            unitFrame:SetSize(height, height)
+        end
+    else
+        unitFrame:SetSize(Gladius.db.DefensivesSize, Gladius.db.DefensivesSize)
+    end
+
+    -- Cooldown styling (on the anchor's cooldown, if used)
+    if unitFrame.cooldown then
+        unitFrame.cooldown:SetDrawSwipe(Gladius.db.DefensivesCooldown)
+        unitFrame.cooldown:SetDrawEdge(Gladius.db.DefensivesCooldownEdge)
+        unitFrame.cooldown:SetSwipeColor(0, 0, 0, Gladius.db.DefensivesCooldownSwipeAlpha)
+        unitFrame.cooldown.isDisabled = not Gladius.db.DefensivesCooldown
+        unitFrame.cooldown:SetReverse(Gladius.db.DefensivesCooldownReverse)
+
+        Gladius:Call(Gladius.modules.Timer, "RegisterTimer", unitFrame, Gladius.db.DefensivesCooldown)
+    end
+
+    -- Hide the anchor by default (actual spell frames are shown on use)
+    unitFrame:SetAlpha(0)
 end
 
+
 function Defensives:Show(unit)
-	-- show frame
-	self.frame[unit]:SetAlpha(1)
+    if self.frame[unit] then
+        if self.frame[unit].anchor then
+            self.frame[unit].anchor:SetAlpha(1)
+        end
+        if self.frame[unit].spells then
+            for _, frame in pairs(self.frame[unit].spells) do
+                frame:SetAlpha(1)
+            end
+        end
+    end
 end
 
 
@@ -427,15 +420,16 @@ function Defensives:Reset(unit)
 	if not self.frame[unit] then
 		return
 	end
-	-- hide icons
-	for _, frame in pairs(self.frame[unit].tracker) do
-		frame.active = false
-		Gladius:Call(Gladius.modules.Timer, "HideTimer", frame)
-		frame:SetScript("OnUpdate", nil)
-		frame:SetAlpha(0)
-	end
 	-- hide
 	self.frame[unit]:SetAlpha(0)
+end
+
+
+function Defensives:ResetDefensivesShuffle()
+    for i = 1, 3 do
+        local unit = "arena"..i
+		self:Reset(unit)
+    end
 end
 
 
@@ -477,7 +471,10 @@ end
 
 
 function Defensives:Test(unit)
-    local testSpellDelay = 10
+	if not Gladius.test then
+		return
+	end
+
     local classFile = Gladius.testing[unit] and Gladius.testing[unit].unitClass
 	local specID = Gladius.testing[unit] and Gladius.testing[unit].unitSpecId
 
@@ -497,30 +494,18 @@ function Defensives:Test(unit)
 		end
     end
 
-    local function triggerRandomSpell()
-        if not Gladius.test then
-            return
-        end
+	local randomIndex = math.random(1, #defensives)
+	local randomSpellID = defensives[randomIndex]
 
-        local randomIndex = math.random(1, #defensives)
-        local randomSpellID = defensives[randomIndex]
-
-		for spellID, _ in pairs(self.frame[unit].tracker) do
-			if randomSpellID == spellID and self.frame[unit].tracker[randomSpellID].active then
-				randomSpellID = nil
-			end
+	for spellID, _ in pairs(self.frame[unit]) do
+		if randomSpellID == spellID and self.frame[unit][randomSpellID].active then
+			randomSpellID = nil
 		end
+	end
 
-        if randomSpellID then
-            self:DefensiveUsed(unit, randomSpellID)
-        end
-
-        -- Schedule the next spell cast
-        C_Timer.After(testSpellDelay, triggerRandomSpell)
-    end
-
-    -- Start the testing loop
-    triggerRandomSpell()
+	if randomSpellID then
+		self:DefensiveUsed(unit, randomSpellID)
+	end
 end
 
 
@@ -569,7 +554,7 @@ function Defensives:GetOptions()
 							width = "full",
 							order = 7,
 						},
---[[ 						DefensivesCooldown = {
+						DefensivesCooldown = {
 							type = "toggle",
 							name = L["Defensives Cooldown Spiral"],
 							desc = L["Display the cooldown spiral for important auras"],
@@ -599,37 +584,6 @@ function Defensives:GetOptions()
 							width = "full",
 							order = 17,
 						},
-						DefensivesGloss = {
-							type = "toggle",
-							name = L["Defensives Gloss"],
-							desc = L["Toggle gloss on the Defensives icon"],
-							disabled = function()
-								return not Gladius.dbi.profile.modules[self.name]
-							end,
-							hidden = function()
-								return not Gladius.db.advancedOptions
-							end,
-							order = 25,
-						},
-						DefensivesGlossColor = {
-							type = "color",
-							name = L["Defensives Gloss Color"],
-							desc = L["Color of the Defensives icon gloss"],
-							get = function(info)
-								return Gladius:GetColorOption(info)
-							end,
-							set = function(info, r, g, b, a)
-								return Gladius:SetColorOption(info, r, g, b, a)
-							end,
-							hasAlpha = true,
-							disabled = function()
-								return not Gladius.dbi.profile.modules[self.name]
-							end,
-							hidden = function()
-								return not Gladius.db.advancedOptions
-							end,
-							order = 30,
-						},
 						sep3 = {
 							type = "description",
 							name = "",
@@ -638,7 +592,7 @@ function Defensives:GetOptions()
 								return not Gladius.db.advancedOptions
 							end,
 							order = 33,
-						}, ]]
+						},
 						DefensivesFrameLevel = {
 							type = "range",
 							name = L["Defensives Frame Level"],
