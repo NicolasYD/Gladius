@@ -609,9 +609,6 @@ function Trinket:GetOptions()
 							disabled = function()
 								return not Gladius.dbi.profile.modules[self.name]
 							end,
-							hidden = function()
-								return not Gladius.db.advancedOptions
-							end,
 							width = "double",
 							order = 30,
 						},
@@ -627,9 +624,6 @@ function Trinket:GetOptions()
 							desc = L["Invert the dark/bright part of the cooldown spiral"],
 							disabled = function()
 								return not Gladius.dbi.profile.modules[self.name] or not Gladius.db.trinketCooldown
-							end,
-							hidden = function()
-								return not Gladius.db.advancedOptions
 							end,
 							width = "double",
 							order = 35,
