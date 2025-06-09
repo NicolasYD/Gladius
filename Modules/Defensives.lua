@@ -64,6 +64,7 @@ local Defensives = Gladius:NewModule("Defensives", false, true, {
 	DefensivesOffsetX = 0,
 	DefensivesOffsetY = 0,
 	DefensivesFrameLevel = 1,
+	DefensivesIconCrop = true,
 	DefensivesCooldown = true,
 	DefensivesCooldownReverse = false,
 	DefensivesCooldownSwipeAlpha = 0.5,
@@ -269,12 +270,6 @@ function Defensives:DefensiveUsed(unit, spell)
 
 		local frameName = frame:GetName()
 
---[[         -- Position the frame relative to the anchor (stack horizontally)
-        local index = 0
-        for _ in pairs(spells) do index = index + 1 end
-        local spacing = Gladius.db.DefensivesSize + Gladius.db.DefensivesMargin
-        frame:SetPoint("LEFT", anchor, "LEFT", index * spacing, 0) ]]
-
         -- Create icon texture
         frame.texture = frame:CreateTexture(nil, "BACKGROUND")
         frame.texture:SetAllPoints()
@@ -287,7 +282,7 @@ function Defensives:DefensiveUsed(unit, spell)
 
 		-- Set texture and cooldown
 		local icon = GetSpellTexture(spell)
-		
+
 		frame.texture:SetTexture(icon)
 		frame:SetAlpha(1)
     end
@@ -340,6 +335,25 @@ function Defensives:CreateFrame(unit)
 		return
 	end
 
+	-- Cleanup old frame if it exists
+    if self.frame[unit] then
+        -- Hide and unparent old spell frames
+        if self.frame[unit].spells then
+            for spell, frame in pairs(self.frame[unit].spells) do
+                frame:Hide()
+                frame:SetParent(nil)
+                frame:UnregisterAllEvents()
+                self.frame[unit].spells[spell] = nil
+            end
+        end
+
+        -- Hide and unparent the parent frame
+        self.frame[unit]:Hide()
+        self.frame[unit]:SetParent(nil)
+        self.frame[unit]:UnregisterAllEvents()
+        self.frame[unit] = nil
+    end
+
 	-- Create a parent frame
 	self.frame[unit] = CreateFrame("CheckButton", "Gladius"..self.name.."Frame"..unit, button)
 	self.frame[unit]:EnableMouse(false)
@@ -388,10 +402,10 @@ function Defensives:Update(unit)
 	if not self.frame[unit].spells then
 		self.frame[unit].spells = { }
 	else
-		for cat, frame in pairs(self.frame[unit].spells) do
+		for spell, frame in pairs(self.frame[unit].spells) do
 			frame:SetWidth(self.frame[unit]:GetHeight())
 			frame:SetHeight(self.frame[unit]:GetHeight())
-			self:UpdateIcon(unit, cat)
+			self:UpdateIcon(unit, spell)
 		end
 		--self:SortIcons(unit)
 	end
@@ -418,15 +432,20 @@ function Defensives:Reset(unit)
 	if not self.frame[unit] then
 		return
 	end
-	-- hide
-	--self.frame[unit]:SetAlpha(0)
+	-- hide icons
+	for _, frame in pairs(self.frame[unit].spells) do
+		frame.active = false
+		Gladius:Call(Gladius.modules.Timer, "HideTimer", frame)
+		frame:SetScript("OnUpdate", nil)
+		--frame:SetAlpha(0)
+	end
 end
 
 
 function Defensives:ResetDefensivesShuffle()
     for i = 1, 3 do
         local unit = "arena"..i
-		self:Reset(unit)
+		self:CreateFrame(unit)
     end
 end
 
