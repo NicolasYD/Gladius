@@ -64,8 +64,10 @@ local Defensives = Gladius:NewModule("Defensives", false, true, {
 	DefensivesOffsetX = 0,
 	DefensivesOffsetY = 0,
 	DefensivesFrameLevel = 1,
-	DefensivesCooldown = false,
-	DefensivesCooldownReverse = false,
+	DefensivesCooldown = true,
+	DefensivesCooldownReverse = true,
+	DefensivesCooldownSwipeAlpha = 0.8,
+	DefensivesCooldownEdge = true,
 	DefensivesFontSize = 10,
 	DefensivesFontColor = {r = 0, g = 1, b = 0, a = 1},
 	DefensivesDetached = false,
@@ -202,14 +204,14 @@ end
 
 
 function Defensives:UpdateIcon(unit, spell)
-	local tracked = self.frame[unit].tracker[spell]
+	local tracked = self.frame[unit].spells[spell]
 	tracked:EnableMouse(false)
 	tracked.reset = 0
 	tracked:SetWidth(self.frame[unit]:GetHeight())
 	tracked:SetHeight(self.frame[unit]:GetHeight())
 	tracked.texture = _G[tracked:GetName().."Icon"]
 
-	tracked.cooldown = tracked:GetName().."Cooldown"
+	tracked.cooldown = _G[tracked:GetName().."Cooldown"]
 	tracked.cooldown.isDisabled = not Gladius.db.DefensivesCooldown
 	tracked.cooldown:SetReverse(Gladius.db.DefensivesCooldownReverse)
 	Gladius:Call(Gladius.modules.Timer, "RegisterTimer", tracked, Gladius.db.DefensivesCooldown)
@@ -252,26 +254,26 @@ function Defensives:DefensiveUsed(unit, spell)
     end
 
     -- Make sure the unit frame structure exists
-    if not self.frame[unit] or not self.frame[unit].anchor or not self.frame[unit].spells then
-        return
+    if not self.frame[unit] or not self.frame[unit].spells then
+		return
     end
 
     local spells = self.frame[unit].spells
-    local anchor = self.frame[unit].anchor
+    local anchor = self.frame[unit]
     local frame = spells[spell]
 
     if not frame then
         -- Create new spell frame
         frame = CreateFrame("Frame", "Gladius"..self.name.."SpellFrame"..unit..spell, anchor)
-        frame:SetSize(Gladius.db.trinketSize, Gladius.db.trinketSize)
+        frame:SetSize(Gladius.db.DefensivesSize, Gladius.db.DefensivesSize)
 
 		local frameName = frame:GetName()
 
-        -- Position the frame relative to the anchor (stack horizontally)
+--[[         -- Position the frame relative to the anchor (stack horizontally)
         local index = 0
         for _ in pairs(spells) do index = index + 1 end
-        local spacing = Gladius.db.trinketSize + 2 -- 2px padding
-        frame:SetPoint("LEFT", anchor, "LEFT", index * spacing, 0)
+        local spacing = Gladius.db.DefensivesSize + Gladius.db.DefensivesMargin
+        frame:SetPoint("LEFT", anchor, "LEFT", index * spacing, 0) ]]
 
         -- Create icon texture
         frame.texture = frame:CreateTexture(nil, "BACKGROUND")
@@ -282,16 +284,41 @@ function Defensives:DefensiveUsed(unit, spell)
         frame.cooldown:SetAllPoints()
 
         spells[spell] = frame
+
+		-- Set texture and cooldown
+		local icon = GetSpellTexture(spell)
+		
+		frame.texture:SetTexture(icon)
+		frame:SetAlpha(1)
     end
 
-    -- Set texture and cooldown
-    local icon = GetSpellTexture(spell)
-    local cooldown = CDList:GetCooldownNumber(spell, specID)
+	-- Optional styling
+	frame.cooldown:SetDrawSwipe(Gladius.db.DefensivesCooldown)
+	frame.cooldown:SetDrawEdge(Gladius.db.DefensivesCooldownEdge)
+	frame.cooldown:SetSwipeColor(0, 0, 0, Gladius.db.DefensivesCooldownSwipeAlpha)
+	frame.cooldown.isDisabled = not Gladius.db.DefensivesCooldown
+	frame.cooldown:SetReverse(Gladius.db.DefensivesCooldownReverse)
+	Gladius:Call(Gladius.modules.Timer, "RegisterTimer", frame, Gladius.db.DefensivesCooldown)
 
-    frame.texture:SetTexture(icon)
-    frame:SetAlpha(1)
+	local cooldown = CDList:GetCooldownNumber(spell, specID)
+	Gladius:Call(Gladius.modules.Timer, "SetTimer", frame, cooldown)
 
-    Gladius:Call(Gladius.modules.Timer, "SetTimer", frame, cooldown)
+	frame.active = true
+	self:SortIcons(unit)
+end
+
+
+function Defensives:SortIcons(unit)
+	local lastFrame = self.frame[unit]
+	for spell, frame in pairs(self.frame[unit].spells) do
+		frame:ClearAllPoints()
+		--frame:SetAlpha(0)
+		if frame.active then
+			frame:SetPoint(Gladius.db.DefensivesAnchor, lastFrame, lastFrame == self.frame[unit] and Gladius.db.DefensivesAnchor or Gladius.db.DefensivesRelativePoint, strfind(Gladius.db.DefensivesAnchor,"LEFT") and Gladius.db.DefensivesMargin or - Gladius.db.DefensivesMargin, 0)
+			lastFrame = frame
+			--frame:SetAlpha(1)
+		end
+	end
 end
 
 
@@ -301,32 +328,9 @@ function Defensives:CreateFrame(unit)
 		return
 	end
 
-	self.frame[unit] = self.frame[unit] or {}
-
-	if not self.frame[unit].anchor then
-		-- Create a parent frame
-		local anchor = CreateFrame("CheckButton", "Gladius"..self.name.."AnchorFrame"..unit, button)
-		anchor:SetSize(Gladius.db.trinketSize, Gladius.db.trinketSize)
-		anchor:SetPoint("CENTER")
-		anchor:EnableMouse(false)
-
-		local frameName = anchor:GetName()
-
-		-- Create a texture frame
-		anchor.texture = anchor:CreateTexture(frameName .. "Icon", "BACKGROUND")
-		anchor.texture:SetAllPoints() -- Makes it cover the frame
-
-		-- Create a cooldown frame on top of the texture frame
-		anchor.cooldown = CreateFrame("Cooldown", frameName .. "Cooldown", anchor, "CooldownFrameTemplate")
-		anchor.cooldown:SetAllPoints() -- Makes it cover the texture frame
-
-		-- secure
-		anchor.secure = CreateFrame("Button", "Gladius"..self.name.."SecureButton"..unit, button, "SecureActionButtonTemplate")
-		anchor.secure:RegisterForClicks("AnyUp", "AnyDown")
-
-		-- Store the anchor frame
-		self.frame[unit].anchor = anchor
-	end
+	-- Create a parent frame
+	self.frame[unit] = CreateFrame("CheckButton", "Gladius"..self.name.."Frame"..unit, button)
+	self.frame[unit]:EnableMouse(false)
 
 	-- Prepare a table to hold per-spell frames if it doesn't exist
     self.frame[unit].spells = self.frame[unit].spells or {}
@@ -334,71 +338,53 @@ end
 
 
 function Defensives:Update(unit)
-    -- Create frame table if not already existing
-    if not self.frame[unit] then
-        self:CreateFrame(unit)
-    end
+	-- create frame
+	if not self.frame[unit] then
+		self:CreateFrame(unit)
+	end
+	-- update frame
+	self.frame[unit]:ClearAllPoints()
+	-- anchor point
+	local parent = Gladius:GetParent(unit, Gladius.db.DefensivesAttachTo)
+	self.frame[unit]:SetPoint(Gladius.db.DefensivesAnchor, parent, Gladius.db.DefensivesRelativePoint, Gladius.db.DefensivesOffsetX, Gladius.db.DefensivesOffsetY)
+	-- frame level
+	self.frame[unit]:SetFrameLevel(Gladius.db.DefensivesFrameLevel)
+	-- when the attached module is disabled
+	if not Gladius:GetModule(self:GetAttachTo()) then
+		Gladius.db.DefensivesAttachTo = "Frame"
+	end
+	if Gladius.db.DefensivesAdjustSize then
+		if self:GetAttachTo() == "Frame" then
+			local height = false
 
-	local unitFrames = self.frame[unit]
-	local unitFrame = unitFrames.anchor
-
-	-- Safety check
-    if not unitFrame then return end
-
-	-- Clear old position
-	unitFrame:ClearAllPoints()
-
-	-- Get the parent frame to attach to
-    local parent = Gladius:GetParent(unit, Gladius.db.DefensivesAttachTo)
-    unitFrame:SetPoint(
-        Gladius.db.DefensivesAnchor,
-        parent,
-        Gladius.db.DefensivesRelativePoint,
-        Gladius.db.DefensivesOffsetX,
-        Gladius.db.DefensivesOffsetY
-    )
-
-	-- Set frame level
-	unitFrame:SetFrameLevel(Gladius.db.DefensivesFrameLevel)
-
-    -- If attached module is disabled, fall back
-    if not Gladius:GetModule(self:GetAttachTo()) then
-        Gladius.db.DefensivesAttachTo = "Frame"
-    end
-
-	-- Adjust size
-    if Gladius.db.DefensivesAdjustSize then
-        if self:GetAttachTo() == "Frame" then
-            -- Use button size
-            local height = false
-            if height then
-                unitFrame:SetSize(Gladius.buttons[unit].height, Gladius.buttons[unit].height)
-            else
-                unitFrame:SetSize(Gladius.buttons[unit].frameHeight, Gladius.buttons[unit].frameHeight)
-            end
-        else
-            local attachedModule = Gladius:GetModule(self:GetAttachTo())
-            local attachedFrame = attachedModule and attachedModule.frame[unit]
-            local height = attachedFrame and attachedFrame:GetHeight() or 1
-            unitFrame:SetSize(height, height)
-        end
-    else
-        unitFrame:SetSize(Gladius.db.DefensivesSize, Gladius.db.DefensivesSize)
-    end
-
-    -- Cooldown styling (on the anchor's cooldown, if used)
-    if unitFrame.cooldown then
-        unitFrame.cooldown:SetDrawSwipe(Gladius.db.DefensivesCooldown)
-        unitFrame.cooldown:SetDrawEdge(Gladius.db.DefensivesCooldownEdge)
-        unitFrame.cooldown:SetSwipeColor(0, 0, 0, Gladius.db.DefensivesCooldownSwipeAlpha)
-        unitFrame.cooldown.isDisabled = not Gladius.db.DefensivesCooldown
-        unitFrame.cooldown:SetReverse(Gladius.db.DefensivesCooldownReverse)
-
-        Gladius:Call(Gladius.modules.Timer, "RegisterTimer", unitFrame, Gladius.db.DefensivesCooldown)
-    end
-
-    -- Hide the anchor by default (actual spell frames are shown on use)
-    unitFrame:SetAlpha(0)
+			if height then
+				self.frame[unit]:SetWidth(Gladius.buttons[unit].height)
+				self.frame[unit]:SetHeight(Gladius.buttons[unit].height)
+			else
+				self.frame[unit]:SetWidth(Gladius.buttons[unit].frameHeight)
+				self.frame[unit]:SetHeight(Gladius.buttons[unit].frameHeight)
+			end
+		else
+			self.frame[unit]:SetWidth(Gladius:GetModule(self:GetAttachTo()).frame[unit]:GetHeight() or 1)
+			self.frame[unit]:SetHeight(Gladius:GetModule(self:GetAttachTo()).frame[unit]:GetHeight() or 1)
+		end
+	else
+		self.frame[unit]:SetWidth(Gladius.db.DefensivesSize)
+		self.frame[unit]:SetHeight(Gladius.db.DefensivesSize)
+	end
+	-- update icons
+	if not self.frame[unit].spells then
+		self.frame[unit].spells = { }
+	else
+		for cat, frame in pairs(self.frame[unit].spells) do
+			frame:SetWidth(self.frame[unit]:GetHeight())
+			frame:SetHeight(self.frame[unit]:GetHeight())
+			self:UpdateIcon(unit, cat)
+		end
+		--self:SortIcons(unit)
+	end
+	-- hide
+	--self.frame[unit]:SetAlpha(0)
 end
 
 
@@ -421,7 +407,7 @@ function Defensives:Reset(unit)
 		return
 	end
 	-- hide
-	self.frame[unit]:SetAlpha(0)
+	--self.frame[unit]:SetAlpha(0)
 end
 
 
