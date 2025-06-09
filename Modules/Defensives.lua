@@ -223,7 +223,6 @@ function Defensives:DefensiveUsed(unit, spell)
 
     local spellConfig = Gladius.db.defensives[spell]
     if not spellConfig or not spellConfig.enabled or spellConfig.deleted then
-		print("return")
         return
     end
 
@@ -254,8 +253,9 @@ function Defensives:DefensiveUsed(unit, spell)
     -- Timer setup
     local cooldown = CDList:GetCooldownNumber(spell, specID)
     frame.timeLeft = cooldown
-    --frame:SetAlpha(1)
     frame.active = true
+
+	frame.priority = Gladius.db.defensives[spell].priority
 
     Gladius:Call(Gladius.modules.Timer, "RegisterTimer", frame, Gladius.db.DefensivesCooldown)
     Gladius:Call(Gladius.modules.Timer, "SetTimer", frame, cooldown)
@@ -277,15 +277,41 @@ end
 
 
 function Defensives:SortIcons(unit)
-	local lastFrame = self.frame[unit]
-	for spell, frame in pairs(self.frame[unit].spells) do
-		frame:ClearAllPoints()
-		frame:SetAlpha(0)
+	local baseFrame = self.frame[unit]
+	if not baseFrame or not baseFrame.spells then return end
+
+	local activeFrames = {}
+
+	-- Collect active frames
+	for spell, frame in pairs(baseFrame.spells) do
 		if frame.active then
-			frame:SetPoint(Gladius.db.DefensivesAnchor, lastFrame, lastFrame == self.frame[unit] and Gladius.db.DefensivesAnchor or Gladius.db.DefensivesRelativePoint, strfind(Gladius.db.DefensivesAnchor,"LEFT") and Gladius.db.DefensivesMargin or - Gladius.db.DefensivesMargin, 0)
-			lastFrame = frame
-			frame:SetAlpha(1)
+			-- Assign priority from spell config or default to 0
+			local spellConfig = Gladius.dbi.profile.defensives[spell]
+			frame.priority = (spellConfig and spellConfig.priority) or 0
+			table.insert(activeFrames, frame)
+		else
+			frame:SetAlpha(0)
 		end
+	end
+
+	-- Sort by priority descending (highest priority first)
+	table.sort(activeFrames, function(a, b)
+		return a.priority > b.priority
+	end)
+
+	-- Anchor sorted icons
+	local lastFrame = baseFrame
+	for i, frame in ipairs(activeFrames) do
+		frame:ClearAllPoints()
+		frame:SetPoint(
+			Gladius.db.DefensivesAnchor,
+			lastFrame,
+			lastFrame == baseFrame and Gladius.db.DefensivesAnchor or Gladius.db.DefensivesRelativePoint,
+			strfind(Gladius.db.DefensivesAnchor, "LEFT") and Gladius.db.DefensivesMargin or -Gladius.db.DefensivesMargin,
+			0
+		)
+		lastFrame = frame
+		frame:SetAlpha(1)
 	end
 end
 
@@ -476,17 +502,8 @@ function Defensives:Test(unit)
 		end
     end
 
-	local randomIndex = #defensives > 0 and math.random(1, #defensives)
-	local randomSpellID = defensives[randomIndex]
-
-	for spellID, _ in pairs(self.frame[unit]) do
-		if randomSpellID == spellID and self.frame[unit][randomSpellID].active then
-			randomSpellID = nil
-		end
-	end
-
-	if randomSpellID then
-		self:DefensiveUsed(unit, randomSpellID)
+	for index, spellID in ipairs(defensives) do
+		self:DefensiveUsed(unit, defensives[index])
 	end
 end
 
@@ -981,6 +998,7 @@ function Defensives:SetupAura(spellID, priority, name, iconID, tooltip)
 				end,
 				set = function (_, value)
 					Gladius.db.defensives[spellID].enabled = value
+					Gladius:UpdateFrame()
 				end,
 			},
 			priority = {
@@ -994,6 +1012,7 @@ function Defensives:SetupAura(spellID, priority, name, iconID, tooltip)
 				end,
 				set = function (_, value)
 					Gladius.db.defensives[spellID].priority = value
+					Gladius:UpdateFrame()
 				end,
 				min = 0,
 				max = 20,
