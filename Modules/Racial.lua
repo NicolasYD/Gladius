@@ -190,6 +190,12 @@ function Racial:UNIT_SPELLCAST_SUCCEEDED(event, unit, spellLineID, spell)
 	end
 end
 
+
+function Racial:GROUP_ROSTER_UPDATE()
+    Racial:ResetTrinketShuffle()
+end
+
+
 function Racial:GetRacialCD(unit)
 	local cd = 0
 	local startTime, duration = self.frame[unit].cooldown:GetCooldownTimes()
@@ -384,6 +390,21 @@ function Racial:Reset(unit)
 	-- hide
 	self.frame[unit]:SetAlpha(0)
 end
+
+
+function Racial:ResetTrinketShuffle()
+    for i = 1, 3 do
+        local unit = "arena"..i
+        local frame = self.frame[unit]
+        if frame then
+            frame.timeleft = nil
+            frame:SetScript("OnUpdate", nil)
+            Gladius:Call(Gladius.modules.Timer, "SetTimer", frame, 0)
+            frame.cooldown:Clear()
+        end
+    end
+end
+
 
 function Racial:Test(unit)
 	if unit == "arena1" then
