@@ -250,12 +250,27 @@ function Defensives:DefensiveUsed(unit, spell)
         spells[spell] = frame
     end
 
+	-- Frame styling
+	if Gladius.db.DefensivesIconCrop then
+		frame.texture:SetTexCoord(0.07, 0.93, 0.07, 0.93)
+	else
+		frame.texture:SetTexCoord(0, 1, 0, 1)
+	end
+
+	frame.cooldown:SetDrawBling(false)
+	frame.cooldown:SetDrawSwipe(Gladius.db.DefensivesCooldown)
+	frame.cooldown:SetDrawEdge(Gladius.db.DefensivesCooldownEdge)
+	frame.cooldown:SetSwipeColor(0, 0, 0, Gladius.db.DefensivesCooldownSwipeAlpha)
+	frame.cooldown:SetReverse(Gladius.db.DefensivesCooldownReverse)
+	frame.cooldown.isDisabled = not Gladius.db.DefensivesCooldown
+
+	-- Assign priority for each frame
+	frame.priority = Gladius.db.defensives[spell].priority
+
     -- Timer setup
     local cooldown = CDList:GetCooldownNumber(spell, specID)
     frame.timeLeft = cooldown
     frame.active = true
-
-	frame.priority = Gladius.db.defensives[spell].priority
 
     Gladius:Call(Gladius.modules.Timer, "RegisterTimer", frame, Gladius.db.DefensivesCooldown)
     Gladius:Call(Gladius.modules.Timer, "SetTimer", frame, cooldown)
@@ -284,7 +299,7 @@ function Defensives:SortIcons(unit)
 
 	-- Collect active frames
 	for spell, frame in pairs(baseFrame.spells) do
-		if frame.active then
+		if frame.active and Gladius.db.defensives[spell].enabled then
 			-- Assign priority from spell config or default to 0
 			local spellConfig = Gladius.dbi.profile.defensives[spell]
 			frame.priority = (spellConfig and spellConfig.priority) or 0
@@ -321,25 +336,6 @@ function Defensives:CreateFrame(unit)
 	if not button then
 		return
 	end
-
-	-- Cleanup old frame if it exists
-    if self.frame[unit] then
-        -- Hide and unparent old spell frames
-        if self.frame[unit].spells then
-            for spell, frame in pairs(self.frame[unit].spells) do
-                frame:Hide()
-                frame:SetParent(nil)
-                frame:UnregisterAllEvents()
-            end
-			self.frame[unit].spells = nil
-        end
-
-        -- Hide and unparent the parent frame
-        self.frame[unit]:Hide()
-        self.frame[unit]:SetParent(nil)
-        self.frame[unit]:UnregisterAllEvents()
-        self.frame[unit] = nil
-    end
 
 	-- Create a parent frame
 	self.frame[unit] = CreateFrame("CheckButton", "Gladius"..self.name.."Frame"..unit, button)
@@ -385,33 +381,6 @@ function Defensives:Update(unit)
 		self.frame[unit]:SetWidth(Gladius.db.DefensivesSize)
 		self.frame[unit]:SetHeight(Gladius.db.DefensivesSize)
 	end
-	-- update icons
-	if not self.frame[unit].spells then
-		self.frame[unit].spells = { }
-	else
-		for spell, frame in pairs(self.frame[unit].spells) do
-			frame:EnableMouse(false)
-			frame:SetWidth(self.frame[unit]:GetHeight())
-			frame:SetHeight(self.frame[unit]:GetHeight())
-
-			-- Style
-			if Gladius.db.DefensivesIconCrop then
-				frame.texture:SetTexCoord(0.07, 0.93, 0.07, 0.93)
-			else
-				frame.texture:SetTexCoord(0, 1, 0, 1)
-			end
-			--frame.cooldown:Clear()
-			frame.cooldown:SetDrawSwipe(Gladius.db.DefensivesCooldown)
-			frame.cooldown:SetDrawEdge(Gladius.db.DefensivesCooldownEdge)
-			frame.cooldown:SetSwipeColor(0, 0, 0, Gladius.db.DefensivesCooldownSwipeAlpha)
-			frame.cooldown:SetReverse(Gladius.db.DefensivesCooldownReverse)
-			frame.cooldown.isDisabled = not Gladius.db.DefensivesCooldown
-			Gladius:Call(Gladius.modules.Timer, "RegisterTimer", frame, Gladius.db.DefensivesCooldown)
-		end
-		self:Reset(unit)
-	end
-	-- hide
-	--self.frame[unit]:SetAlpha(0)
 end
 
 
@@ -434,6 +403,26 @@ end
 function Defensives:ResetDefensivesShuffle()
     for i = 1, 3 do
         local unit = "arena"..i
+
+		-- Cleanup old frame if it exists
+		if self.frame[unit] then
+			-- Hide and unparent old spell frames
+			if self.frame[unit].spells then
+				for spell, frame in pairs(self.frame[unit].spells) do
+					frame:Hide()
+					frame:SetParent(nil)
+					frame:UnregisterAllEvents()
+				end
+				self.frame[unit].spells = nil
+			end
+
+			-- Hide and unparent the parent frame
+			self.frame[unit]:Hide()
+			self.frame[unit]:SetParent(nil)
+			self.frame[unit]:UnregisterAllEvents()
+			self.frame[unit] = nil
+		end
+
 		self:CreateFrame(unit)
     end
 end
@@ -487,17 +476,15 @@ function Defensives:Test(unit)
     -- Get a list of all spellIDs in the table
     local defensives = {}
     for spellID, spellData in pairs(defaultValues) do
-		if Gladius.db.defensives[spellID].enabled then
-			if defaultValues[spellID]["specID"] then
-				for _, value in pairs(defaultValues[spellID]["specID"]) do
-					if (spellData.class == classFile or spellData.class == nil) and (value == specID or value == nil) then
-						table.insert(defensives, spellID)
-					end
-				end
-			else
-				if (spellData.class == classFile or spellData.class == nil) then
+		if defaultValues[spellID]["specID"] then
+			for _, value in pairs(defaultValues[spellID]["specID"]) do
+				if (spellData.class == classFile or spellData.class == nil) and (value == specID or value == nil) then
 					table.insert(defensives, spellID)
 				end
+			end
+		else
+			if (spellData.class == classFile or spellData.class == nil) then
+				table.insert(defensives, spellID)
 			end
 		end
     end
@@ -904,6 +891,7 @@ function Defensives:GetOptions()
 									Gladius.db.defensives[tonumber(self.newAuraID)] = {priority = self.newAuraPriority, class = self.newClassFile, name = spellInfo.name, iconID = spellInfo.iconID, enabled = true, deleted = false}
 								end
 								self.newAuraID = nil
+								Gladius:UpdateFrame()
 							end,
 							order = 4,
 						},
@@ -998,7 +986,10 @@ function Defensives:SetupAura(spellID, priority, name, iconID, tooltip)
 				end,
 				set = function (_, value)
 					Gladius.db.defensives[spellID].enabled = value
-					Gladius:UpdateFrame()
+					for i = 1, 3 do
+        				local unit = "arena"..i
+						self:SortIcons(unit)
+					end
 				end,
 			},
 			priority = {
