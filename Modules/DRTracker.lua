@@ -43,10 +43,11 @@ local DRTracker = Gladius:NewModule("DRTracker", false, true, {
 	drTrackerOffsetX = 0,
 	drTrackerOffsetY = 0,
 	drTrackerFrameLevel = 1,
-	drTrackerGloss = false,
-	drTrackerGlossColor = {r = 1, g = 1, b = 1, a = 0.4},
+	drTrackerIconCrop = true,
 	drTrackerCooldown = false,
 	drTrackerCooldownReverse = false,
+	drTrackerCooldownSwipeAlpha = 0.5,
+	drTrackerCooldownEdge = true,
 	drFontSize = 18,
 	drFontColor = {r = 0, g = 1, b = 0, a = 1},
 	drCategories = { },
@@ -254,7 +255,6 @@ end
 function DRTracker:UpdateColors(unit)
 	for cat, frame in pairs(self.frame[unit].tracker) do
 		local tracked = self.frame[unit].tracker[cat]
-		tracked.normalTexture:SetVertexColor(Gladius.db.drTrackerGlossColor.r, Gladius.db.drTrackerGlossColor.g, Gladius.db.drTrackerGlossColor.b, Gladius.db.drTrackerGloss and Gladius.db.drTrackerGlossColor.a or 0)
 		tracked.text:SetTextColor(Gladius.db.drFontColor.r, Gladius.db.drFontColor.g, Gladius.db.drFontColor.b, Gladius.db.drFontColor.a)
 	end
 end
@@ -265,9 +265,7 @@ function DRTracker:UpdateIcon(unit, drCat)
 	tracked.reset = 0
 	tracked:SetWidth(self.frame[unit]:GetHeight())
 	tracked:SetHeight(self.frame[unit]:GetHeight())
-	tracked:SetNormalTexture("Interface\\AddOns\\Gladius\\Images\\Gloss")
 	tracked.texture = _G[tracked:GetName().."Icon"]
-	tracked.normalTexture = _G[tracked:GetName().."NormalTexture"]
 
 	tracked.cooldown = _G[tracked:GetName().."Cooldown"]
 	tracked.cooldown.isDisabled = not Gladius.db.drTrackerCooldown
@@ -284,16 +282,10 @@ function DRTracker:UpdateIcon(unit, drCat)
 	tracked.text:SetFont(LSM:Fetch(LSM.MediaType.FONT, Gladius.db.globalFont), Gladius.db.drFontSize, "OUTLINE")
 	tracked.text:SetTextColor(Gladius.db.drFontColor.r, Gladius.db.drFontColor.g, Gladius.db.drFontColor.b, Gladius.db.drFontColor.a)
 	-- style action button
-	tracked.normalTexture:SetHeight(self.frame[unit]:GetHeight() + self.frame[unit]:GetHeight() * 0.4)
-	tracked.normalTexture:SetWidth(self.frame[unit]:GetWidth() + self.frame[unit]:GetWidth() * 0.4)
-	tracked.normalTexture:ClearAllPoints()
-	tracked.normalTexture:SetPoint("CENTER", 0, 0)
-	tracked:SetNormalTexture("Interface\\AddOns\\Gladius\\Images\\Gloss")
 	tracked.texture:ClearAllPoints()
 	tracked.texture:SetPoint("TOPLEFT", tracked, "TOPLEFT")
 	tracked.texture:SetPoint("BOTTOMRIGHT", tracked, "BOTTOMRIGHT")
 	tracked.texture:SetTexCoord(0.07, 0.93, 0.07, 0.93)
-	tracked.normalTexture:SetVertexColor(Gladius.db.drTrackerGlossColor.r, Gladius.db.drTrackerGlossColor.g, Gladius.db.drTrackerGlossColor.b, Gladius.db.drTrackerGloss and Gladius.db.drTrackerGlossColor.a or 0)
 end
 
 function DRTracker:DRApplied(unit, spellID, force, auraDuration)
@@ -447,7 +439,6 @@ function DRTracker:CreateFrame(unit)
 	-- create frame
 	self.frame[unit] = CreateFrame("CheckButton", "Gladius"..self.name.."Frame"..unit, button)
 	self.frame[unit]:EnableMouse(false)
-	self.frame[unit]:SetNormalTexture("Interface\\COMMON\\spacer")
 end
 
 function DRTracker:Update(unit)
@@ -497,8 +488,6 @@ function DRTracker:Update(unit)
 		for cat, frame in pairs(self.frame[unit].tracker) do
 			frame:SetWidth(self.frame[unit]:GetHeight())
 			frame:SetHeight(self.frame[unit]:GetHeight())
-			frame.normalTexture:SetHeight(self.frame[unit]:GetHeight() + self.frame[unit]:GetHeight() * 0.4)
-			frame.normalTexture:SetWidth(self.frame[unit]:GetWidth() + self.frame[unit]:GetWidth() * 0.4)
 			self:UpdateIcon(unit, cat)
 		end
 		self:SortIcons(unit)
@@ -548,6 +537,9 @@ function DRTracker:GetOptions()
 					name = L["Widget"],
 					desc = L["Widget settings"],
 					inline = true,
+					hidden = function ()
+						return not Gladius.db.advancedOptions
+					end,
 					order = 1,
 					args = {
 						drTrackerMargin = {
@@ -560,13 +552,30 @@ function DRTracker:GetOptions()
 							disabled = function()
 								return not Gladius.dbi.profile.modules[self.name]
 							end,
+							width = "double",
 							order = 5,
 						},
-						sep = {
+						sep1 = {
 							type = "description",
 							name = "",
 							width = "full",
-							order = 7,
+							order = 8,
+						},
+						drTrackerIconCrop = {
+							type = "toggle",
+							name = L["DR Icon Border Crop"],
+							desc = L["Toggle if the borders of the DR icon should be cropped"],
+							disabled = function()
+								return not Gladius.dbi.profile.modules[self.name]
+							end,
+							width = "double",
+							order = 10,
+						},
+						sep2 = {
+							type = "description",
+							name = "",
+							width = "full",
+							order = 13,
 						},
 						drTrackerCooldown = {
 							type = "toggle",
@@ -575,10 +584,14 @@ function DRTracker:GetOptions()
 							disabled = function()
 								return not Gladius.dbi.profile.modules[self.name]
 							end,
-							hidden = function()
-								return not Gladius.db.advancedOptions
-							end,
-							order = 10,
+							width = "double",
+							order = 15,
+						},
+						sep3 = {
+							type = "description",
+							name = "",
+							width = "full",
+							order = 18,
 						},
 						drTrackerCooldownReverse = {
 							type = "toggle",
@@ -587,55 +600,48 @@ function DRTracker:GetOptions()
 							disabled = function()
 								return not Gladius.dbi.profile.modules[self.name]
 							end,
-							hidden = function()
-								return not Gladius.db.advancedOptions
-							end,
-							order = 15,
+							width = "double",
+							order = 20,
 						},
-						sep2 = {
+						sep4 = {
 							type = "description",
 							name = "",
 							width = "full",
-							order = 17,
+							order = 23,
 						},
-						drTrackerGloss = {
+						drTrackerCooldownEdge = {
 							type = "toggle",
-							name = L["DRTracker Gloss"],
-							desc = L["Toggle gloss on the drTracker icon"],
+							name = L["DR Cooldown Edge"],
+							desc = L["Display the edge texture for the cooldown spiral"],
 							disabled = function()
-								return not Gladius.dbi.profile.modules[self.name]
+								return not Gladius.dbi.profile.modules[self.name] or not Gladius.db.drTrackerCooldown
 							end,
-							hidden = function()
-								return not Gladius.db.advancedOptions
-							end,
+							width = "double",
 							order = 25,
 						},
-						drTrackerGlossColor = {
-							type = "color",
-							name = L["DRTracker Gloss Color"],
-							desc = L["Color of the drTracker icon gloss"],
-							get = function(info)
-								return Gladius:GetColorOption(info)
-							end,
-							set = function(info, r, g, b, a)
-								return Gladius:SetColorOption(info, r, g, b, a)
-							end,
-							hasAlpha = true,
-							disabled = function()
-								return not Gladius.dbi.profile.modules[self.name]
-							end,
-							hidden = function()
-								return not Gladius.db.advancedOptions
-							end,
-							order = 30,
-						},
-						sep3 = {
+						sep5 = {
 							type = "description",
 							name = "",
 							width = "full",
-							hidden = function()
-								return not Gladius.db.advancedOptions
+							order = 28,
+						},
+						drTrackerCooldownSwipeAlpha = {
+							type = "range",
+							name = L["DR Cooldown Swipe Alpha"],
+							desc = L["Set the darkness of the cooldown swipe animation"],
+							disabled = function()
+								return not Gladius.dbi.profile.modules[self.name] or not Gladius.db.drTrackerCooldown
 							end,
+							min = 0,
+							max = 1,
+							step = 0.1,
+							width = "double",
+							order = 30,
+						},
+						sep6 = {
+							type = "description",
+							name = "",
+							width = "full",
 							order = 33,
 						},
 						drTrackerFrameLevel = {
@@ -644,9 +650,6 @@ function DRTracker:GetOptions()
 							desc = L["Frame level of the drTracker"],
 							disabled = function()
 								return not Gladius.dbi.profile.modules[self.name]
-							end,
-							hidden = function()
-								return not Gladius.db.advancedOptions
 							end,
 							min = 1,
 							max = 5,
@@ -691,27 +694,8 @@ function DRTracker:GetOptions()
 					name = L["Font"],
 					desc = L["Font settings"],
 					inline = true,
-					hidden = function()
-						return not Gladius.db.advancedOptions
-					end,
 					order = 3,
 					args = {
-						--[[drFontColor = {
-							type = "color",
-							name = L["DR Text Color"],
-							desc = L["Text color of the DR text"],
-							hasAlpha = true,
-							get = function(info)
-								return Gladius:GetColorOption(info)
-							end,
-							set = function(info, r, g, b, a)
-								return Gladius:SetColorOption(info, r, g, b, a)
-							end,
-							disabled = function()
-								return not Gladius.dbi.profile.castText or not Gladius.dbi.profile.modules[self.name]
-							end,
-							order = 10,
-						},]]
 						drFontSize = {
 							type = "range",
 							name = L["DR Text Size"],
@@ -733,18 +717,6 @@ function DRTracker:GetOptions()
 					inline = true,
 					order = 4,
 					args = {
-						drTrackerAttachTo = {
-							type = "select",
-							name = L["DRTracker Attach To"],
-							desc = L["Attach drTracker to the given frame"],
-							values = function()
-								return Gladius:GetModules(self.name)
-							end,
-							disabled = function()
-								return not Gladius.dbi.profile.modules[self.name]
-							end,
-							order = 5,
-						},
 						drTrackerPosition = {
 							type = "select",
 							name = L["DRTracker Position"],
@@ -766,16 +738,31 @@ function DRTracker:GetOptions()
 							disabled = function()
 								return not Gladius.dbi.profile.modules[self.name]
 							end,
-							hidden = function()
-								return Gladius.db.advancedOptions
-							end,
-							order = 6,
+							order = 5,
 						},
-						sep = {
+						sep1 = {
 							type = "description",
 							name = "",
 							width = "full",
-							order = 7,
+							order = 8,
+						},
+						drTrackerAttachTo = {
+							type = "select",
+							name = L["DRTracker Attach To"],
+							desc = L["Attach drTracker to the given frame"],
+							values = function()
+								return Gladius:GetModules(self.name)
+							end,
+							disabled = function()
+								return not Gladius.dbi.profile.modules[self.name]
+							end,
+							order = 10,
+						},
+						sep2 = {
+							type = "description",
+							name = "",
+							width = "full",
+							order = 13,
 						},
 						drTrackerAnchor = {
 							type = "select",
@@ -787,10 +774,7 @@ function DRTracker:GetOptions()
 							disabled = function()
 								return not Gladius.dbi.profile.modules[self.name]
 							end,
-							hidden = function()
-								return not Gladius.db.advancedOptions
-							end,
-							order = 10,
+							order = 15,
 						},
 						drTrackerRelativePoint = {
 							type = "select",
@@ -802,16 +786,13 @@ function DRTracker:GetOptions()
 							disabled = function()
 								return not Gladius.dbi.profile.modules[self.name]
 							end,
-							hidden = function()
-								return not Gladius.db.advancedOptions
-							end,
-							order = 15,
+							order = 20,
 						},
-						sep2 = {
+						sep3 = {
 							type = "description",
 							name = "",
 							width = "full",
-							order = 17,
+							order = 23,
 						},
 						drTrackerOffsetX = {
 							type = "range",
@@ -823,7 +804,7 @@ function DRTracker:GetOptions()
 							disabled = function()
 								return not Gladius.dbi.profile.modules[self.name]
 							end,
-							order = 20,
+							order = 25,
 						},
 						drTrackerOffsetY = {
 							type = "range",
@@ -835,7 +816,7 @@ function DRTracker:GetOptions()
 							min = - 50,
 							max = 50,
 							step = 1,
-							order = 25,
+							order = 30,
 						},
 					},
 				},
