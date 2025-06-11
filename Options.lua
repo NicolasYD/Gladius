@@ -27,7 +27,7 @@ Gladius.defaults = {
 		growLeft = false,
 		groupButtons = true,
 		advancedOptions = true,
-		backgroundColor = {r = 0, g = 0, b = 0, a = 0.4},
+		backgroundColor = {r = 0, g = 0, b = 0, a = 0},
 		backgroundPadding = 0,
 		bottomMargin = 70,
 		useGlobalFontSize = true,
