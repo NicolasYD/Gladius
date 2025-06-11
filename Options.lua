@@ -17,7 +17,7 @@ Gladius.defaults = {
 			["*"] = true,
 			["Announcements"] = false,
 			["Auras"] = false,
-			["Clicks"] = false,
+			["Clicks"] = true,
 			["Layout"] = false,
 			["TargetBar"] = false,
 		},

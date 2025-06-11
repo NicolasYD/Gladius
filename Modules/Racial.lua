@@ -88,6 +88,7 @@ function Racial:OnEnable()
 	self:RegisterEvent("UNIT_SPELLCAST_SUCCEEDED")
 	self:RegisterEvent("UNIT_AURA")
 	self:RegisterEvent("UNIT_NAME_UPDATE")
+	self:RegisterEvent("GROUP_ROSTER_UPDATE")
 	LSM = Gladius.LSM
 	if not self.frame then
 		self.frame = { }

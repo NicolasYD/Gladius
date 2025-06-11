@@ -279,7 +279,6 @@ function Defensives:DefensiveUsed(unit, spell)
 	else
 		Gladius:Call(Gladius.modules.Timer, "SetTimer", frame, cooldown)
 	end
-    --Gladius:Call(Gladius.modules.Timer, "SetTimer", frame, cooldown)
 
     -- OnUpdate for expiration
     frame:SetScript("OnUpdate", function(f, elapsed)
@@ -409,27 +408,18 @@ end
 function Defensives:ResetDefensivesShuffle()
     for i = 1, 3 do
         local unit = "arena"..i
+		local baseFrame = self.frame[unit]
 
 		-- Cleanup old frame if it exists
-		if self.frame[unit] then
+		if baseFrame then
 			-- Hide and unparent old spell frames
-			if self.frame[unit].spells then
-				for spell, frame in pairs(self.frame[unit].spells) do
-					frame:Hide()
-					frame:SetParent(nil)
-					frame:UnregisterAllEvents()
+			if baseFrame.spells then
+				for _, frame in pairs(baseFrame.spells) do
+					frame.active = false
 				end
-				self.frame[unit].spells = nil
 			end
-
-			-- Hide and unparent the parent frame
-			self.frame[unit]:Hide()
-			self.frame[unit]:SetParent(nil)
-			self.frame[unit]:UnregisterAllEvents()
-			self.frame[unit] = nil
 		end
-
-		self:CreateFrame(unit)
+		self:SortIcons(unit)
     end
 end
 
