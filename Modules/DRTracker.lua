@@ -44,7 +44,7 @@ local DRTracker = Gladius:NewModule("DRTracker", false, true, {
 	drTrackerOffsetY = 0,
 	drTrackerFrameLevel = 1,
 	drTrackerIconCrop = true,
-	drTrackerCooldown = false,
+	drTrackerCooldown = true,
 	drTrackerCooldownReverse = false,
 	drTrackerCooldownSwipeAlpha = 0.5,
 	drTrackerCooldownEdge = true,
@@ -261,15 +261,32 @@ end
 
 function DRTracker:UpdateIcon(unit, drCat)
 	local tracked = self.frame[unit].tracker[drCat]
+	local frameName = tracked:GetName()
+
 	tracked:EnableMouse(false)
 	tracked.reset = 0
 	tracked:SetWidth(self.frame[unit]:GetHeight())
 	tracked:SetHeight(self.frame[unit]:GetHeight())
-	tracked.texture = _G[tracked:GetName().."Icon"]
 
-	tracked.cooldown = _G[tracked:GetName().."Cooldown"]
-	tracked.cooldown.isDisabled = not Gladius.db.drTrackerCooldown
+	tracked.texture = tracked:CreateTexture(frameName .. "Icon", "BACKGROUND")
+	tracked.texture:SetAllPoints()
+
+	tracked.cooldown = CreateFrame("Cooldown", frameName .. "Cooldown", tracked, "CooldownFrameTemplate")
+    tracked.cooldown:SetAllPoints()
+
+	-- Frame styling
+	if Gladius.db.drTrackerIconCrop then
+		tracked.texture:SetTexCoord(0.07, 0.93, 0.07, 0.93)
+	else
+		tracked.texture:SetTexCoord(0, 1, 0, 1)
+	end
+
+	tracked.cooldown:SetDrawBling(false)
+	tracked.cooldown:SetDrawSwipe(Gladius.db.drTrackerCooldown)
+	tracked.cooldown:SetDrawEdge(Gladius.db.drTrackerCooldownEdge)
+	tracked.cooldown:SetSwipeColor(0, 0, 0, Gladius.db.drTrackerCooldownSwipeAlpha)
 	tracked.cooldown:SetReverse(Gladius.db.drTrackerCooldownReverse)
+	tracked.cooldown.isDisabled = not Gladius.db.drTrackerCooldown
 	Gladius:Call(Gladius.modules.Timer, "RegisterTimer", tracked, Gladius.db.drTrackerCooldown)
 
 	if not tracked.text then
@@ -281,11 +298,6 @@ function DRTracker:UpdateIcon(unit, drCat)
 	tracked.text:SetPoint("BOTTOMRIGHT", tracked, -2, 0)
 	tracked.text:SetFont(LSM:Fetch(LSM.MediaType.FONT, Gladius.db.globalFont), Gladius.db.drFontSize, "OUTLINE")
 	tracked.text:SetTextColor(Gladius.db.drFontColor.r, Gladius.db.drFontColor.g, Gladius.db.drFontColor.b, Gladius.db.drFontColor.a)
-	-- style action button
-	tracked.texture:ClearAllPoints()
-	tracked.texture:SetPoint("TOPLEFT", tracked, "TOPLEFT")
-	tracked.texture:SetPoint("BOTTOMRIGHT", tracked, "BOTTOMRIGHT")
-	tracked.texture:SetTexCoord(0.07, 0.93, 0.07, 0.93)
 end
 
 function DRTracker:DRApplied(unit, spellID, force, auraDuration)
@@ -324,8 +336,7 @@ function DRTracker:DRApplied(unit, spellID, force, auraDuration)
 		[0] = {"%", 1, 0, 0},
 	}
 	if self.frame[unit].tracker and not self.frame[unit].tracker[drCat] then
-		self.frame[unit].tracker[drCat] = CreateFrame("CheckButton", "Gladius"..self.name.."FrameCat"..drCat..unit, self.frame[unit], "ActionButtonTemplate")
-		self.frame[unit].tracker[drCat].IconMask:Hide()
+		self.frame[unit].tracker[drCat] = CreateFrame("CheckButton", "Gladius"..self.name.."FrameCat"..drCat..unit, self.frame[unit])
 		self:UpdateIcon(unit, drCat)
 	end
 	local tracked = self.frame[unit].tracker[drCat]
@@ -598,7 +609,7 @@ function DRTracker:GetOptions()
 							name = L["DRTracker Cooldown Reverse"],
 							desc = L["Invert the dark/bright part of the cooldown spiral"],
 							disabled = function()
-								return not Gladius.dbi.profile.modules[self.name]
+								return not Gladius.dbi.profile.modules[self.name] or not Gladius.db.drTrackerCooldown
 							end,
 							width = "double",
 							order = 20,
