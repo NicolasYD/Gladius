@@ -385,6 +385,12 @@ function Defensives:Update(unit)
 	else
 		self.frame[unit]:SetWidth(Gladius.db.DefensivesSize)
 		self.frame[unit]:SetHeight(Gladius.db.DefensivesSize)
+
+		for _, frame in pairs(self.frame[unit].spells) do
+			if frame then
+				frame:SetSize(Gladius.db.DefensivesSize, Gladius.db.DefensivesSize)
+			end
+		end
 	end
 end
 
