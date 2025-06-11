@@ -281,8 +281,10 @@ function DRTracker:UpdateIcon(unit, drCat)
 
 	Gladius:Call(Gladius.modules.Timer, "RegisterTimer", tracked, Gladius.db.drTrackerCooldown)
 
-	if not tracked.text then
-		tracked.text = tracked:CreateFontString(nil, "OVERLAY")
+	if Gladius.db.drTrackerCooldown then
+		tracked.text = tracked.cooldownFrameText
+	else
+		tracked.text = tracked.baseFrameText
 	end
 
 	tracked.text:SetDrawLayer("OVERLAY")
@@ -337,6 +339,13 @@ function DRTracker:DRApplied(unit, spellID, force, auraDuration)
 
 		tracked.cooldown = CreateFrame("Cooldown", frameName .. "Cooldown", tracked, "CooldownFrameTemplate")
 		tracked.cooldown:SetAllPoints()
+
+		if not tracked.cooldownFrameText then
+			tracked.cooldownFrameText = tracked.cooldown:CreateFontString(nil, "OVERLAY")
+		end
+		if not tracked.baseFrameText then
+			tracked.baseFrameText = tracked:CreateFontString(nil, "OVERLAY")
+		end
 
 		self:UpdateIcon(unit, drCat)
 	end
