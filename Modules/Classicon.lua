@@ -71,9 +71,9 @@ local ClassIcon = Gladius:NewModule("ClassIcon", false, true, {
 	classIconFrameLevel = 1,
 	classIconImportantAuras = true,
 	classIconCrop = true,
-	classIconCooldown = false,
+	classIconCooldown = true,
 	classIconCooldownReverse = true,
-	classIconCooldownSwipeAlpha = 0.8,
+	classIconCooldownSwipeAlpha = 0.4,
 	classIconCooldownEdge = true,
 	classIconShowSpec = true,
 	classIconDetached = false,
@@ -418,11 +418,11 @@ function ClassIcon:Update(unit)
 
 	-- cooldown
 	-- Optional styling
-	self.frame[unit].cooldown:SetDrawBling(false)
-	self.frame[unit].cooldown:SetDrawSwipe(Gladius.db.classIconCooldown)
-	self.frame[unit].cooldown:SetSwipeColor(0, 0, 0, Gladius.db.classIconCooldownSwipeAlpha)
-	self.frame[unit].cooldown:SetDrawEdge(Gladius.db.classIconCooldownEdge)
+	unitFrame.cooldown:SetDrawBling(false)
+	unitFrame.cooldown:SetDrawSwipe(Gladius.db.classIconCooldown)
 	unitFrame.cooldown:SetReverse(Gladius.db.classIconCooldownReverse)
+	unitFrame.cooldown:SetSwipeColor(0, 0, 0, Gladius.db.classIconCooldownSwipeAlpha)
+	unitFrame.cooldown:SetDrawEdge(Gladius.db.classIconCooldown and Gladius.db.classIconCooldownEdge)
 	Gladius:Call(Gladius.modules.Timer, "RegisterTimer", unitFrame, Gladius.db.classIconCooldown)
 
 	-- Secure frame
@@ -716,7 +716,7 @@ function ClassIcon:GetOptions()
 							disabled = function()
 								return not Gladius.dbi.profile.modules[self.name] or not Gladius.db.classIconCooldown
 							end,
-							min = 0.5,
+							min = 0,
 							max = 1,
 							step = 0.1,
 							width = "double",

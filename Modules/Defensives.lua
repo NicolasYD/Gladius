@@ -67,7 +67,7 @@ local Defensives = Gladius:NewModule("Defensives", false, true, {
 	DefensivesIconCrop = true,
 	DefensivesCooldown = true,
 	DefensivesCooldownReverse = false,
-	DefensivesCooldownSwipeAlpha = 0.5,
+	DefensivesCooldownSwipeAlpha = 0.4,
 	DefensivesCooldownEdge = true,
 	DefensivesDetached = false,
 	defensives = defaultValues,
@@ -259,9 +259,9 @@ function Defensives:DefensiveUsed(unit, spell)
 
 	frame.cooldown:SetDrawBling(false)
 	frame.cooldown:SetDrawSwipe(Gladius.db.DefensivesCooldown)
-	frame.cooldown:SetDrawEdge(Gladius.db.DefensivesCooldownEdge)
-	frame.cooldown:SetSwipeColor(0, 0, 0, Gladius.db.DefensivesCooldownSwipeAlpha)
 	frame.cooldown:SetReverse(Gladius.db.DefensivesCooldownReverse)
+	frame.cooldown:SetSwipeColor(0, 0, 0, Gladius.db.DefensivesCooldownSwipeAlpha)
+	frame.cooldown:SetDrawEdge(Gladius.db.DefensivesCooldown and Gladius.db.DefensivesCooldownEdge)
 	frame.cooldown.isDisabled = not Gladius.db.DefensivesCooldown
 
 	-- Assign priority for each frame
@@ -273,7 +273,13 @@ function Defensives:DefensiveUsed(unit, spell)
     frame.active = true
 
     Gladius:Call(Gladius.modules.Timer, "RegisterTimer", frame, Gladius.db.DefensivesCooldown)
-    Gladius:Call(Gladius.modules.Timer, "SetTimer", frame, cooldown)
+	if not Gladius.db.modules["Timer"] then
+		frame.cooldown:SetHideCountdownNumbers(false)
+		frame.cooldown:SetCooldown(GetTime(), frame.timeLeft)
+	else
+		Gladius:Call(Gladius.modules.Timer, "SetTimer", frame, cooldown)
+	end
+    --Gladius:Call(Gladius.modules.Timer, "SetTimer", frame, cooldown)
 
     -- OnUpdate for expiration
     frame:SetScript("OnUpdate", function(f, elapsed)

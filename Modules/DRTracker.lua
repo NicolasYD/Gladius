@@ -20,7 +20,6 @@ local pairs = pairs
 local strfind = string.find
 local unpack = unpack
 
-local CreateFontString = CreateFontString
 local GetNumClasses = GetNumClasses
 local GetClassInfo = GetClassInfo
 local GetNumSpecializationsForClassID = C_SpecializationInfo.GetNumSpecializationsForClassID
@@ -45,8 +44,8 @@ local DRTracker = Gladius:NewModule("DRTracker", false, true, {
 	drTrackerFrameLevel = 1,
 	drTrackerIconCrop = true,
 	drTrackerCooldown = true,
-	drTrackerCooldownReverse = false,
-	drTrackerCooldownSwipeAlpha = 0.5,
+	drTrackerCooldownReverse = true,
+	drTrackerCooldownSwipeAlpha = 0.4,
 	drTrackerCooldownEdge = true,
 	drFontSize = 18,
 	drFontColor = {r = 0, g = 1, b = 0, a = 1},

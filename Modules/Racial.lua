@@ -320,11 +320,11 @@ function Racial:Update(unit)
 
 	-- cooldown
 	-- Optional styling
-	self.frame[unit].cooldown:SetDrawSwipe(Gladius.db.RacialCooldown)
-	self.frame[unit].cooldown:SetDrawEdge(Gladius.db.RacialCooldownEdge)
-	self.frame[unit].cooldown:SetSwipeColor(0, 0, 0, Gladius.db.RacialCooldownSwipeAlpha)
-	unitFrame.cooldown.isDisabled = not Gladius.db.RacialCooldown
+	unitFrame.cooldown:SetDrawSwipe(Gladius.db.RacialCooldown)
 	unitFrame.cooldown:SetReverse(Gladius.db.RacialCooldownReverse)
+	unitFrame.cooldown:SetSwipeColor(0, 0, 0, Gladius.db.RacialCooldownSwipeAlpha)
+	unitFrame.cooldown:SetDrawEdge(Gladius.db.RacialCooldown and Gladius.db.RacialCooldownEdge)
+	unitFrame.cooldown.isDisabled = not Gladius.db.RacialCooldown
 	Gladius:Call(Gladius.modules.Timer, "RegisterTimer", unitFrame, Gladius.db.RacialCooldown)
 
 	-- Secure frame
@@ -514,7 +514,7 @@ function Racial:GetOptions()
 							disabled = function()
 								return not Gladius.dbi.profile.modules[self.name] or not Gladius.db.RacialCooldown
 							end,
-							min = 0.5,
+							min = 0,
 							max = 1,
 							step = 0.1,
 							width = "double",

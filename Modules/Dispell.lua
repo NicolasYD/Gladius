@@ -259,12 +259,16 @@ function Dispell:Update(unit)
 		unitFrame:SetHeight(Gladius.db.dispellSize)
 	end
 
-	-- cooldown
-	-- Optional styling
-	self.frame[unit].cooldown:SetDrawSwipe(Gladius.db.dispellCooldown)
-	self.frame[unit].cooldown:SetSwipeColor(0, 0, 0, Gladius.db.dispellCooldownSwipeAlpha)
-	self.frame[unit].cooldown:SetDrawEdge(Gladius.db.dispellCooldownEdge)
+	-- Frame styling
+	if Gladius.db.dispellIconCrop then
+		unitFrame.texture:SetTexCoord(0.07, 0.93, 0.07, 0.93)
+	else
+		unitFrame.texture:SetTexCoord(0, 1, 0, 1)
+	end
+	unitFrame.cooldown:SetDrawSwipe(Gladius.db.dispellCooldown)
 	unitFrame.cooldown:SetReverse(Gladius.db.dispellCooldownReverse)
+	unitFrame.cooldown:SetSwipeColor(0, 0, 0, Gladius.db.dispellCooldownSwipeAlpha)
+	unitFrame.cooldown:SetDrawEdge(Gladius.db.dispellCooldown and Gladius.db.dispellCooldownEdge)
 	Gladius:Call(Gladius.modules.Timer, "RegisterTimer", unitFrame, Gladius.db.dispellCooldown)
 
 	-- Secure frame
@@ -347,9 +351,6 @@ function Dispell:Show(unit)
 			self.frame[unit].texture:SetTexture("")
 			self.frame[unit].cooldown:SetDrawBling(false)
 			self.frame[unit]:SetAlpha(0)
-		end
-		if Gladius.db.dispellIconCrop then
-			self.frame[unit].texture:SetTexCoord(0.07, 0.93, 0.07, 0.93)
 		end
 		self.frame[unit].texture:SetVertexColor(1, 1, 1, 1)
 	end
@@ -616,7 +617,7 @@ function Dispell:GetOptions()
 							disabled = function()
 								return not Gladius.dbi.profile.modules[self.name] or not Gladius.db.dispellCooldown
 							end,
-							min = 0.5,
+							min = 0,
 							max = 1,
 							step = 0.1,
 							width = "double",

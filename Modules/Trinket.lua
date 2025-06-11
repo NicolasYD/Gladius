@@ -40,7 +40,7 @@ local Trinket = Gladius:NewModule("Trinket", false, true, {
 	trinketIconCrop = true,
 	trinketCooldown = true,
 	trinketCooldownReverse = false,
-	trinketCooldownSwipeAlpha = 0.8,
+	trinketCooldownSwipeAlpha = 1,
 	trinketCooldownEdge = true,
 	trinketFaction = false,
 	trinketDetached = false
@@ -373,11 +373,11 @@ function Trinket:Update(unit)
 
 	-- cooldown
 	-- Optional styling
-	self.frame[unit].cooldown:SetDrawSwipe(Gladius.db.trinketCooldown)
-	self.frame[unit].cooldown:SetDrawEdge(Gladius.db.trinketCooldownEdge)
-	self.frame[unit].cooldown:SetSwipeColor(0, 0, 0, Gladius.db.trinketCooldownSwipeAlpha)
-	unitFrame.cooldown.isDisabled = not Gladius.db.trinketCooldown
+	unitFrame.cooldown:SetDrawSwipe(Gladius.db.trinketCooldown)
 	unitFrame.cooldown:SetReverse(Gladius.db.trinketCooldownReverse)
+	unitFrame.cooldown:SetSwipeColor(0, 0, 0, Gladius.db.trinketCooldownSwipeAlpha)
+	unitFrame.cooldown:SetDrawEdge(Gladius.db.trinketCooldown and Gladius.db.trinketCooldownEdge)
+	unitFrame.cooldown.isDisabled = not Gladius.db.trinketCooldown
 	Gladius:Call(Gladius.modules.Timer, "RegisterTimer", unitFrame, Gladius.db.trinketCooldown)
 
 	-- Secure frame
@@ -657,7 +657,7 @@ function Trinket:GetOptions()
 							disabled = function()
 								return not Gladius.dbi.profile.modules[self.name] or not Gladius.db.trinketCooldown
 							end,
-							min = 0.5,
+							min = 0,
 							max = 1,
 							step = 0.1,
 							width = "double",
