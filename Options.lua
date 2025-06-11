@@ -261,6 +261,54 @@ function Gladius:SetupOptions()
 		get = getOption,
 		set = setOption,
 		args = {
+			testModeButton = {
+				type = "execute",
+				name = "Toggle Test Mode",
+				order = 4,
+				func = function()
+					if not Gladius.test then
+						if Gladius.instanceType ~= "arena" then
+							if InCombatLockdown() then
+								return
+							end
+							local test = 3
+							Gladius:BuildTestEnvironment()
+							Gladius.testCount = test
+							Gladius.test = true
+							Gladius:HideFrame()
+							-- create and update buttons
+							for i = 1, test do
+								if not Gladius.buttons["arena"..i] then
+									Gladius:UpdateUnit("arena"..i)
+								end
+								if Gladius.buttons["arena"..i] then
+									Gladius.buttons["arena"..i]:RegisterForDrag("LeftButton")
+									Gladius.buttons["arena"..i]:Show()
+								end
+							end
+							-- update buttons, so every module should be fine
+							Gladius:UpdateFrame()
+						else
+							Gladius:Print(L["You can't use this function inside arenas."])
+						end
+					elseif Gladius.test then
+						if InCombatLockdown() then
+							return
+						end
+						-- reset test environment
+						Gladius.testCount = 0
+						Gladius.test = false
+						for i = 1, 5 do
+							if Gladius.buttons["arena"..i] then
+								Gladius.buttons["arena"..i]:RegisterForDrag()
+								Gladius.buttons["arena"..i]:Hide()
+							end
+						end
+						-- hide buttons
+						Gladius:HideFrame()
+					end
+				end,
+			},
 			general = {
 				type = "group",
 				name = L["General"],
