@@ -581,7 +581,7 @@ function Defensives:GetOptions()
 							name = L["Defensives Cooldown Reverse"],
 							desc = L["Invert the dark/bright part of the cooldown spiral"],
 							disabled = function()
-								return not Gladius.dbi.profile.modules[self.name]
+								return not Gladius.dbi.profile.modules[self.name] or not Gladius.db.DefensivesCooldown
 							end,
 							width = "double",
 							order = 20,
