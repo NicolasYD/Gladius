@@ -260,18 +260,11 @@ end
 
 function DRTracker:UpdateIcon(unit, drCat)
 	local tracked = self.frame[unit].tracker[drCat]
-	local frameName = tracked:GetName()
 
 	tracked:EnableMouse(false)
 	tracked.reset = 0
 	tracked:SetWidth(self.frame[unit]:GetHeight())
 	tracked:SetHeight(self.frame[unit]:GetHeight())
-
-	tracked.texture = tracked:CreateTexture(frameName .. "Icon", "BACKGROUND")
-	tracked.texture:SetAllPoints()
-
-	tracked.cooldown = CreateFrame("Cooldown", frameName .. "Cooldown", tracked, "CooldownFrameTemplate")
-    tracked.cooldown:SetAllPoints()
 
 	-- Frame styling
 	if Gladius.db.drTrackerIconCrop then
@@ -279,13 +272,13 @@ function DRTracker:UpdateIcon(unit, drCat)
 	else
 		tracked.texture:SetTexCoord(0, 1, 0, 1)
 	end
-
 	tracked.cooldown:SetDrawBling(false)
 	tracked.cooldown:SetDrawSwipe(Gladius.db.drTrackerCooldown)
-	tracked.cooldown:SetDrawEdge(Gladius.db.drTrackerCooldownEdge)
-	tracked.cooldown:SetSwipeColor(0, 0, 0, Gladius.db.drTrackerCooldownSwipeAlpha)
 	tracked.cooldown:SetReverse(Gladius.db.drTrackerCooldownReverse)
+	tracked.cooldown:SetSwipeColor(0, 0, 0, Gladius.db.drTrackerCooldownSwipeAlpha)
+	tracked.cooldown:SetDrawEdge(Gladius.db.drTrackerCooldown and Gladius.db.drTrackerCooldownEdge)
 	tracked.cooldown.isDisabled = not Gladius.db.drTrackerCooldown
+
 	Gladius:Call(Gladius.modules.Timer, "RegisterTimer", tracked, Gladius.db.drTrackerCooldown)
 
 	if not tracked.text then
@@ -336,6 +329,15 @@ function DRTracker:DRApplied(unit, spellID, force, auraDuration)
 	}
 	if self.frame[unit].tracker and not self.frame[unit].tracker[drCat] then
 		self.frame[unit].tracker[drCat] = CreateFrame("CheckButton", "Gladius"..self.name.."FrameCat"..drCat..unit, self.frame[unit])
+		local tracked = self.frame[unit].tracker[drCat]
+		local frameName = tracked:GetName()
+
+		tracked.texture = tracked:CreateTexture(frameName .. "Icon", "BACKGROUND")
+		tracked.texture:SetAllPoints()
+
+		tracked.cooldown = CreateFrame("Cooldown", frameName .. "Cooldown", tracked, "CooldownFrameTemplate")
+		tracked.cooldown:SetAllPoints()
+
 		self:UpdateIcon(unit, drCat)
 	end
 	local tracked = self.frame[unit].tracker[drCat]
@@ -372,7 +374,12 @@ function DRTracker:DRApplied(unit, spellID, force, auraDuration)
 		tracked.texture:SetTexture(GetSpellTexture(setSpellID))
 	end
 
-	Gladius:Call(Gladius.modules.Timer, "SetTimer", tracked, tracked.timeLeft)
+	if not Gladius.db.modules["Timer"] then
+		tracked.cooldown:SetHideCountdownNumbers(false)
+		tracked.cooldown:SetCooldown(GetTime(), tracked.timeLeft)
+	else
+		Gladius:Call(Gladius.modules.Timer, "SetTimer", tracked, tracked.timeLeft)
+	end
 	tracked:SetScript("OnUpdate", function(f, elapsed)
 		f.timeLeft = f.timeLeft - elapsed
 		if f.timeLeft <= 0 then
