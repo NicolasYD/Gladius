@@ -46,7 +46,6 @@ local Dispell = Gladius:NewModule("Dispell", false, true, {
 	dispellCooldownReverse = false,
 	dispellCooldownSwipeAlpha = 0.8,
 	dispellCooldownEdge = true,
-	dispellFaction = false,
 	dispellDetached = false,
 	showCurse = false,
 	showDisease = false,
@@ -357,28 +356,6 @@ function Dispell:Show(unit)
 end
 
 
-function Dispell:Reset(unit)
-	if not self.frame[unit] then
-		return
-	end
-	-- reset frame
-	local dispellIcon
-	if UnitFactionGroup("player") == "Horde" and Gladius.db.dispellFaction then
-		dispellIcon = "Interface\\Icons\\INV_Jewelry_Necklace_38"
-	else
-		dispellIcon = "Interface\\Icons\\INV_Jewelry_Necklace_37"
-	end
-	self.frame[unit].texture:SetTexture(dispellIcon)
-	if Gladius.db.dispellIconCrop then
-		self.frame[unit].texture:SetTexCoord(0.07, 0.93, 0.07, 0.93)
-	end
-	self.frame[unit]:SetScript("OnUpdate", nil)
-	-- reset cooldown
-	Gladius:Call(Gladius.modules.Timer, "HideTimer", self.frame[unit])
-	-- hide
-	self.frame[unit]:SetAlpha(0)
-end
-
 function Dispell:Test(unit)
 	if unit == "arena1" then
 		self:UpdateDispell(unit, 8)
@@ -476,28 +453,12 @@ function Dispell:GetOptions()
 					end,
 					order = 2,
 					args = {
-						dispellFaction = {
-							type = "toggle",
-							name = L["Dispell Icon Faction"],
-							desc = L["Toggle if the dispel icon should be changing based on the opponents faction"],
-							disabled = function()
-								return not Gladius.dbi.profile.modules[self.name] or Gladius.db.dispellGridStyleIcon
-							end,
-							width = "double",
-							order = 5,
-						},
-						sep1 = {
-							type = "description",
-							name = "",
-							width = "full",
-							order = 7,
-						},
 						dispellGridStyleIcon = {
 							type = "toggle",
 							name = L["Dispell Grid Style Icon"],
 							desc = L["Toggle dispel grid style icon"],
 							disabled = function()
-								return not Gladius.dbi.profile.modules[self.name] or Gladius.db.dispellFaction
+								return not Gladius.dbi.profile.modules[self.name]
 							end,
 							width = "double",
 							order = 10,
