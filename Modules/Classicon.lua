@@ -35,6 +35,7 @@ end
 
 
 local CDList = LibStub("CDList-1.0")
+local interruptsList = CDList:GetSpellsByCategory("interrupt")
 local spellTableUnordered = CDList:GetPrioritySpells()
 local spellTable = CDList:OrderAlphabetically(spellTableUnordered)
 local originalSpellTable = deepcopy(spellTable)
@@ -50,6 +51,7 @@ local CreateFrame = CreateFrame
 local GetSpecializationInfoByID = GetSpecializationInfoByID
 local GetNumClasses = GetNumClasses
 local GetTime = GetTime
+local UnitGUID = UnitGUID
 local GetSpellInfo = C_Spell.GetSpellInfo
 local GetSpellDescription = C_Spell.GetSpellDescription
 local RequestLoadSpellData = C_Spell.RequestLoadSpellData
@@ -171,6 +173,7 @@ end
 
 function ClassIcon:OnEnable()
 	self:RegisterEvent("UNIT_AURA")
+	self:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
 	self.version = 1
 	LSM = Gladius.LSM
 	if not self.frame then
@@ -220,7 +223,38 @@ function ClassIcon:UNIT_AURA(event, unit)
 end
 
 
-function ClassIcon:UpdateAura(unit, testSpell)
+function ClassIcon:COMBAT_LOG_EVENT_UNFILTERED(event)
+	local _, subEvent, _, _, _, _, _, destGUID, _, _, _, spellID, _, _, _, _, _, _ = CombatLogGetCurrentEventInfo()
+
+    if subEvent == "SPELL_INTERRUPT" then
+        for spell, data in pairs(interruptsList) do
+            if spellID == spell then
+				local spellInfo = GetSpellInfo(spellID)
+				for i = 1, GetNumArenaOpponents() do
+					local unit = "arena" .. i
+					if destGUID == UnitGUID(unit) then
+						local time = GetTime()
+						local config = Gladius.dbi.profile.classIconAuras[spellID]
+						local aura = {
+							name = spellInfo.name,
+							icon = spellInfo.originalIconID,
+							duration = data.duration or 0,
+							expires = data.duration and (time + data.duration) or 0,
+							spellid = spellID,
+							priority = data.priority or 0,
+							enabled = config.enabled ~= false, -- Defaults to true, unless explicitly false
+							deleted = config.deleted == true, -- Defaults to false, unless explicitly true
+						}
+						self:ShowAura(unit, aura)
+					end
+				end
+            end
+        end
+    end
+end
+
+
+function ClassIcon:UpdateAura(unit, spell, duration)
 	local unitFrame = self.frame[unit]
 	local auraList = Gladius.dbi.profile.classIconAuras
 	local aura
@@ -275,6 +309,16 @@ end
 
 function ClassIcon:ShowAura(unit, aura)
 	local unitFrame = self.frame[unit]
+	local time = GetTime() or 0
+
+	if unitFrame and unitFrame.priority and aura and aura.priority then
+		if unitFrame.priority > aura.priority and time < unitFrame.expires then
+			return
+		end
+	end
+
+	unitFrame.priority = aura.priority
+	unitFrame.expires = aura.expires
 	unitFrame.aura = aura
 
 	-- display aura
@@ -288,15 +332,15 @@ function ClassIcon:ShowAura(unit, aura)
 	local start
 
 	if aura.expires then
-		local timeLeft = aura.expires > 0 and aura.expires - GetTime() or 0
-		start = GetTime() - (aura.duration - timeLeft)
+		local timeLeft = aura.expires > 0 and (aura.expires - time) or 0
+		start = aura.duration and (time - (aura.duration - timeLeft)) or 0
 	end
 	-- cooldown
 	if not Gladius.db.modules["Timer"] then
 		self.frame[unit].cooldown:SetHideCountdownNumbers(false)
 		self.frame[unit].cooldown:SetCooldown(GetTime(), aura.duration)
 	else
-		Gladius:Call(Gladius.modules.Timer, "SetTimer", unitFrame, aura.duration, start)
+		Gladius:Call(Gladius.modules.Timer, "SetTimer", unitFrame, aura.duration or 0, start)
 	end
 
 end
