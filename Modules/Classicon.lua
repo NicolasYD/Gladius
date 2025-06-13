@@ -254,7 +254,7 @@ function ClassIcon:COMBAT_LOG_EVENT_UNFILTERED(event)
 end
 
 
-function ClassIcon:UpdateAura(unit, spell, duration)
+function ClassIcon:UpdateAura(unit, spellID, duration)
 	local unitFrame = self.frame[unit]
 	local auraList = Gladius.dbi.profile.classIconAuras
 	local aura
@@ -263,38 +263,47 @@ function ClassIcon:UpdateAura(unit, spell, duration)
 		return
 	end
 
-	for _, auraType in pairs({'HELPFUL', 'HARMFUL'}) do
-		for i = 1, 40 do
-			local auraData = UnitAura(unit, i, auraType)
+	if not Gladius.test then
+		for _, auraType in pairs({'HELPFUL', 'HARMFUL'}) do
+			for i = 1, 255 do
+				local auraData = UnitAura(unit, i, auraType)
 
-			if Gladius.test and testSpell and i == 1 then
-				local spellInfo = GetSpellInfo(testSpell.spellID)
-				auraData = {
-					name = spellInfo.name,
-					icon = spellInfo.originalIconID,
-					duration = testSpell.duration or 5,
-					expirationTime = testSpell.expirationTime or GetTime() + 5,
-					spellId = spellInfo.spellID
-				}
-			end
+				if not auraData then
+					break
+				end
 
-			if not auraData then
-				break
+				local config = auraList[auraData.spellId]
+				if config then
+					if not aura or aura.priority < (config.priority or 0) then
+						aura = {
+							name = auraData.name,
+							icon = auraData.icon,
+							duration = auraData.duration,
+							expires = auraData.expirationTime,
+							spellid = auraData.spellId,
+							priority = config.priority or (config.parent and auraList[config.parent].priority) or 0,
+							enabled = config.enabled ~= false, -- Defaults to true, unless explicitly false
+							deleted = config.deleted == true, -- Defaults to false, unless explicitly true
+						}
+					end
+				end
 			end
-
-            local config = auraList[auraData.spellId]
-			if config and (not aura or aura.priority < (config.priority or 0)) then
-				aura = {
-					name = auraData.name,
-					icon = auraData.icon,
-					duration = auraData.duration,
-					expires = auraData.expirationTime,
-					spellid = auraData.spellId,
-					priority = config.priority or (config.parent and auraList[config.parent].priority) or 0,
-					enabled = config.enabled,
-					deleted = config.deleted
-				}
-			end
+		end
+	elseif spellID then
+		local spellInfo = GetSpellInfo(spellID)
+		local config = auraList[spellID]
+		local time = GetTime()
+		if config then
+			aura = {
+				name = spellInfo.name,
+				icon = spellInfo.originalIconID,
+				duration = config.duration or duration,
+				expires = (config.duration and (time + config.duration)) or (duration and (time + duration)) or 0,
+				spellid = spellID,
+				priority = config.priority or (config.parent and auraList[config.parent].priority) or 0,
+				enabled = config.enabled ~= false, -- Defaults to true, unless explicitly false
+				deleted = config.deleted == true, -- Defaults to false, unless explicitly true
+			}
 		end
 	end
 
@@ -425,12 +434,8 @@ end
 
 
 function ClassIcon:Update(unit)
-	if not Gladius.db.classIconImportantAuras then
-		self:Reset(unit)
-	end
-
-	-- TODO: check why we need this >_<
-	self.frame = self.frame or { }
+	-- Reset frame
+	self:Reset(unit)
 
 	-- create frame
 	if not self.frame[unit] then
@@ -512,20 +517,31 @@ end
 
 
 function ClassIcon:Reset(unit)
+	local unitFrame = self.frame[unit]
+
+	-- Reset frame
+	if unitFrame then
+		unitFrame.aura = nil
+		unitFrame.priority = nil
+
+		if unitFrame.cooldown then
+			unitFrame.cooldown:SetCooldown(0, 0)
+		end
+
+		if unitFrame.texture then
+			unitFrame.texture:SetTexture("")
+		end
+	end
+
 	-- Cancel testmode ticker
+	if self.auraCancelTimer and self.auraCancelTimer[unit] then
+		self.auraCancelTimer[unit]:Cancel()
+		self.auraCancelTimer[unit] = nil
+	end
 	if self.testTicker and self.testTicker[unit] then
 		self.testTicker[unit]:Cancel()
 		self.testTicker[unit] = nil
 	end
-	-- reset frame
-	self.frame[unit].aura = nil
-	self.frame[unit]:SetScript("OnUpdate", nil)
-	-- reset cooldown
-	self.frame[unit].cooldown:SetCooldown(0, 0)
-	-- reset texture
-	self.frame[unit].texture:SetTexture("")
-	-- hide
-	self.frame[unit]:SetAlpha(0)
 end
 
 
@@ -559,84 +575,54 @@ end
 
 
 function ClassIcon:Test(unit)
-	local unitClass = Gladius.testing[unit].unitClass
-	local unitSpecId = Gladius.testing[unit].unitSpecId
-	local keys = {}
+	local unitData = Gladius.testing[unit]
+	if not unitData or not Gladius.db.classIconImportantAuras then return end
 
-	if Gladius.db.classIconImportantAuras then
-		for spellID, spellData in pairs(spellTable) do
-			if spellData.class == unitClass and not spellData.specID then
-				table.insert(keys, spellID)
-			elseif spellData.specID then
-				for _, specID in ipairs(spellData.specID) do
-					if unitSpecId == specID then
-						table.insert(keys, spellID)
-					end
-				end
-			end
+	local unitClass, unitSpecId = unitData.unitClass, unitData.unitSpecId
+	local auraList, keys = Gladius.dbi.profile.classIconAuras, {}
+
+	for spellID, spellData in pairs(spellTable) do
+		if spellData.class == unitClass and (not spellData.specID or tContains(spellData.specID, unitSpecId)) then
+			table.insert(keys, spellID)
 		end
+	end
 
-		-- Pick a random spell
-		local randomIndex = math.random(1, #keys)
-		local randomSpellID = keys[randomIndex]
+	if #keys == 0 then return end
 
-		local testDuration = 5
-		local testSpell = {
-			spellID = randomSpellID,
-			duration = testDuration,
-			expirationTime = GetTime() + testDuration
-		}
-		-- Apply test aura
-		self:UpdateAura(unit, testSpell)
+	self.testTicker = self.testTicker or {}
+	self.auraCancelTimer = self.auraCancelTimer or {}
 
-		-- Remove it after testDuration (seconds)
-		C_Timer.After(testDuration, function()
+	-- Helper to cancel existing timers
+	local function cancelTimers()
+		if self.testTicker[unit] then self.testTicker[unit]:Cancel() end
+		if self.auraCancelTimer[unit] then self.auraCancelTimer[unit]:Cancel() end
+		self.testTicker[unit], self.auraCancelTimer[unit] = nil, nil
+	end
+
+	cancelTimers()
+
+	local function applyRandomAura()
+		local spellID = keys[math.random(#keys)]
+		local duration = auraList[spellID] and auraList[spellID].duration or 6
+
+		self:UpdateAura(unit, spellID, duration)
+
+		if self.auraCancelTimer[unit] then self.auraCancelTimer[unit]:Cancel() end
+		self.auraCancelTimer[unit] = C_Timer.NewTimer(duration, function()
 			self:UpdateAura(unit)
-		end)
-
-		-- Create a repeating timer that triggers every testDuration + 6 seconds
-		self.testTicker = self.testTicker or {}
-
-		-- Cancel existing ticker if it exists
-		if self.testTicker[unit] then
-			self.testTicker[unit]:Cancel()
-			self.testTicker[unit] = nil
-		end
-
-		-- Create a new ticker
-		self.testTicker[unit] = C_Timer.NewTicker(testDuration + 6, function()
-			if not Gladius.test then
-				self.testTicker[unit]:Cancel()
-				self.testTicker[unit] = nil
-				return
-			end
-
-			-- Pick a random spell
-			randomIndex = math.random(1, #keys)
-			randomSpellID = keys[randomIndex]
-
-			testSpell = {
-				spellID = randomSpellID,
-				duration = testDuration,
-				expirationTime = GetTime() + testDuration,
-				active = false
-			}
-
-			-- Apply test aura
-			if testSpell.active == false then
-				testSpell.active = true
-				self:UpdateAura(unit, testSpell)
-			end
-
-			-- Remove it after testDuration (seconds)
-			C_Timer.After(testDuration, function()
-				if testSpell.active == true then
-					testSpell.active = false
-					self:UpdateAura(unit)
-				end
-			end)
+			self.auraCancelTimer[unit] = nil
 		end)
 	end
+
+	applyRandomAura()
+
+	self.testTicker[unit] = C_Timer.NewTicker(10, function()
+		if not Gladius.test or not Gladius.testing[unit] then
+			cancelTimers()
+		else
+			applyRandomAura()
+		end
+	end)
 end
 
 
