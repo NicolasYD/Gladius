@@ -142,7 +142,7 @@ function ClassIcon:BuildOptions(options)
 		end
 	end
 
-	for spellID, spellData in pairs(Gladius.dbi.profile.classIconAuras) do
+	for spellID, spellData in pairs(Gladius.db.classIconAuras) do
 		if not descriptions.cache[spellID] then
 			RequestLoadSpellData(spellID)
 		end
@@ -182,9 +182,9 @@ function ClassIcon:OnEnable()
 	Gladius.db.auraVersion = self.version
 
 	-- Activate auras in options by default
-	for spellID, _ in pairs(Gladius.dbi.profile.classIconAuras) do
-		if Gladius.dbi.profile.classIconAuras[spellID].enabled == nil then
-			Gladius.dbi.profile.classIconAuras[spellID].enabled = true
+	for spellID, _ in pairs(Gladius.db.classIconAuras) do
+		if Gladius.db.classIconAuras[spellID].enabled == nil then
+			Gladius.db.classIconAuras[spellID].enabled = true
 		end
 	end
 end
@@ -234,7 +234,7 @@ function ClassIcon:COMBAT_LOG_EVENT_UNFILTERED(event)
 					local unit = "arena" .. i
 					if destGUID == UnitGUID(unit) then
 						local time = GetTime()
-						local config = Gladius.dbi.profile.classIconAuras[spellID]
+						local config = Gladius.db.classIconAuras[spellID]
 						local aura = {
 							name = spellInfo.name,
 							icon = spellInfo.originalIconID,
@@ -256,7 +256,7 @@ end
 
 function ClassIcon:UpdateAura(unit, spellID, duration)
 	local unitFrame = self.frame[unit]
-	local auraList = Gladius.dbi.profile.classIconAuras
+	local auraList = Gladius.db.classIconAuras
 	local aura
 
 	if not unitFrame or not auraList then
@@ -546,17 +546,17 @@ end
 
 
 function ClassIcon:ResetModule()
-	Gladius.dbi.profile.classIconAuras = {}
-	Gladius.dbi.profile.classIconAuras = deepcopy(originalSpellTable)
+	Gladius.db.classIconAuras = {}
+	Gladius.db.classIconAuras = deepcopy(originalSpellTable)
 	Gladius.options.args[self.name].args.auraList.args["GENERAL"].args.spells.args = {}
-	for _, spellData in pairs(Gladius.dbi.profile.classIconAuras) do
+	for _, spellData in pairs(Gladius.db.classIconAuras) do
 		if spellData.class then
 			Gladius.options.args[self.name].args.auraList.args[spellData.class].args.spells.args = {}
 		end
 	end
 
-	for spellID, spellData in pairs(Gladius.dbi.profile.classIconAuras) do
-		Gladius.dbi.profile.classIconAuras[spellID].enabled = true
+	for spellID, spellData in pairs(Gladius.db.classIconAuras) do
+		Gladius.db.classIconAuras[spellID].enabled = true
 		local spellInfo = GetSpellInfo(spellID)
 		if spellData.priority and spellData.class then
 			Gladius.options.args[self.name].args.auraList.args[spellData.class].args.spells.args[tostring(spellID)] = self:SetupAura(spellID, spellData.priority, spellInfo.name, spellInfo.originalIconID, spellData.order)
@@ -579,7 +579,7 @@ function ClassIcon:Test(unit)
 	if not unitData or not Gladius.db.classIconImportantAuras then return end
 
 	local unitClass, unitSpecId = unitData.unitClass, unitData.unitSpecId
-	local auraList, keys = Gladius.dbi.profile.classIconAuras, {}
+	local auraList, keys = Gladius.db.classIconAuras, {}
 
 	for spellID, spellData in pairs(spellTable) do
 		if spellData.class == unitClass and (not spellData.specID or tContains(spellData.specID, unitSpecId)) then
@@ -1018,21 +1018,21 @@ function ClassIcon:GetOptions()
 								local spellInfo = GetSpellInfo(self.newAuraID)
 								Gladius.options.args[self.name].args.auraList.args[self.newClassFile].args.spells.args[self.newAuraID] = self:SetupAura(self.newAuraID, self.newAuraPriority, spellInfo.name, spellInfo.originalIconID)
 								if self.newClassFile == "GENERAL" then
-									Gladius.dbi.profile.classIconAuras[tonumber(self.newAuraID)] = {priority = self.newAuraPriority, name = spellInfo.name, iconID = spellInfo.originalIconID, enabled = true, deleted = false}
+									Gladius.db.classIconAuras[tonumber(self.newAuraID)] = {priority = self.newAuraPriority, name = spellInfo.name, iconID = spellInfo.originalIconID, enabled = true, deleted = false}
 								else
-									Gladius.dbi.profile.classIconAuras[tonumber(self.newAuraID)] = {priority = self.newAuraPriority, class = self.newClassFile, name = spellInfo.name, iconID = spellInfo.originalIconID, enabled = true, deleted = false}
+									Gladius.db.classIconAuras[tonumber(self.newAuraID)] = {priority = self.newAuraPriority, class = self.newClassFile, name = spellInfo.name, iconID = spellInfo.originalIconID, enabled = true, deleted = false}
 								end
 								self.newAuraID = nil
 							end,
 							disabled = function()
-								return not Gladius.dbi.profile.modules[self.name] or not Gladius.db.classIconImportantAuras or not self.newAuraID or not GetSpellInfo(self.newAuraID) or Gladius.dbi.profile.classIconAuras[self.newAuraID]
+								return not Gladius.dbi.profile.modules[self.name] or not Gladius.db.classIconImportantAuras or not self.newAuraID or not GetSpellInfo(self.newAuraID) or (Gladius.db.classIconAuras[self.newAuraID] and not Gladius.db.classIconAuras[self.newAuraID].deleted)
 							end,
 							order = 4,
 						},
 						newAuraPreview = {
 							type = "description",
 							name = function()
-								local spellData = Gladius.dbi.profile.classIconAuras[self.newAuraID]
+								local spellData = Gladius.db.classIconAuras[self.newAuraID]
 								local id = self.newAuraID
 								local classes = {}
 
@@ -1056,7 +1056,7 @@ function ClassIcon:GetOptions()
 										local parentSpellInfo = GetSpellInfo(parentID)
 										local parentIcon = parentSpellInfo.originalIconID
 										local parentName = parentSpellInfo.name
-										local parentSpellData = Gladius.dbi.profile.classIconAuras[parentID]
+										local parentSpellData = Gladius.db.classIconAuras[parentID]
 										local classIcon = "|A:classicon-" .. string.lower(parentSpellData.class) .. ":20:20|a "
 										local _, _, _, argbHex = GetClassColor(parentSpellData.class)
 										return "|T" .. icon .. ":20:20|t " .. spellName .. "\n\n" .. "|cffff0000Error:|r " .. "This Spell is already being tracked for:" .. "\n\n" .. classIcon .. " |c" .. argbHex .. (classes[parentSpellData.class] or "General") .. "|r" .. " with the parent spell:" .. "\n" .. "|T" .. parentIcon .. ":20:20|t " .. parentName
@@ -1127,12 +1127,12 @@ function ClassIcon:SetupAura(spellID, priority, name, iconID, order)
 					return spellDesc..extra
 				end,
 				get = function ()
-					if Gladius.dbi.profile.classIconAuras[spellID] then
-						return Gladius.dbi.profile.classIconAuras[spellID].enabled
+					if Gladius.db.classIconAuras[spellID] then
+						return Gladius.db.classIconAuras[spellID].enabled
 					end
 				end,
 				set = function (_, value)
-					Gladius.dbi.profile.classIconAuras[spellID].enabled = value
+					Gladius.db.classIconAuras[spellID].enabled = value
 				end,
 			},
 			priority = {
@@ -1140,12 +1140,12 @@ function ClassIcon:SetupAura(spellID, priority, name, iconID, order)
 				name = L["Priority"],
 				desc = L["Select what priority the aura should have - higher equals more priority"],
 				get = function ()
-					if Gladius.dbi.profile.classIconAuras[spellID] then
-						return Gladius.dbi.profile.classIconAuras[spellID].priority
+					if Gladius.db.classIconAuras[spellID] then
+						return Gladius.db.classIconAuras[spellID].priority
 					end
 				end,
 				set = function (_, value)
-					Gladius.dbi.profile.classIconAuras[spellID].priority = value
+					Gladius.db.classIconAuras[spellID].priority = value
 				end,
 				min = 0,
 				max = 20,
