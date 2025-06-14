@@ -1123,8 +1123,8 @@ function ClassIcon:SetupAura(spellID, priority, name, iconID, order)
 				order = 1,
 				desc = function()
 					local spellDesc = descriptions.cache[spellID] or ""
-					local extra = "\n\n|cffffd700 ".."Spell ID".."|r "..spellID
-					return spellDesc..extra
+					local extra = "\n\n|cffffd700".."Spell ID".."|r "..spellID
+					return spellDesc .. extra
 				end,
 				get = function ()
 					if Gladius.db.classIconAuras[spellID] then
