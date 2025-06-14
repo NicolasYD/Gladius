@@ -980,7 +980,10 @@ function Defensives:SetupAura(spellID, priority, name, iconID, tooltip)
 				type = "toggle",
 				name = "|T" .. iconID .. ":20:20:0:0:64:64:5:59:5:59|t " .. name,
 				order = 1,
-				desc = tooltip,
+				desc = function ()
+					local extra = "\n\n|cffffd700".."Spell ID".."|r "..spellID
+					return tooltip .. extra
+				end,
 				get = function ()
 					if Gladius.db.defensives[spellID] then
 						return Gladius.db.defensives[spellID].enabled
