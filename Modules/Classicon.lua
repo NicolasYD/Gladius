@@ -260,7 +260,6 @@ function ClassIcon:UpdateAura(unit, spellID, duration)
 	local unitFrame = self.frame[unit]
 	local aura = unitFrame.interruptAura
 	local auraList = Gladius.db.classIconAuras
-	local time = GetTime()
 
 	if not unitFrame or not auraList then
 		return
@@ -298,6 +297,7 @@ function ClassIcon:UpdateAura(unit, spellID, duration)
 		local spellInfo = GetSpellInfo(spellID)
 		local config = auraList[spellID]
 		if config then
+			local time = GetTime()
 			aura = {
 				name = spellInfo.name,
 				icon = spellInfo.originalIconID,
@@ -311,7 +311,7 @@ function ClassIcon:UpdateAura(unit, spellID, duration)
 		end
 	end
 
-	if aura and aura.enabled and not aura.deleted and aura.expires > time then
+	if aura and aura.enabled and not aura.deleted and aura.expires > GetTime() then
 		self:ShowAura(unit, aura)
 	else
 		self:SetClassIcon(unit)
