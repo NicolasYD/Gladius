@@ -223,36 +223,58 @@ function ClassIcon:UNIT_AURA(event, unit)
 end
 
 
-function ClassIcon:COMBAT_LOG_EVENT_UNFILTERED(event)
+function ClassIcon:COMBAT_LOG_EVENT_UNFILTERED(event) -- Need to handle stuff like Concentration Aura
 	local _, subEvent, _, _, _, _, _, destGUID, _, _, _, spellID, _, _, _, _, _, _ = CombatLogGetCurrentEventInfo()
 
-    if subEvent == "SPELL_INTERRUPT" then
-        for spell, data in pairs(interruptsList) do
-            if spellID == spell then
+	local function DisplayInterrupt(unit, spellID)
+		for spell, data in pairs(interruptsList) do
+			if spellID == spell then
+				local unitFrame = self.frame[unit]
 				local spellInfo = GetSpellInfo(spellID)
-				for i = 1, GetNumArenaOpponents() do
-					local unit = "arena" .. i
-					if destGUID == UnitGUID(unit) then
-						local unitFrame = self.frame[unit]
-						local config = Gladius.db.classIconAuras[spellID]
-						local time = GetTime()
-						local aura = {
-							name = spellInfo.name,
-							icon = spellInfo.originalIconID,
-							duration = data.duration or 0,
-							expires = data.duration and (time + data.duration) or 0,
-							spellid = spellID,
-							priority = data.priority or 0,
-							timeApplied = time,
-							enabled = config.enabled ~= false, -- Defaults to true, unless explicitly false
-							deleted = config.deleted == true, -- Defaults to false, unless explicitly true
-						}
-						unitFrame.interruptAura = aura
-						self:UpdateAura(unit, aura)
-					end
+				local config = Gladius.db.classIconAuras[spellID]
+				if not config then
+					geterrorhandler()("Error: Interrupt with spellID [" .. spellID .. "] not found in CDList-1.0 library!")
+					return
 				end
-            end
-        end
+				local time = GetTime()
+				local aura = {
+					name = spellInfo.name,
+					icon = spellInfo.originalIconID,
+					duration = data.duration or 0,
+					expires = data.duration and (time + data.duration) or 0,
+					spellid = spellID,
+					priority = data.priority or 0,
+					timeApplied = time,
+					enabled = config.enabled ~= false, -- Defaults to true, unless explicitly false
+					deleted = config.deleted == true, -- Defaults to false, unless explicitly true
+				}
+				unitFrame.interruptAura = aura
+				self:UpdateAura(unit, aura)
+			end
+		end
+	end
+
+	if subEvent == "SPELL_CAST_SUCCESS" then
+		for i = 1, GetNumArenaOpponents() do
+			local unit = "arena" .. i
+			if destGUID == UnitGUID(unit) then
+				local _, _, _, _, _, _, notInterruptibleChannel = UnitChannelInfo(unit)
+				if notInterruptibleChannel ~= false then
+					return
+				else
+					DisplayInterrupt(unit, spellID)
+				end
+			end
+		end
+	end
+
+    if subEvent == "SPELL_INTERRUPT" then
+		for i = 1, GetNumArenaOpponents() do
+			local unit = "arena" .. i
+			if destGUID == UnitGUID(unit) then
+				DisplayInterrupt(unit, spellID)
+			end
+		end
     end
 end
 
@@ -327,7 +349,6 @@ end
 
 function ClassIcon:ShowAura(unit, aura)
 	local unitFrame = self.frame[unit]
-	local time = GetTime()
 	unitFrame.aura = aura
 
 	-- display aura
@@ -341,25 +362,23 @@ function ClassIcon:ShowAura(unit, aura)
 
 	local start
 
-	if aura.expires then
-		local timeLeft = aura.expires > 0 and (aura.expires - time) or 0
-		start = aura.duration and (time - (aura.duration - timeLeft)) or 0
-	end
-
-	-- cooldown
-	local applied = aura.timeApplied or time
-	if not Gladius.db.modules["Timer"] then
-		self.frame[unit].cooldown:SetHideCountdownNumbers(false)
-		self.frame[unit].cooldown:SetCooldown(applied, aura.duration)
+	if not aura.timeApplied then
+		start = aura.expires - aura.duration
 	else
-		Gladius:Call(Gladius.modules.Timer, "SetTimer", unitFrame, aura.duration or 0, applied or start)
-	end
+		start = aura.timeApplied
 
-	-- Hide interrupt icon after lockout duration
-	if aura.timeApplied then
+		-- Hide interrupt icon after lockout duration
 		C_Timer.After(aura.duration, function ()
 			self:UpdateAura(unit, aura)
 		end)
+	end
+
+	-- cooldown
+	if not Gladius.db.modules["Timer"] then
+		self.frame[unit].cooldown:SetHideCountdownNumbers(false)
+		self.frame[unit].cooldown:SetCooldown(start, aura.duration)
+	else
+		Gladius:Call(Gladius.modules.Timer, "SetTimer", unitFrame, aura.duration or 0, start)
 	end
 end
 
