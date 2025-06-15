@@ -224,7 +224,7 @@ end
 
 
 function ClassIcon:COMBAT_LOG_EVENT_UNFILTERED(event)
-	local timeStamp, subEvent, _, _, _, _, _, destGUID, _, _, _, spellID, _, _, _, _, _, _ = CombatLogGetCurrentEventInfo()
+	local _, subEvent, _, _, _, _, _, destGUID, _, _, _, spellID, _, _, _, _, _, _ = CombatLogGetCurrentEventInfo()
 
     if subEvent == "SPELL_INTERRUPT" then
         for spell, data in pairs(interruptsList) do
@@ -235,14 +235,15 @@ function ClassIcon:COMBAT_LOG_EVENT_UNFILTERED(event)
 					if destGUID == UnitGUID(unit) then
 						local unitFrame = self.frame[unit]
 						local config = Gladius.db.classIconAuras[spellID]
+						local time = GetTime()
 						local aura = {
 							name = spellInfo.name,
 							icon = spellInfo.originalIconID,
 							duration = data.duration or 0,
-							expires = data.duration and (timeStamp + data.duration) or 0,
+							expires = data.duration and (time + data.duration) or 0,
 							spellid = spellID,
 							priority = data.priority or 0,
-							timeStamp = timeStamp,
+							timeApplied = time,
 							enabled = config.enabled ~= false, -- Defaults to true, unless explicitly false
 							deleted = config.deleted == true, -- Defaults to false, unless explicitly true
 						}
@@ -258,8 +259,8 @@ end
 
 function ClassIcon:UpdateAura(unit, spellID, duration)
 	local unitFrame = self.frame[unit]
-	local aura = unitFrame.interruptAura
 	local auraList = Gladius.db.classIconAuras
+	local aura
 
 	if not unitFrame or not auraList then
 		return
@@ -292,6 +293,10 @@ function ClassIcon:UpdateAura(unit, spellID, duration)
 			end
 		end
 
+		if (aura and unitFrame.interruptAura and aura.priority < unitFrame.interruptAura.priority and unitFrame.interruptAura.expires > GetTime()) or (unitFrame.interruptAura and unitFrame.interruptAura.expires > GetTime()) then
+			aura = unitFrame.interruptAura
+		end
+
 	-- Display icons and cooldowns from the test environment
 	elseif spellID then
 		local spellInfo = GetSpellInfo(spellID)
@@ -311,9 +316,10 @@ function ClassIcon:UpdateAura(unit, spellID, duration)
 		end
 	end
 
-	if aura and aura.enabled and not aura.deleted and aura.expires > GetTime() then
+	if (aura and aura.enabled and not aura.deleted) and (not unitFrame.aura or unitFrame.aura.expires ~= aura.expires) then
 		self:ShowAura(unit, aura)
-	else
+	elseif not aura then
+		unitFrame.aura = nil
 		self:SetClassIcon(unit)
 	end
 end
@@ -322,6 +328,7 @@ end
 function ClassIcon:ShowAura(unit, aura)
 	local unitFrame = self.frame[unit]
 	local time = GetTime()
+	unitFrame.aura = aura
 
 	-- display aura
 	unitFrame.texture:SetTexture(aura.icon)
@@ -340,11 +347,19 @@ function ClassIcon:ShowAura(unit, aura)
 	end
 
 	-- cooldown
+	local applied = aura.timeApplied or time
 	if not Gladius.db.modules["Timer"] then
 		self.frame[unit].cooldown:SetHideCountdownNumbers(false)
-		self.frame[unit].cooldown:SetCooldown(aura.timeStamp or time, aura.duration)
+		self.frame[unit].cooldown:SetCooldown(applied, aura.duration)
 	else
-		Gladius:Call(Gladius.modules.Timer, "SetTimer", unitFrame, aura.duration or 0, aura.timeStamp or start)
+		Gladius:Call(Gladius.modules.Timer, "SetTimer", unitFrame, aura.duration or 0, applied or start)
+	end
+
+	-- Hide interrupt icon after lockout duration
+	if aura.timeApplied then
+		C_Timer.After(aura.duration, function ()
+			self:UpdateAura(unit, aura)
+		end)
 	end
 end
 
@@ -353,7 +368,13 @@ function ClassIcon:SetClassIcon(unit)
 	if not self.frame[unit] then
 		return
 	end
-	Gladius:Call(Gladius.modules.Timer, "HideTimer", self.frame[unit])
+
+	if not Gladius.db.modules["Timer"] then
+		self.frame[unit].cooldown:SetCooldown(0, 0)
+	else
+		Gladius:Call(Gladius.modules.Timer, "HideTimer", self.frame[unit])
+	end
+
 	-- get unit class
 	local class
 	local specIcon
@@ -515,6 +536,8 @@ function ClassIcon:Reset(unit)
 
 	-- Reset frame
 	if unitFrame then
+		unitFrame.aura = nil
+
 		if unitFrame.cooldown then
 			unitFrame.cooldown:SetCooldown(0, 0)
 		end
