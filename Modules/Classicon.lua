@@ -315,7 +315,7 @@ function ClassIcon:UpdateAura(unit, spellID, duration)
 			end
 		end
 
-		if (aura and unitFrame.interruptAura and aura.priority < unitFrame.interruptAura.priority and unitFrame.interruptAura.expires > GetTime()) or (unitFrame.interruptAura and unitFrame.interruptAura.expires > GetTime()) then
+		if (aura and unitFrame.interruptAura and aura.priority < unitFrame.interruptAura.priority and unitFrame.interruptAura.expires > GetTime()) or (not aura and unitFrame.interruptAura and unitFrame.interruptAura.expires > GetTime()) then
 			aura = unitFrame.interruptAura
 		end
 
