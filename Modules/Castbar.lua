@@ -33,15 +33,15 @@ local CastBar = Gladius:NewModule("CastBar", true, true, {
 	castBarAnchor = "TOPRIGHT",
 	castBarRelativePoint = "BOTTOMLEFT",
 	castBarDetached = true,
-	castBarHeight = 20,
+	castBarHeight = 25,
 	castBarAdjustWidth = false,
-	castBarWidth = 175,
+	castBarWidth = 200,
 	castBarOffsetX = - 5,
 	castBarOffsetY = - 5,
 	castBarInverse = false,
 	castBarColor = {r = 1, g = 1, b = 0, a = 1},
-	castBarColorUninterruptible = {r = 0.3, g = 0.3, b = 0.3, a = 1},
-	castBarBackgroundColor = {r = 1, g = 1, b = 1, a = 0},
+	castBarColorUninterruptible = {r = 0.2, g = 0.2, b = 0.2, a = 1},
+	castBarBackgroundColor = {r = 1, g = 1, b = 1, a = 0.3},
 	castBarTexture = "Clean",
 	castBarTextureUninterruptible = "Clean",
 	castIcon = true,
@@ -64,14 +64,13 @@ function CastBar:OnEnable()
 	self:RegisterEvent("UNIT_SPELLCAST_START")
 	self:RegisterEvent("UNIT_SPELLCAST_STOP")
 	self:RegisterEvent("UNIT_SPELLCAST_DELAYED")
-	self:RegisterEvent("UNIT_SPELLCAST_EMPOWER_START", "UNIT_SPELLCAST_START")
-	self:RegisterEvent("UNIT_SPELLCAST_EMPOWER_STOP", "UNIT_SPELLCAST_STOP")
 	self:RegisterEvent("UNIT_SPELLCAST_FAILED", "UNIT_SPELLCAST_STOP")
 	self:RegisterEvent("UNIT_SPELLCAST_INTERRUPTED", "UNIT_SPELLCAST_STOP")
 	self:RegisterEvent("UNIT_SPELLCAST_CHANNEL_START")
-	self:RegisterEvent("UNIT_SPELLCAST_EMPOWER_START", "UNIT_SPELLCAST_CHANNEL_START")
 	self:RegisterEvent("UNIT_SPELLCAST_CHANNEL_UPDATE", "UNIT_SPELLCAST_DELAYED")
 	self:RegisterEvent("UNIT_SPELLCAST_CHANNEL_STOP", "UNIT_SPELLCAST_STOP")
+	self:RegisterEvent("UNIT_SPELLCAST_EMPOWER_START", "UNIT_SPELLCAST_CHANNEL_START")
+	self:RegisterEvent("UNIT_SPELLCAST_EMPOWER_STOP", "UNIT_SPELLCAST_STOP")
 	if not IsWrathClassic then
 		self:RegisterEvent("UNIT_SPELLCAST_INTERRUPTIBLE")
 		self:RegisterEvent("UNIT_SPELLCAST_NOT_INTERRUPTIBLE")
@@ -187,11 +186,12 @@ function CastBar:UNIT_SPELLCAST_CHANNEL_START(event, unit)
 	if self.frame[unit] == nil then
 		return
 	end
-	local spell, displayName, icon, startTime, endTime, isTradeSkill, notInterruptible = UnitChannelInfo(unit)
+	local spell, _, icon, startTime, endTime, _, notInterruptible, _, isEmpowered, _ = UnitChannelInfo(unit)
 	if spell then
 		self.frame[unit].isChanneling = true
+		self.frame[unit].isEmpowered = isEmpowered
 		--self.frame[unit].value = ((endTime / 1000) - GetTime())
-		if Gladius.db.castBarInverse then
+		if Gladius.db.castBarInverse or isEmpowered then
 			self.frame[unit].value = (GetTime() - (startTime / 1000))
 		else
 			self.frame[unit].value = (endTime - startTime) / 1000
@@ -258,6 +258,7 @@ function CastBar:CastEnd(bar)
 	if bar then
 		bar.isCasting = nil
 		bar.isChanneling = nil
+		bar.isEmpowered = nil
 		bar.timeText:SetText("")
 		bar.castText:SetText("")
 		bar.icon:SetTexture("")
@@ -283,7 +284,7 @@ local function CastUpdate(self, elapsed)
 	if Gladius.test then
 		return
 	end
-	if (self.isCasting and not Gladius.db.castBarInverse) or (self.isChanneling and Gladius.db.castBarInverse) then
+	if (self.isCasting and not Gladius.db.castBarInverse) or (self.isChanneling and (Gladius.db.castBarInverse or self.isEmpowered)) then
 		if self.value >= self.maxValue then
 			self:SetValue(self.maxValue)
 			CastBar:CastEnd(self)
@@ -318,7 +319,7 @@ function CastBar:UpdateColors(unit)
 			self.frame[unit]:SetStatusBarTexture(LSM:Fetch(LSM.MediaType.STATUSBAR, Gladius.db.castBarTexture))
 		end
 	else
-		if unit == "arena2" then
+		if unit == "arena3" then
 			local color = Gladius.db.castBarColorUninterruptible
 			self.frame[unit]:SetStatusBarColor(color.r, color.g, color.b, color.a)
 			self.frame[unit]:SetStatusBarTexture(LSM:Fetch(LSM.MediaType.STATUSBAR, Gladius.db.castBarTextureUninterruptible))
@@ -470,13 +471,14 @@ end
 
 function CastBar:Test(unit)
 	if unit == "arena1" then
+		local value = math.random(7, 9) / 10
 		self.frame[unit].isCasting = true
-		self.frame[unit].value = Gladius.db.castBarInverse and 0 or 1
+		self.frame[unit].value = Gladius.db.castBarInverse and value or (1 - value)
 		self.frame[unit].maxValue = 1
 		self.frame[unit]:SetMinMaxValues(0, self.frame[unit].maxValue)
 		self.frame[unit]:SetValue(self.frame[unit].value)
 		if Gladius.db.castTimeText then
-			self.frame[unit].timeText:SetFormattedText("%.1f", self.frame[unit].maxValue - self.frame[unit].value)
+			self.frame[unit].timeText:SetFormattedText("%.1f", value)
 		else
 			self.frame[unit].timeText:SetText("")
 		end
@@ -488,34 +490,14 @@ function CastBar:Test(unit)
 			self.frame[unit].castText:SetText("")
 		end
 	elseif unit == "arena2" then
+		local value = math.random(4, 6) / 10
 		self.frame[unit].isCasting = true
-		self.frame[unit].value = Gladius.db.castBarInverse and 0 or 1
-		self.frame[unit].maxValue = 1
-		self.frame[unit]:SetMinMaxValues(0, self.frame[unit].maxValue)
-		self.frame[unit]:SetValue(self.frame[unit].value)
-		local color = Gladius.db.castBarColorUninterruptible
-		self.frame[unit]:SetStatusBarColor(color.r, color.g, color.b, color.a)
-		self.frame[unit]:SetStatusBarTexture(LSM:Fetch(LSM.MediaType.STATUSBAR, Gladius.db.castBarTextureUninterruptible))
-		if Gladius.db.castTimeText then
-			self.frame[unit].timeText:SetFormattedText("%.1f", self.frame[unit].maxValue - self.frame[unit].value)
-		else
-			self.frame[unit].timeText:SetText("")
-		end
-		local texture = select(3, GetSpellInfo(1))
-		self.frame[unit].icon:SetTexture(texture)
-		if Gladius.db.castText then
-			self.frame[unit].castText:SetText(L["Uninterruptible Spell"])
-		else
-			self.frame[unit].castText:SetText("")
-		end
-	elseif unit == "arena3" then
-		self.frame[unit].isCasting = true
-		self.frame[unit].value = Gladius.db.castBarInverse and 0 or 1
+		self.frame[unit].value = Gladius.db.castBarInverse and value or (1 - value)
 		self.frame[unit].maxValue = 1
 		self.frame[unit]:SetMinMaxValues(0, self.frame[unit].maxValue)
 		self.frame[unit]:SetValue(self.frame[unit].value)
 		if Gladius.db.castTimeText then
-			self.frame[unit].timeText:SetFormattedText("%.1f", self.frame[unit].maxValue - self.frame[unit].value)
+			self.frame[unit].timeText:SetFormattedText("%.1f", value)
 		else
 			self.frame[unit].timeText:SetText("")
 		end
@@ -523,6 +505,28 @@ function CastBar:Test(unit)
 		self.frame[unit].icon:SetTexture(texture)
 		if Gladius.db.castText then
 			self.frame[unit].castText:SetText(L["Example Spell Name"])
+		else
+			self.frame[unit].castText:SetText("")
+		end
+	elseif unit == "arena3" then
+		local value = math.random(1, 3) / 10
+		self.frame[unit].isCasting = true
+		self.frame[unit].value = Gladius.db.castBarInverse and value or (1 - value)
+		self.frame[unit].maxValue = 1
+		self.frame[unit]:SetMinMaxValues(0, self.frame[unit].maxValue)
+		self.frame[unit]:SetValue(self.frame[unit].value)
+		local color = Gladius.db.castBarColorUninterruptible
+		self.frame[unit]:SetStatusBarColor(color.r, color.g, color.b, color.a)
+		self.frame[unit]:SetStatusBarTexture(LSM:Fetch(LSM.MediaType.STATUSBAR, Gladius.db.castBarTextureUninterruptible))
+		if Gladius.db.castTimeText then
+			self.frame[unit].timeText:SetFormattedText("%.1f", value)
+		else
+			self.frame[unit].timeText:SetText("")
+		end
+		local texture = select(3, GetSpellInfo(1))
+		self.frame[unit].icon:SetTexture(texture)
+		if Gladius.db.castText then
+			self.frame[unit].castText:SetText(L["Uninterruptible Spell"])
 		else
 			self.frame[unit].castText:SetText("")
 		end
