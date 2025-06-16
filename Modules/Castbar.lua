@@ -12,16 +12,8 @@ local strfind = string.find
 
 local AceGUIWidgetLSMlists = AceGUIWidgetLSMlists
 local CreateFrame = CreateFrame
-local GetSpellInfo = GetSpellInfo or function(spellID)
-  if not spellID then
-    return nil;
-  end
+local GetSpellInfo = C_Spell.GetSpellInfo
 
-  local spellInfo = C_Spell.GetSpellInfo(spellID);
-  if spellInfo then
-    return spellInfo.name, nil, spellInfo.iconID, spellInfo.castTime, spellInfo.minRange, spellInfo.maxRange, spellInfo.spellID, spellInfo.originalIconID;
-  end
-end
 local GetTime = GetTime
 local UnitCastingInfo = UnitCastingInfo
 local UnitChannelInfo = UnitChannelInfo
@@ -41,7 +33,7 @@ local CastBar = Gladius:NewModule("CastBar", true, true, {
 	castBarInverse = false,
 	castBarColor = {r = 1, g = 1, b = 0, a = 1},
 	castBarColorUninterruptible = {r = 0.2, g = 0.2, b = 0.2, a = 1},
-	castBarBackgroundColor = {r = 1, g = 1, b = 1, a = 0.3},
+	castBarBackgroundColor = {r = 1, g = 1, b = 1, a = 0},
 	castBarTexture = "Clean",
 	castBarTextureUninterruptible = "Clean",
 	castIcon = true,
@@ -505,7 +497,7 @@ function CastBar:Test(unit)
 		else
 			self.frame[unit].timeText:SetText("")
 		end
-		local texture = select(3, GetSpellInfo(1))
+		local texture = GetSpellInfo(1).originalIconID
 		self.frame[unit].icon:SetTexture(texture)
 		if Gladius.db.castText then
 			self.frame[unit].castText:SetText(L["Example Spell Name"])
@@ -524,7 +516,7 @@ function CastBar:Test(unit)
 		else
 			self.frame[unit].timeText:SetText("")
 		end
-		local texture = select(3, GetSpellInfo(1))
+		local texture = GetSpellInfo(1).originalIconID
 		self.frame[unit].icon:SetTexture(texture)
 		if Gladius.db.castText then
 			self.frame[unit].castText:SetText(L["Example Spell Name"])
@@ -546,7 +538,7 @@ function CastBar:Test(unit)
 		else
 			self.frame[unit].timeText:SetText("")
 		end
-		local texture = select(3, GetSpellInfo(1))
+		local texture = GetSpellInfo(1).originalIconID
 		self.frame[unit].icon:SetTexture(texture)
 		if Gladius.db.castText then
 			self.frame[unit].castText:SetText(L["Uninterruptible Spell"])
