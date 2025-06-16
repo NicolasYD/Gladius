@@ -118,38 +118,61 @@ function CastBar:GetIndicatorHeight()
 	return Gladius.db.castBarHeight
 end
 
+
 function CastBar:UNIT_SPELLCAST_START(event, unit)
-	if not strfind(unit, "arena") or strfind(unit, "pet") then
-		return
-	end
-	if self.frame[unit] == nil then
-		return
-	end
-	local spell, displayName, icon, startTime, endTime, isTradeSkill, castID, notInterruptible = UnitCastingInfo(unit)
-	if spell then
-		self.frame[unit].isCasting = true
-		if Gladius.db.castBarInverse then
-			self.frame[unit].value = (endTime - startTime) / 1000
-		else
-			self.frame[unit].value = (GetTime() - (startTime / 1000))
-		end
-		self.frame[unit].maxValue = (endTime - startTime) / 1000
-		self.frame[unit]:SetMinMaxValues(0, self.frame[unit].maxValue)
-		self.frame[unit]:SetValue(self.frame[unit].value)
-		self.frame[unit].timeText:SetText(self.frame[unit].maxValue)
-		self.frame[unit].icon:SetTexture(icon)
-		if notInterruptible then
-			local color = Gladius.db.castBarColorUninterruptible
-			self.frame[unit]:SetStatusBarColor(color.r, color.g, color.b, color.a)
-			self.frame[unit]:SetStatusBarTexture(LSM:Fetch(LSM.MediaType.STATUSBAR, Gladius.db.castBarTextureUninterruptible))
-		else
-			local color = Gladius.db.castBarColor
-			self.frame[unit]:SetStatusBarColor(color.r, color.g, color.b, color.a)
-			self.frame[unit]:SetStatusBarTexture(LSM:Fetch(LSM.MediaType.STATUSBAR, Gladius.db.castBarTexture))
-		end
-		self.frame[unit].castText:SetText(spell)
-	end
+    if not strfind(unit, "arena") or strfind(unit, "pet") then
+        return
+    end
+    if self.frame[unit] == nil then
+        return
+    end
+
+    local spell, displayName, icon, startTime, endTime, isTradeSkill, castID, notInterruptible, spellID, isEmpower = UnitCastingInfo(unit)
+
+    if spell then
+        self.frame[unit].isCasting = true
+
+        -- Empower spells
+        if isEmpower then
+            local stageDurations = {UnitSpellEmpowerStageDuration(spellID)}
+            local totalDuration = 0
+            for _, stage in ipairs(stageDurations) do
+                totalDuration = totalDuration + stage
+            end
+            self.frame[unit].maxValue = totalDuration / 1000
+            if Gladius.db.castBarInverse then
+                self.frame[unit].value = self.frame[unit].maxValue
+            else
+                self.frame[unit].value = GetTime() - (startTime / 1000)
+            end
+        else
+            self.frame[unit].maxValue = (endTime - startTime) / 1000
+            if Gladius.db.castBarInverse then
+                self.frame[unit].value = self.frame[unit].maxValue
+            else
+                self.frame[unit].value = GetTime() - (startTime / 1000)
+            end
+        end
+
+        self.frame[unit]:SetMinMaxValues(0, self.frame[unit].maxValue)
+        self.frame[unit]:SetValue(self.frame[unit].value)
+        self.frame[unit].timeText:SetText(self.frame[unit].maxValue)
+        self.frame[unit].icon:SetTexture(icon)
+
+        local color
+        if notInterruptible then
+            color = Gladius.db.castBarColorUninterruptible
+            self.frame[unit]:SetStatusBarTexture(LSM:Fetch(LSM.MediaType.STATUSBAR, Gladius.db.castBarTextureUninterruptible))
+        else
+            color = Gladius.db.castBarColor
+            self.frame[unit]:SetStatusBarTexture(LSM:Fetch(LSM.MediaType.STATUSBAR, Gladius.db.castBarTexture))
+        end
+        self.frame[unit]:SetStatusBarColor(color.r, color.g, color.b, color.a)
+
+        self.frame[unit].castText:SetText(spell)
+    end
 end
+
 
 function CastBar:UNIT_SPELLCAST_INTERRUPTIBLE(event, unit)
 	if not strfind(unit, "arena") or strfind(unit, "pet") then
