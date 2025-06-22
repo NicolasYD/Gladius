@@ -231,7 +231,7 @@ function ClassIcon:COMBAT_LOG_EVENT_UNFILTERED(event) -- Need to handle stuff li
 		local auraList = Gladius.db.classIconAuras
 		local config = auraList[spellID]
 		if not config then
-			geterrorhandler()("Error: Interrupt with spellID [" .. spellID .. "] not found in CDList-1.0 library!")
+			geterrorhandler()("Error: Interrupt with spellID [" .. spellID .. "] not found in Gladius.db.classIconAuras")
 			return
 		end
 		local time = GetTime()
