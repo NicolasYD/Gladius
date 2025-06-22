@@ -35,7 +35,6 @@ end
 
 
 local CDList = LibStub("CDList-1.0")
-local interruptsList = CDList:GetSpellsByCategory("interrupt")
 local spellTableUnordered = CDList:GetPrioritySpells()
 local spellTable = CDList:OrderAlphabetically(spellTableUnordered)
 local originalSpellTable = deepcopy(spellTable)
@@ -227,31 +226,28 @@ function ClassIcon:COMBAT_LOG_EVENT_UNFILTERED(event) -- Need to handle stuff li
 	local _, subEvent, _, _, _, _, _, destGUID, _, _, _, spellID, _, _, _, _, _, _ = CombatLogGetCurrentEventInfo()
 
 	local function DisplayInterrupt(unit, spellID)
-		for spell, data in pairs(interruptsList) do
-			if spellID == spell then
-				local unitFrame = self.frame[unit]
-				local spellInfo = GetSpellInfo(spellID)
-				local config = Gladius.db.classIconAuras[spellID]
-				if not config then
-					geterrorhandler()("Error: Interrupt with spellID [" .. spellID .. "] not found in CDList-1.0 library!")
-					return
-				end
-				local time = GetTime()
-				local aura = {
-					name = spellInfo.name,
-					icon = spellInfo.originalIconID,
-					duration = data.duration or 0,
-					expires = data.duration and (time + data.duration) or 0,
-					spellid = spellID,
-					priority = data.priority or 0,
-					timeApplied = time,
-					enabled = config.enabled ~= false, -- Defaults to true, unless explicitly false
-					deleted = config.deleted == true, -- Defaults to false, unless explicitly true
-				}
-				unitFrame.interruptAura = aura
-				self:UpdateAura(unit, aura)
-			end
+		local unitFrame = self.frame[unit]
+		local spellInfo = GetSpellInfo(spellID)
+		local auraList = Gladius.db.classIconAuras
+		local config = auraList[spellID]
+		if not config then
+			geterrorhandler()("Error: Interrupt with spellID [" .. spellID .. "] not found in CDList-1.0 library!")
+			return
 		end
+		local time = GetTime()
+		local aura = {
+			name = spellInfo.name,
+			icon = spellInfo.originalIconID,
+			duration = config.duration or (config.parent and auraList[config.parent].duration) or 0,
+			expires = (config.duration and time + config.duration) or (config.parent and time + auraList[config.parent].duration) or 0,
+			spellid = spellID,
+			priority = config.priority or (config.parent and auraList[config.parent].priority) or 0,
+			timeApplied = time,
+			enabled = config.enabled ~= false, -- Defaults to true, unless explicitly false
+			deleted = config.deleted == true, -- Defaults to false, unless explicitly true
+		}
+		unitFrame.interruptAura = aura
+		self:UpdateAura(unit, aura)
 	end
 
 	if subEvent == "SPELL_CAST_SUCCESS" then
