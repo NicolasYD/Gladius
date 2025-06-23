@@ -32,18 +32,20 @@ local CastBar = Gladius:NewModule("CastBar", true, true, {
 	castBarOffsetY = - 5,
 	castBarInverse = false,
 	castBarColor = {r = 1, g = 1, b = 0, a = 1},
-	castBarColorUninterruptible = {r = 0.7, g = 0.7, b = 0.7, a = 1},
-	castBarBackgroundColor = {r = 1, g = 1, b = 1, a = 0},
+	castBarColorUninterruptible = {r = 1, g = 1, b = 1, a = 1},
+	castBarBackgroundColor = {r = 1, g = 1, b = 1, a = 0.3},
 	castBarTexture = "Clean",
 	castBarTextureUninterruptible = "Clean",
 	castIcon = true,
 	castIconPosition = "LEFT",
-	shieldSizeFactor = 2,
+	castShieldSize = 50,
+	castShieldOffsetX = 0,
+	castShieldOffsetY = - 3,
 	castText = true,
 	castTextSize = 11,
 	castTextColor = {r = 2.55, g = 2.55, b = 2.55, a = 1},
 	castTextAlign = "LEFT",
-	castTextOffsetX = 0,
+	castTextOffsetX = 10,
 	castTextOffsetY = 0,
 	castTimeText = true,
 	castTimeTextSize = 11,
@@ -151,6 +153,8 @@ function CastBar:UNIT_SPELLCAST_START(event, unit)
         self.frame[unit]:SetValue(self.frame[unit].value)
         self.frame[unit].timeText:SetText(self.frame[unit].maxValue)
         self.frame[unit].icon:SetTexture(icon)
+		self.frame[unit].icon.bg:Show()
+		self.frame[unit].background:Show()
 
         local color
         if notInterruptible then
@@ -177,6 +181,7 @@ function CastBar:UNIT_SPELLCAST_INTERRUPTIBLE(event, unit)
 		return
 	end
 	if self.frame[unit].isChanneling or self.frame[unit].isCasting then
+		self.frame[unit].shield:Hide()
 		local color = Gladius.db.castBarColor
 		self.frame[unit]:SetStatusBarColor(color.r, color.g, color.b, color.a)
 		self.frame[unit]:SetStatusBarTexture(LSM:Fetch(LSM.MediaType.STATUSBAR, Gladius.db.castBarTexture))
@@ -191,6 +196,7 @@ function CastBar:UNIT_SPELLCAST_NOT_INTERRUPTIBLE(event, unit)
 		return
 	end
 	if self.frame[unit].isChanneling or self.frame[unit].isCasting then
+		self.frame[unit].shield:Show()
 		local color = Gladius.db.castBarColorUninterruptible
 		self.frame[unit]:SetStatusBarColor(color.r, color.g, color.b, color.a)
 		self.frame[unit]:SetStatusBarTexture(LSM:Fetch(LSM.MediaType.STATUSBAR, Gladius.db.castBarTextureUninterruptible))
@@ -219,6 +225,9 @@ function CastBar:UNIT_SPELLCAST_CHANNEL_START(event, unit)
 		self.frame[unit]:SetValue(self.frame[unit].value)
 		self.frame[unit].timeText:SetText(self.frame[unit].maxValue)
 		self.frame[unit].icon:SetTexture(icon)
+		self.frame[unit].icon.bg:Show()
+		self.frame[unit].background:Show()
+
 		if notInterruptible then
 			self.frame[unit].shield:Show()
 			local color = Gladius.db.castBarColorUninterruptible
@@ -282,6 +291,8 @@ function CastBar:CastEnd(bar)
 		bar.timeText:SetText("")
 		bar.castText:SetText("")
 		bar.icon:SetTexture("")
+		bar.icon.bg:Hide()
+		bar.background:Hide()
 		bar.shield:Hide()
 		bar:SetValue(0)
 	end
@@ -438,22 +449,24 @@ function CastBar:Update(unit)
 	self.frame[unit].timeText:SetPoint(Gladius.db.castTimeTextAlign, Gladius.db.castTimeTextOffsetX, Gladius.db.castTimeTextOffsetY)
 	-- update icon
 	self.frame[unit].icon:ClearAllPoints()
-	local offsetY = 0.2 * self.frame[unit]:GetHeight()
-	self.frame[unit].icon:SetPoint("CENTER", self.frame[unit].shield, 0, offsetY)
+	self.frame[unit].icon:SetPoint(Gladius.db.castIconPosition == "LEFT" and "RIGHT" or "LEFT", self.frame[unit], Gladius.db.castIconPosition)
 	self.frame[unit].icon:SetWidth(self.frame[unit]:GetHeight())
 	self.frame[unit].icon:SetHeight(self.frame[unit]:GetHeight())
 	self.frame[unit].icon:SetTexCoord(0.07, 0.93, 0.07, 0.93)
-	self.frame[unit].icon:SetDrawLayer("ARTWORK", 1)
+	self.frame[unit].icon:SetDrawLayer("ARTWORK", 2)
+
 	self.frame[unit].icon.bg:ClearAllPoints()
 	self.frame[unit].icon.bg:SetAllPoints(self.frame[unit].icon)
 	self.frame[unit].icon.bg:SetTexture(LSM:Fetch(LSM.MediaType.STATUSBAR, Gladius.db.castBarTexture))
 	self.frame[unit].icon.bg:SetVertexColor(Gladius.db.castBarBackgroundColor.r, Gladius.db.castBarBackgroundColor.g, Gladius.db.castBarBackgroundColor.b, Gladius.db.castBarBackgroundColor.a)
+	self.frame[unit].icon.bg:Hide()
+
 	self.frame[unit].shield:ClearAllPoints()
-	self.frame[unit].shield:SetPoint(Gladius.db.castIconPosition == "LEFT" and "RIGHT" or "LEFT", self.frame[unit], Gladius.db.castIconPosition, 0, -offsetY)
-	self.frame[unit].shield:SetWidth(Gladius.db.shieldSizeFactor * self.frame[unit]:GetHeight())
-	self.frame[unit].shield:SetHeight(Gladius.db.shieldSizeFactor * self.frame[unit]:GetHeight())
+	self.frame[unit].shield:SetPoint("CENTER", self.frame[unit].icon, Gladius.db.castShieldOffsetX, Gladius.db.castShieldOffsetY)
+	self.frame[unit].shield:SetWidth(Gladius.db.castShieldSize)
+	self.frame[unit].shield:SetHeight(Gladius.db.castShieldSize)
 	self.frame[unit].shield:SetAtlas("ui-castingbar-shield")
-	self.frame[unit].shield:SetDrawLayer("ARTWORK", 0)
+	self.frame[unit].shield:SetDrawLayer("ARTWORK", 1)
 	self.frame[unit].shield:Hide()
 	if not Gladius.db.castIcon then
 		self.frame[unit].icon:SetAlpha(0)
@@ -477,6 +490,7 @@ function CastBar:Update(unit)
 	-- disable tileing
 	self.frame[unit].background:SetHorizTile(false)
 	self.frame[unit].background:SetVertTile(false)
+	self.frame[unit].background:Hide()
 	-- hide
 	self.frame[unit]:SetAlpha(0)
 end
@@ -517,6 +531,10 @@ function CastBar:Test(unit)
 		end
 		local texture = GetSpellInfo(1).originalIconID
 		self.frame[unit].icon:SetTexture(texture)
+		self.frame[unit].icon.bg:Show()
+		self.frame[unit].background:Show()
+		self.frame[unit].shield:Hide()
+
 		if Gladius.db.castText then
 			self.frame[unit].castText:SetText(L["Example Spell Name"])
 		else
@@ -536,6 +554,10 @@ function CastBar:Test(unit)
 		end
 		local texture = GetSpellInfo(1).originalIconID
 		self.frame[unit].icon:SetTexture(texture)
+		self.frame[unit].icon.bg:Show()
+		self.frame[unit].background:Show()
+		self.frame[unit].shield:Hide()
+
 		if Gladius.db.castText then
 			self.frame[unit].castText:SetText(L["Example Spell Name"])
 		else
@@ -558,6 +580,8 @@ function CastBar:Test(unit)
 		end
 		local texture = GetSpellInfo(1).originalIconID
 		self.frame[unit].icon:SetTexture(texture)
+		self.frame[unit].icon.bg:Show()
+		self.frame[unit].background:Show()
 		self.frame[unit].shield:Show()
 
 		if Gladius.db.castText then
