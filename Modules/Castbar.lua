@@ -18,8 +18,6 @@ local GetTime = GetTime
 local UnitCastingInfo = UnitCastingInfo
 local UnitChannelInfo = UnitChannelInfo
 
-local IsWrathClassic = WOW_PROJECT_ID == WOW_PROJECT_WRATH_CLASSIC
-
 local CastBar = Gladius:NewModule("CastBar", true, true, {
 	castBarAttachTo = "ClassIcon",
 	castBarAnchor = "TOPRIGHT",
@@ -44,7 +42,7 @@ local CastBar = Gladius:NewModule("CastBar", true, true, {
 	castShieldSetPoint = "Cast Icon",
 	castShieldAlign = "CENTER",
 	castShieldOffsetX = 0,
-	castShieldOffsetY = - 3,
+	castShieldOffsetY = - 4,
 	castText = true,
 	castTextSize = 11,
 	castTextColor = {r = 2.55, g = 2.55, b = 2.55, a = 1},
@@ -70,10 +68,8 @@ function CastBar:OnEnable()
 	self:RegisterEvent("UNIT_SPELLCAST_CHANNEL_STOP", "UNIT_SPELLCAST_STOP")
 	self:RegisterEvent("UNIT_SPELLCAST_EMPOWER_START", "UNIT_SPELLCAST_CHANNEL_START")
 	self:RegisterEvent("UNIT_SPELLCAST_EMPOWER_STOP", "UNIT_SPELLCAST_STOP")
-	if not IsWrathClassic then
-		self:RegisterEvent("UNIT_SPELLCAST_INTERRUPTIBLE")
-		self:RegisterEvent("UNIT_SPELLCAST_NOT_INTERRUPTIBLE")
-	end
+	self:RegisterEvent("UNIT_SPELLCAST_INTERRUPTIBLE")
+	self:RegisterEvent("UNIT_SPELLCAST_NOT_INTERRUPTIBLE")
 	LSM = Gladius.LSM
 	self.isBar = true
 	if not self.frame then
@@ -120,7 +116,7 @@ function CastBar:UNIT_SPELLCAST_START(event, unit)
         return
     end
 
-    local spell, displayName, icon, startTime, endTime, isTradeSkill, castID, notInterruptible, spellID, isEmpower = UnitCastingInfo(unit)
+    local spell, _, icon, startTime, endTime, _, _, notInterruptible, spellID, isEmpower = UnitCastingInfo(unit)
 
     if spell then
         self.frame[unit].isCasting = true
@@ -447,25 +443,22 @@ function CastBar:Update(unit)
 	self.frame[unit].icon:SetHeight(self.frame[unit]:GetHeight())
 	self.frame[unit].icon:SetTexCoord(0.07, 0.93, 0.07, 0.93)
 	self.frame[unit].icon:SetDrawLayer("ARTWORK", 2)
+	local iconLayer, iconSublayer = self.frame[unit].icon:GetDrawLayer()
 
 	self.frame[unit].shield:ClearAllPoints()
 	self.frame[unit].shield:SetPoint(Gladius.db.castShieldAlign, ((Gladius.db.castShieldSetPoint == "Cast Bar" and self.frame[unit]) or (Gladius.db.castShieldSetPoint == "Cast Icon" and self.frame[unit].icon)), Gladius.db.castShieldOffsetX, Gladius.db.castShieldOffsetY)
 	self.frame[unit].shield:SetWidth(Gladius.db.castShieldSize)
 	self.frame[unit].shield:SetHeight(Gladius.db.castShieldSize)
 	self.frame[unit].shield:SetAtlas("ui-castingbar-shield")
-	local layer, sublayer = self.frame[unit].icon:GetDrawLayer()
-	self.frame[unit].shield:SetDrawLayer(layer, Gladius.db.castShieldCoverCastIcon and (sublayer + 1) or (sublayer - 1))
+	self.frame[unit].shield:SetDrawLayer(iconLayer, Gladius.db.castShieldCoverCastIcon and (iconSublayer + 1) or (iconSublayer - 1))
 	self.frame[unit].shield:Hide()
+
 	if not Gladius.db.castIcon then
 		self.frame[unit].icon:SetAlpha(0)
 	else
 		self.frame[unit].icon:SetAlpha(1)
 	end
-	if not Gladius.db.castShield then
-		self.frame[unit].shield:SetAlpha(0)
-	else
-		self.frame[unit].shield:SetAlpha(1)
-	end
+
 	-- update cast bar background
 	self.frame[unit].background:ClearAllPoints()
 	self.frame[unit].background:SetAllPoints(self.frame[unit])
@@ -517,7 +510,6 @@ function CastBar:Test(unit)
 		local texture = GetSpellInfo(1).originalIconID
 		self.frame[unit].icon:SetTexture(texture)
 		self.frame[unit].background:Show()
-		self.frame[unit].shield:Hide()
 
 		if Gladius.db.castText then
 			self.frame[unit].castText:SetText(L["Example Spell Name"])
@@ -539,7 +531,6 @@ function CastBar:Test(unit)
 		local texture = GetSpellInfo(1).originalIconID
 		self.frame[unit].icon:SetTexture(texture)
 		self.frame[unit].background:Show()
-		self.frame[unit].shield:Hide()
 
 		if Gladius.db.castText then
 			self.frame[unit].castText:SetText(L["Example Spell Name"])
@@ -564,7 +555,12 @@ function CastBar:Test(unit)
 		local texture = GetSpellInfo(1).originalIconID
 		self.frame[unit].icon:SetTexture(texture)
 		self.frame[unit].background:Show()
-		self.frame[unit].shield:Show()
+
+		if Gladius.db.castShield then
+			self.frame[unit].shield:Show()
+		else
+			self.frame[unit].shield:Hide()
+		end
 
 		if Gladius.db.castText then
 			self.frame[unit].castText:SetText(L["Uninterruptible Spell"])
