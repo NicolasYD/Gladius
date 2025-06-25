@@ -57,6 +57,7 @@ local CastBar = Gladius:NewModule("CastBar", true, true, {
 	castTimeTextOffsetY = 0,
 })
 
+
 function CastBar:OnEnable()
 	self:RegisterEvent("UNIT_SPELLCAST_START")
 	self:RegisterEvent("UNIT_SPELLCAST_STOP")
@@ -77,6 +78,7 @@ function CastBar:OnEnable()
 	end
 end
 
+
 function CastBar:OnDisable()
 	self:UnregisterAllEvents()
 	for unit in pairs(self.frame) do
@@ -84,13 +86,16 @@ function CastBar:OnDisable()
 	end
 end
 
+
 function CastBar:GetAttachTo()
 	return Gladius.db.castBarAttachTo
 end
 
+
 function CastBar:IsDetached()
 	return Gladius.db.castBarDetached
 end
+
 
 function CastBar:GetFrame(unit)
 	if self.frame[unit] == nil then
@@ -102,6 +107,7 @@ function CastBar:GetFrame(unit)
 		return self.frame[unit]
 	end
 end
+
 
 function CastBar:GetIndicatorHeight()
 	return Gladius.db.castBarHeight
@@ -183,6 +189,7 @@ function CastBar:UNIT_SPELLCAST_INTERRUPTIBLE(event, unit)
 	end
 end
 
+
 function CastBar:UNIT_SPELLCAST_NOT_INTERRUPTIBLE(event, unit)
 	if not strfind(unit, "arena") or strfind(unit, "pet") then
 		return
@@ -199,6 +206,7 @@ function CastBar:UNIT_SPELLCAST_NOT_INTERRUPTIBLE(event, unit)
 		self.frame[unit]:SetStatusBarTexture(LSM:Fetch(LSM.MediaType.STATUSBAR, Gladius.db.castBarTextureUninterruptible))
 	end
 end
+
 
 function CastBar:UNIT_SPELLCAST_CHANNEL_START(event, unit)
 	if not strfind(unit, "arena") or strfind(unit, "pet") then
@@ -240,12 +248,14 @@ function CastBar:UNIT_SPELLCAST_CHANNEL_START(event, unit)
 	end
 end
 
+
 function CastBar:UNIT_SPELLCAST_STOP(event, unit)
 	if not strfind(unit, "arena") or strfind(unit, "pet") then
 		return
 	end
 	self:CastEnd(self.frame[unit])
 end
+
 
 function CastBar:UNIT_SPELLCAST_DELAYED(event, unit)
 	if not strfind(unit, "arena") or strfind(unit, "pet") then
@@ -280,6 +290,7 @@ function CastBar:UNIT_SPELLCAST_DELAYED(event, unit)
 	self.frame[unit]:SetMinMaxValues(0, self.frame[unit].maxValue)
 end
 
+
 function CastBar:CastEnd(bar)
 	if bar then
 		bar.isCasting = nil
@@ -294,6 +305,7 @@ function CastBar:CastEnd(bar)
 	end
 end
 
+
 function CastBar:CreateBar(unit)
 	local button = Gladius.buttons[unit]
 	if not button then
@@ -307,6 +319,7 @@ function CastBar:CreateBar(unit)
 	self.frame[unit].icon = self.frame[unit]:CreateTexture("Gladius"..self.name.."IconFrame"..unit, "ARTWORK")
 	self.frame[unit].shield = self.frame[unit]:CreateTexture("Gladius"..self.name.."ShieldFrame"..unit, "ARTWORK")
 end
+
 
 local function CastUpdate(self, elapsed)
 	if Gladius.test then
@@ -332,6 +345,7 @@ local function CastUpdate(self, elapsed)
 		self.timeText:SetFormattedText("%.1f", self.value)
 	end
 end
+
 
 function CastBar:UpdateColors(unit)
 	if not Gladius.test then
@@ -363,6 +377,7 @@ function CastBar:UpdateColors(unit)
 	self.frame[unit].timeText:SetTextColor(color.r, color.g, color.b, color.a)
 	self.frame[unit].background:SetVertexColor(Gladius.db.castBarBackgroundColor.r, Gladius.db.castBarBackgroundColor.g, Gladius.db.castBarBackgroundColor.b, Gladius.db.castBarBackgroundColor.a)
 end
+
 
 function CastBar:Update(unit)
 	-- check parent module
@@ -473,10 +488,12 @@ function CastBar:Update(unit)
 	self.frame[unit]:SetAlpha(0)
 end
 
+
 function CastBar:Show(unit)
 	-- show frame
 	self.frame[unit]:SetAlpha(1)
 end
+
 
 function CastBar:Reset(unit)
 	self.frame[unit] = self.frame[unit] or {}
@@ -493,6 +510,7 @@ function CastBar:Reset(unit)
 	-- hide
 	self.frame[unit]:SetAlpha(0)
 end
+
 
 function CastBar:Test(unit)
 	if unit == "arena1" then
@@ -569,6 +587,7 @@ function CastBar:Test(unit)
 		end
 	end
 end
+
 
 function CastBar:GetOptions()
 	return {
@@ -936,7 +955,7 @@ function CastBar:GetOptions()
 						castShieldAlign = {
 							type = "select",
 							name = L["Cast Shield Align"],
-							desc = L["Text align of the cast shield"],
+							desc = L["Align the cast shield"],
 							values={ ["LEFT"] = L["LEFT"], ["CENTER"] = L["CENTER"], ["RIGHT"] = L["RIGHT"] },
 							disabled = function()
 								return not Gladius.dbi.profile.castShield or not Gladius.dbi.profile.modules[self.name]
