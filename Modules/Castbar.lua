@@ -33,7 +33,7 @@ local CastBar = Gladius:NewModule("CastBar", true, true, {
 	castBarInverse = false,
 	castBarColor = {r = 1, g = 1, b = 0, a = 1},
 	castBarColorUninterruptible = {r = 1, g = 1, b = 1, a = 1},
-	castBarBackgroundColor = {r = 1, g = 1, b = 1, a = 0.3},
+	castBarBackgroundColor = {r = 0, g = 0, b = 0, a = 0.3},
 	castBarTexture = "Clean",
 	castBarTextureUninterruptible = "Clean",
 	castIcon = true,
