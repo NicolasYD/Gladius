@@ -38,7 +38,11 @@ local CastBar = Gladius:NewModule("CastBar", true, true, {
 	castBarTextureUninterruptible = "Clean",
 	castIcon = true,
 	castIconPosition = "LEFT",
+	castShield = true,
+	castShieldCoverCastIcon = false,
 	castShieldSize = 50,
+	castShieldSetPoint = "Cast Icon",
+	castShieldAlign = "CENTER",
 	castShieldOffsetX = 0,
 	castShieldOffsetY = - 3,
 	castText = true,
@@ -151,7 +155,9 @@ function CastBar:UNIT_SPELLCAST_START(event, unit)
 
         local color
         if notInterruptible then
-			self.frame[unit].shield:Show()
+			if Gladius.db.castShield then
+				self.frame[unit].shield:Show()
+			end
             color = Gladius.db.castBarColorUninterruptible
             self.frame[unit]:SetStatusBarTexture(LSM:Fetch(LSM.MediaType.STATUSBAR, Gladius.db.castBarTextureUninterruptible))
         else
@@ -189,7 +195,9 @@ function CastBar:UNIT_SPELLCAST_NOT_INTERRUPTIBLE(event, unit)
 		return
 	end
 	if self.frame[unit].isChanneling or self.frame[unit].isCasting then
-		self.frame[unit].shield:Show()
+		if Gladius.db.castShield then
+			self.frame[unit].shield:Show()
+		end
 		local color = Gladius.db.castBarColorUninterruptible
 		self.frame[unit]:SetStatusBarColor(color.r, color.g, color.b, color.a)
 		self.frame[unit]:SetStatusBarTexture(LSM:Fetch(LSM.MediaType.STATUSBAR, Gladius.db.castBarTextureUninterruptible))
@@ -220,7 +228,9 @@ function CastBar:UNIT_SPELLCAST_CHANNEL_START(event, unit)
 		self.frame[unit].background:Show()
 
 		if notInterruptible then
-			self.frame[unit].shield:Show()
+			if Gladius.db.castShield then
+				self.frame[unit].shield:Show()
+			end
 			local color = Gladius.db.castBarColorUninterruptible
 			self.frame[unit]:SetStatusBarColor(color.r, color.g, color.b, color.a)
 			self.frame[unit]:SetStatusBarTexture(LSM:Fetch(LSM.MediaType.STATUSBAR, Gladius.db.castBarTextureUninterruptible))
@@ -439,17 +449,21 @@ function CastBar:Update(unit)
 	self.frame[unit].icon:SetDrawLayer("ARTWORK", 2)
 
 	self.frame[unit].shield:ClearAllPoints()
-	self.frame[unit].shield:SetPoint("CENTER", self.frame[unit].icon, Gladius.db.castShieldOffsetX, Gladius.db.castShieldOffsetY)
+	self.frame[unit].shield:SetPoint(Gladius.db.castShieldAlign, ((Gladius.db.castShieldSetPoint == "Cast Bar" and self.frame[unit]) or (Gladius.db.castShieldSetPoint == "Cast Icon" and self.frame[unit].icon)), Gladius.db.castShieldOffsetX, Gladius.db.castShieldOffsetY)
 	self.frame[unit].shield:SetWidth(Gladius.db.castShieldSize)
 	self.frame[unit].shield:SetHeight(Gladius.db.castShieldSize)
 	self.frame[unit].shield:SetAtlas("ui-castingbar-shield")
-	self.frame[unit].shield:SetDrawLayer("ARTWORK", 1)
+	local layer, sublayer = self.frame[unit].icon:GetDrawLayer()
+	self.frame[unit].shield:SetDrawLayer(layer, Gladius.db.castShieldCoverCastIcon and (sublayer + 1) or (sublayer - 1))
 	self.frame[unit].shield:Hide()
 	if not Gladius.db.castIcon then
 		self.frame[unit].icon:SetAlpha(0)
-		self.frame[unit].shield:SetAlpha(0)
 	else
 		self.frame[unit].icon:SetAlpha(1)
+	end
+	if not Gladius.db.castShield then
+		self.frame[unit].shield:SetAlpha(0)
+	else
 		self.frame[unit].shield:SetAlpha(1)
 	end
 	-- update cast bar background
@@ -842,6 +856,126 @@ function CastBar:GetOptions()
 							max = 100,
 							step = 1,
 							order = 25,
+						},
+					},
+				},
+			},
+		},
+		castShield = {
+			type = "group",
+			name = L["Cast Shield"],
+			order = 2,
+			args = {
+				icon = {
+					type = "group",
+					name = L["Icon"],
+					desc = L["Icon settings"],
+					inline = true,
+					order = 1,
+					args = {
+						castShield = {
+							type = "toggle",
+							name = L["Cast Shield"],
+							desc = L["Toggle cast shield"],
+							disabled = function()
+								return not Gladius.dbi.profile.modules[self.name]
+							end,
+							order = 5,
+						},
+						sep1 = {
+							type = "description",
+							name = "",
+							width = "full",
+							order = 7,
+						},
+						castShieldCoverCastIcon = {
+							type = "toggle",
+							name = L["Cover Cast Icon"],
+							desc = L["Toggle if cast shield should cover the cast icon"],
+							disabled = function()
+								return not Gladius.dbi.profile.castShield or not Gladius.dbi.profile.modules[self.name]
+							end,
+							order = 10,
+						},
+						sep2 = {
+							type = "description",
+							name = "",
+							width = "full",
+							order = 12,
+						},
+						castShieldSize = {
+							type = "range",
+							name = L["Cast Shield Size"],
+							desc = L["Icon size of the cast shield"],
+							min = 1,
+							max = 100,
+							step = 1,
+							disabled = function()
+								return not Gladius.dbi.profile.castShield or not Gladius.dbi.profile.modules[self.name]
+							end,
+							order = 15,
+						},
+					},
+				},
+				position = {
+					type = "group",
+					name = L["Position"],
+					desc = L["Position settings"],
+					inline = true,
+					hidden = function()
+						return not Gladius.db.advancedOptions
+					end,
+					order = 2,
+					args = {
+						castShieldSetPoint = {
+							type = "select",
+							name = L["Cast Shield Set Point"],
+							desc = L["Set point of the cast shield"],
+							values={["Cast Icon"] = L["Cast Icon"], ["Cast Bar"] = L["Cast Bar"]},
+							disabled = function()
+								return not Gladius.dbi.profile.castShield or not Gladius.dbi.profile.modules[self.name]
+							end,
+							order = 5,
+						},
+						castShieldAlign = {
+							type = "select",
+							name = L["Cast Shield Align"],
+							desc = L["Text align of the cast shield"],
+							values={ ["LEFT"] = L["LEFT"], ["CENTER"] = L["CENTER"], ["RIGHT"] = L["RIGHT"] },
+							disabled = function()
+								return not Gladius.dbi.profile.castShield or not Gladius.dbi.profile.modules[self.name]
+							end,
+							order = 10,
+						},
+						sep = {
+							type = "description",
+							name = "",
+							width = "full",
+							order = 12,
+						},
+						castShieldOffsetX = {
+							type = "range",
+							name = L["Cast Shield Offset X"],
+							desc = L["X offset of the cast shield"],
+							min = - 100,
+							max = 100,
+							step = 1,
+							disabled = function()
+								return not Gladius.dbi.profile.castShield or not Gladius.dbi.profile.modules[self.name]
+							end,
+							order = 15,
+						},
+						castShieldOffsetY = {
+							type = "range",
+							name = L["Cast Shield Offset Y"],
+							desc = L["Y offset of the cast shield"],
+							disabled = function()
+								return not Gladius.dbi.profile.castShield or not Gladius.dbi.profile.modules[self.name]
+							end,
+							min = - 100,
+							max = 100,
+							step = 1,
+							order = 15,
 						},
 					},
 				},
