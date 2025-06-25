@@ -71,12 +71,6 @@ function CastBar:OnEnable()
 		self:RegisterEvent("UNIT_SPELLCAST_NOT_INTERRUPTIBLE")
 	end
 	LSM = Gladius.LSM
-	-- set frame type
-	--[[if (Gladius.db.castBarAttachTo == "Frame" or Gladius:GetModule(Gladius.db.castBarAttachTo).isBar) then
-		self.isBar = true
-	else
-		self.isBar = false
-	end]]
 	self.isBar = true
 	if not self.frame then
 		self.frame = { }
@@ -153,7 +147,6 @@ function CastBar:UNIT_SPELLCAST_START(event, unit)
         self.frame[unit]:SetValue(self.frame[unit].value)
         self.frame[unit].timeText:SetText(self.frame[unit].maxValue)
         self.frame[unit].icon:SetTexture(icon)
-		self.frame[unit].icon.bg:Show()
 		self.frame[unit].background:Show()
 
         local color
@@ -214,7 +207,6 @@ function CastBar:UNIT_SPELLCAST_CHANNEL_START(event, unit)
 	if spell then
 		self.frame[unit].isChanneling = true
 		self.frame[unit].isEmpowered = isEmpowered
-		--self.frame[unit].value = ((endTime / 1000) - GetTime())
 		if Gladius.db.castBarInverse or isEmpowered then
 			self.frame[unit].value = (GetTime() - (startTime / 1000))
 		else
@@ -225,7 +217,6 @@ function CastBar:UNIT_SPELLCAST_CHANNEL_START(event, unit)
 		self.frame[unit]:SetValue(self.frame[unit].value)
 		self.frame[unit].timeText:SetText(self.frame[unit].maxValue)
 		self.frame[unit].icon:SetTexture(icon)
-		self.frame[unit].icon.bg:Show()
 		self.frame[unit].background:Show()
 
 		if notInterruptible then
@@ -291,7 +282,6 @@ function CastBar:CastEnd(bar)
 		bar.timeText:SetText("")
 		bar.castText:SetText("")
 		bar.icon:SetTexture("")
-		bar.icon.bg:Hide()
 		bar.background:Hide()
 		bar.shield:Hide()
 		bar:SetValue(0)
@@ -309,7 +299,6 @@ function CastBar:CreateBar(unit)
 	self.frame[unit].castText = self.frame[unit]:CreateFontString("Gladius"..self.name.."CastText"..unit, "OVERLAY")
 	self.frame[unit].timeText = self.frame[unit]:CreateFontString("Gladius"..self.name.."TimeText"..unit, "OVERLAY")
 	self.frame[unit].icon = self.frame[unit]:CreateTexture("Gladius"..self.name.."IconFrame"..unit, "ARTWORK")
-	self.frame[unit].icon.bg = self.frame[unit]:CreateTexture("Gladius"..self.name.."IconFrameBackground"..unit, "BACKGROUND")
 	self.frame[unit].shield = self.frame[unit]:CreateTexture("Gladius"..self.name.."ShieldFrame"..unit, "ARTWORK")
 end
 
@@ -366,7 +355,6 @@ function CastBar:UpdateColors(unit)
 	self.frame[unit].castText:SetTextColor(color.r, color.g, color.b, color.a)
 	local color = Gladius.db.castTimeTextColor
 	self.frame[unit].timeText:SetTextColor(color.r, color.g, color.b, color.a)
-	self.frame[unit].icon.bg:SetVertexColor(Gladius.db.castBarBackgroundColor.r, Gladius.db.castBarBackgroundColor.g, Gladius.db.castBarBackgroundColor.b, Gladius.db.castIcon and Gladius.db.castBarBackgroundColor.a or 0)
 	self.frame[unit].background:SetVertexColor(Gladius.db.castBarBackgroundColor.r, Gladius.db.castBarBackgroundColor.g, Gladius.db.castBarBackgroundColor.b, Gladius.db.castBarBackgroundColor.a)
 end
 
@@ -385,11 +373,6 @@ function CastBar:Update(unit)
 	end
 	-- set bar type
 	local parent = Gladius:GetParent(unit, Gladius.db.castBarAttachTo)
-	--[[if (Gladius.db.castBarAttachTo == "Frame" or Gladius:GetModule(Gladius.db.castBarAttachTo).isBar) then
-		self.isBar = true
-	else
-		self.isBar = false
-	end]]
 	-- update power bar
 	self.frame[unit]:ClearAllPoints()
 	local width = Gladius.db.castBarAdjustWidth and Gladius.db.barWidth or Gladius.db.castBarWidth
@@ -455,12 +438,6 @@ function CastBar:Update(unit)
 	self.frame[unit].icon:SetTexCoord(0.07, 0.93, 0.07, 0.93)
 	self.frame[unit].icon:SetDrawLayer("ARTWORK", 2)
 
-	self.frame[unit].icon.bg:ClearAllPoints()
-	self.frame[unit].icon.bg:SetAllPoints(self.frame[unit].icon)
-	self.frame[unit].icon.bg:SetTexture(LSM:Fetch(LSM.MediaType.STATUSBAR, Gladius.db.castBarTexture))
-	self.frame[unit].icon.bg:SetVertexColor(Gladius.db.castBarBackgroundColor.r, Gladius.db.castBarBackgroundColor.g, Gladius.db.castBarBackgroundColor.b, Gladius.db.castBarBackgroundColor.a)
-	self.frame[unit].icon.bg:Hide()
-
 	self.frame[unit].shield:ClearAllPoints()
 	self.frame[unit].shield:SetPoint("CENTER", self.frame[unit].icon, Gladius.db.castShieldOffsetX, Gladius.db.castShieldOffsetY)
 	self.frame[unit].shield:SetWidth(Gladius.db.castShieldSize)
@@ -478,12 +455,6 @@ function CastBar:Update(unit)
 	-- update cast bar background
 	self.frame[unit].background:ClearAllPoints()
 	self.frame[unit].background:SetAllPoints(self.frame[unit])
-	-- Maybe it looks better if the background covers the whole castbar
-	--[[if (Gladius.db.castIcon) then
-		self.frame[unit].background:SetWidth(self.frame[unit]:GetWidth() + self.frame[unit].icon:GetWidth())
-	else
-		self.frame[unit].background:SetWidth(self.frame[unit]:GetWidth())
-	end]]
 	self.frame[unit].background:SetHeight(self.frame[unit]:GetHeight())
 	self.frame[unit].background:SetTexture(LSM:Fetch(LSM.MediaType.STATUSBAR, Gladius.db.castBarTexture))
 	self.frame[unit].background:SetVertexColor(Gladius.db.castBarBackgroundColor.r, Gladius.db.castBarBackgroundColor.g, Gladius.db.castBarBackgroundColor.b, Gladius.db.castBarBackgroundColor.a)
@@ -531,7 +502,6 @@ function CastBar:Test(unit)
 		end
 		local texture = GetSpellInfo(1).originalIconID
 		self.frame[unit].icon:SetTexture(texture)
-		self.frame[unit].icon.bg:Show()
 		self.frame[unit].background:Show()
 		self.frame[unit].shield:Hide()
 
@@ -554,7 +524,6 @@ function CastBar:Test(unit)
 		end
 		local texture = GetSpellInfo(1).originalIconID
 		self.frame[unit].icon:SetTexture(texture)
-		self.frame[unit].icon.bg:Show()
 		self.frame[unit].background:Show()
 		self.frame[unit].shield:Hide()
 
@@ -580,7 +549,6 @@ function CastBar:Test(unit)
 		end
 		local texture = GetSpellInfo(1).originalIconID
 		self.frame[unit].icon:SetTexture(texture)
-		self.frame[unit].icon.bg:Show()
 		self.frame[unit].background:Show()
 		self.frame[unit].shield:Show()
 
@@ -797,11 +765,6 @@ function CastBar:GetOptions()
 							end,
 							set = function(info, value)
 								local key = info.arg or info[#info]
-								--[[if (Gladius.db.castBarAttachTo == "Frame" or Gladius:GetModule(Gladius.db.castBarAttachTo).isBar) then
-									self.isBar = true
-								else
-									self.isBar = false
-								end]]
 								Gladius.dbi.profile[key] = value
 								Gladius:UpdateFrame()
 							end,
