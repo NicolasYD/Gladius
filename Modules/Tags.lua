@@ -60,7 +60,7 @@ local Tags = Gladius:NewModule("Tags", false, false, {
 			offsetY = 0,
 			size = 11,
 			color = {r = 1, g = 1, b = 1, a = 1},
-			text = "[power:percentage]",
+			text = "[power:percentageManaOnly]",
 		},
 		["TargetBar Left Text"] = {
 			attachTo = "TargetBar",
@@ -372,7 +372,7 @@ function Tags:GetOptions()
 										text = ""
 									}
 									-- add to options
-									Gladius.options.args[self.name].args.textList.args[text] = self:GetTextOptionTable(text, self.order)
+									Gladius.options.args[self.name].args.textList.args[text] = self:GetTextOptionTable(text)
 									-- set tags
 									Gladius.options.args[self.name].args.textList.args[text].args.tag.args = self.optionTags
 									-- update
@@ -430,7 +430,7 @@ function Tags:GetOptions()
 										events = ""
 									}
 									-- add to options
-									Gladius.options.args[self.name].args.tagList.args[self.addTagName] = self:GetTagOptionTable(self.addTagName, self.order)
+									Gladius.options.args[self.name].args.tagList.args[self.addTagName] = self:GetTagOptionTable(self.addTagName)
 									-- add to text option tags
 									for text, v in pairs(Gladius.options.args[self.name].args.textList.args) do
 										if v.args.tag then
@@ -490,7 +490,6 @@ function Tags:GetOptions()
 			end,
 		},
 	}
-	local order = 2
 	for tag, _ in pairs(Gladius.dbi.profile.tags) do
 		local tagName = L[tag.."Tag"] ~= tag.."Tag" and L[tag.."Tag"] or strformat(L["Tag: %s"], tag)
 		self.optionTags[tag] = {
@@ -522,36 +521,29 @@ function Tags:GetOptions()
 				-- update
 				Gladius:UpdateFrame()
 			end,
+			order = 2,
 			disabled = function()
 				return not Gladius.dbi.profile.modules[self.name]
 			end,
-			order = order,
 		}
-		order = order + 1
 	end
-	-- texts
-	order = 1
 	for text, _ in pairs(Gladius.dbi.profile.tagsTexts) do
-		options.textList.args[text] = self:GetTextOptionTable(text, order)
+		options.textList.args[text] = self:GetTextOptionTable(text)
 		-- set tags
 		options.textList.args[text].args.tag.args = self.optionTags
-		order = order + 1
 	end
 	-- tags
-	order = 1
 	for tag, _ in pairs(Gladius.dbi.profile.tags) do
-		options.tagList.args[tag] = self:GetTagOptionTable(tag, order)
-		order = order + 1
+		options.tagList.args[tag] = self:GetTagOptionTable(tag)
 	end
 	return options
 end
 
-function Tags:GetTextOptionTable(text, order)
+function Tags:GetTextOptionTable(text)
 	return {
 		type = "group",
 		name = text,
 		childGroups = "tree",
-		order = order,
 		get = function(info)
 			local key = info[#info - 2]
 			return Gladius.dbi.profile.tagsTexts[key][info[#info]]
@@ -683,13 +675,12 @@ function Tags:GetTextOptionTable(text, order)
 	}
 end
 
-function Tags:GetTagOptionTable(tag, order)
+function Tags:GetTagOptionTable(tag)
 	local tagName = L[tag.."Tag"] ~= tag.."Tag" and L[tag.."Tag"] or strformat(L["Tag: %s"], tag)
 	return {
 		type = "group",
 		name = tagName,
 		childGroups = "tree",
-		order = order,
 		args = {
 			delete = {
 				type = "execute",
@@ -884,6 +875,10 @@ function Tags:GetTags()
 		},
 		["power:percentage"] = {
 			func = "function(unit)\nlocal power = not Gladius.test and UnitPower(unit) or Gladius.testing[unit].power\nlocal maxPower = not Gladius.test and UnitPowerMax(unit) or Gladius.testing[unit].maxPower\nreturn strformat(\"%.1f%%\", (power / maxPower * 100))\nend",
+			events = "UNIT_POWER_UPDATE UNIT_MAXPOWER UNIT_DISPLAYPOWER UNIT_NAME_UPDATE"
+		},
+		["power:percentageManaOnly"] = {
+			func = "function(unit)\nlocal power = not Gladius.test and UnitPower(unit) or Gladius.testing[unit].power\nlocal maxPower = not Gladius.test and UnitPowerMax(unit) or Gladius.testing[unit].maxPower\nlocal powerType = not Gladius.test and UnitPowerType(unit) or Gladius.testing[unit].powerType\nif powerType == 0 then\nreturn strformat(\"%.1f%%\", (power / maxPower * 100))\nelse\nreturn power\nend\nend",
 			events = "UNIT_POWER_UPDATE UNIT_MAXPOWER UNIT_DISPLAYPOWER UNIT_NAME_UPDATE"
 		},
 	}
