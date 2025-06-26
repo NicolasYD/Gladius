@@ -571,6 +571,7 @@ if locale == "enUS" or locale == "enGB" then
 	L["health:shortTag"] = "Health (Short)"
 	L["classTag"] = "Unit Class"
 	L["power:percentageTag"] = "Power (Percentage)"
+	L["power:percentageHealerOnlyTag"] = "Power (% Healer Only)"
 	L["power:percentageManaOnlyTag"] = "Power (Short / Mana %)"
 	L["power:shortTag"] = "Power (Short)"
 	L["raceTag"] = "Unit Race"

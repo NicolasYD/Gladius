@@ -60,7 +60,7 @@ local Tags = Gladius:NewModule("Tags", false, false, {
 			offsetY = 0,
 			size = 11,
 			color = {r = 1, g = 1, b = 1, a = 1},
-			text = "[power:percentageManaOnly]",
+			text = "[power:percentageHealerOnly]",
 		},
 		["TargetBar Left Text"] = {
 			attachTo = "TargetBar",
@@ -879,6 +879,10 @@ function Tags:GetTags()
 		},
 		["power:percentageManaOnly"] = {
 			func = "function(unit)\nlocal power = not Gladius.test and UnitPower(unit) or Gladius.testing[unit].power\nlocal maxPower = not Gladius.test and UnitPowerMax(unit) or Gladius.testing[unit].maxPower\nlocal powerType = not Gladius.test and UnitPowerType(unit) or Gladius.testing[unit].powerType\nif powerType == 0 then\nreturn strformat(\"%.1f%%\", (power / maxPower * 100))\nelse\nreturn power\nend\nend",
+			events = "UNIT_POWER_UPDATE UNIT_MAXPOWER UNIT_DISPLAYPOWER UNIT_NAME_UPDATE"
+		},
+		["power:percentageHealerOnly"] = {
+			func = "function(unit)\nlocal id = string.match(unit, \"%d+\")\nlocal specID, _ = not Gladius.test and GetArenaOpponentSpec(id) or Gladius.testing[unit].unitSpecId\nlocal _, _, _, _, role = GetSpecializationInfoForSpecID(specID)\nlocal power = not Gladius.test and UnitPower(unit) or Gladius.testing[unit].power\nlocal maxPower = not Gladius.test and UnitPowerMax(unit) or Gladius.testing[unit].maxPower\nif role == \"HEALER\" then\nreturn strformat(\"%.1f%%\", (power / maxPower * 100))\nend\nend",
 			events = "UNIT_POWER_UPDATE UNIT_MAXPOWER UNIT_DISPLAYPOWER UNIT_NAME_UPDATE"
 		},
 	}
