@@ -244,7 +244,7 @@ function Gladius:SetupModule(key, module, order)
 		name = L["Reset Module"],
 		func = function()
 			for k, v in pairs(module.defaults) do
-				self.dbi.profile[k] = v
+				self.dbi.profile[k] = Gladius:DeepCopy(v)
 			end
 			self:Call(module, "ResetModule")
 			self:UpdateFrame()

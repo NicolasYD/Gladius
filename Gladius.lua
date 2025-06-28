@@ -60,6 +60,50 @@ Gladius.defaults = { }
 
 local L
 
+
+function Gladius:DeepCopy(src)
+    if type(src) ~= "table" then
+        return src
+    end
+
+    local seen = {}
+    local copy = {}
+    local stack = { {src = src, dst = copy} }
+    seen[src] = copy
+
+    while #stack > 0 do
+        local current = table.remove(stack)
+        local srcTbl = current.src
+        local dstTbl = current.dst
+
+        for k, v in pairs(srcTbl) do
+            local copyKey
+            if type(k) == "table" then
+                if not seen[k] then
+                    seen[k] = {}
+                    table.insert(stack, {src = k, dst = seen[k]})
+                end
+                copyKey = seen[k]
+            else
+                copyKey = k
+            end
+
+            if type(v) == "table" then
+                if not seen[v] then
+                    seen[v] = {}
+                    table.insert(stack, {src = v, dst = seen[v]})
+                end
+                dstTbl[copyKey] = seen[v]
+            else
+                dstTbl[copyKey] = v
+            end
+        end
+    end
+
+    return copy
+end
+
+
 function Gladius:Call(handler, func, ...)
 	-- module disabled, return
 	if not handler:IsEnabled() then
@@ -166,7 +210,7 @@ function Gladius:NewModule(key, bar, attachTo, defaults, templates)
 	self.modules[key] = module
 	-- set db defaults
 	for k, v in pairs(defaults) do
-		self.defaults.profile[k] = v
+		self.defaults.profile[k] = self:DeepCopy(v)
 	end
 	return module
 end
