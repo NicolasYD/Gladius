@@ -1,7 +1,7 @@
 -- @@@@@@@@@@@@@@@@@@@@@@@@@ Classicon Module @@@@@@@@@@@@@@@@@@@@@@@@@@@
 -- Originally written by: Resike and Firebunny. Original author: Proditor
 -- Modified by: Pharmac1st
--- Game Version: 11.1.5
+-- Game Version: 11.1.7
 -- @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
 local Gladius = _G.Gladius
@@ -10,37 +10,11 @@ if not Gladius then
 end
 local L = Gladius.L
 
-
--- @@@@@@@@@@@@@@@@@@@@@@@@@ Deepcopy Function @@@@@@@@@@@@@@@@@@@@@@@@@@
-local function deepcopy(orig, copies)
-    copies = copies or {}
-    local orig_type = type(orig)
-    local copy
-    if orig_type == 'table' then
-        if copies[orig] then
-            return copies[orig]
-        end
-        copy = {}
-        copies[orig] = copy
-        for k, v in next, orig, nil do
-            copy[deepcopy(k, copies)] = deepcopy(v, copies)
-        end
-        setmetatable(copy, deepcopy(getmetatable(orig), copies))
-    else
-        copy = orig
-    end
-    return copy
-end
--- @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-
-
 local CDList = LibStub("CDList-1.0")
 local spellTableUnordered = CDList:GetPrioritySpells()
 local spellTable = CDList:OrderAlphabetically(spellTableUnordered)
-local originalSpellTable = deepcopy(spellTable)
 
 -- Global Functions
-local _G = _G
 local pairs = pairs
 local strfind = string.find
 local tostring = tostring
@@ -58,8 +32,6 @@ local GetClassInfo = C_CreatureInfo.GetClassInfo
 local UnitAura = C_UnitAuras.GetAuraDataByIndex
 
 local CLASS_BUTTONS = CLASS_ICON_TCOORDS
-
-local IsWrathClassic = WOW_PROJECT_ID == WOW_PROJECT_WRATH_CLASSIC
 
 local ClassIcon = Gladius:NewModule("ClassIcon", false, true, {
 	classIconAttachTo = "Frame",
@@ -119,16 +91,6 @@ local sortedClasses = GetSortedClassIDs()
 local selectedSortedClass = 0
 
 
-local descriptions = CreateFrame("Frame")
-descriptions.cache = {}
-descriptions:SetScript("OnEvent", function(self, event, spellID, success)
-    if success then
-        self.cache[spellID] = GetSpellDescription(spellID)
-    end
-end)
-descriptions:RegisterEvent("SPELL_DATA_LOAD_RESULT")
-
-
 function ClassIcon:BuildOptions(options)
 	if not options.auraList.args["GENERAL"] then
 		options.auraList.args["GENERAL"] = self:SetupClass(nil, "General", 0)
@@ -142,10 +104,6 @@ function ClassIcon:BuildOptions(options)
 	end
 
 	for spellID, spellData in pairs(Gladius.db.classIconAuras) do
-		if not descriptions.cache[spellID] then
-			RequestLoadSpellData(spellID)
-		end
-
 		if not spellData.deleted then
 			local spellInfo = GetSpellInfo(spellID)
 			if not spellData.parent then
@@ -419,12 +377,10 @@ function ClassIcon:SetClassIcon(unit)
 		specIcon = frame.specIcon
 	else
 		class = Gladius.testing[unit].unitClass
-		if not IsWrathClassic then
-			local _, _, _, icon = GetSpecializationInfoByID(Gladius.testing[unit].unitSpecId)
-			specIcon = icon
-		end
+		local _, _, _, icon = GetSpecializationInfoByID(Gladius.testing[unit].unitSpecId)
+		specIcon = icon
 	end
-	if Gladius.db.classIconShowSpec and not IsWrathClassic then
+	if Gladius.db.classIconShowSpec then
 		if specIcon then
 			self.frame[unit].texture:SetTexture(specIcon)
 			local left, right, top, bottom = 0, 1, 0, 1
@@ -595,8 +551,6 @@ end
 
 
 function ClassIcon:ResetModule()
-	Gladius.db.classIconAuras = {}
-	Gladius.db.classIconAuras = deepcopy(originalSpellTable)
 	Gladius.options.args[self.name].args.auraList.args["GENERAL"].args.spells.args = {}
 	for _, spellData in pairs(Gladius.db.classIconAuras) do
 		if spellData.class then
@@ -1171,7 +1125,7 @@ function ClassIcon:SetupAura(spellID, priority, name, iconID, order)
 				name = "|T" .. iconID .. ":20:20:0:0:64:64:5:59:5:59|t " .. name,
 				order = 1,
 				desc = function()
-					local spellDesc = descriptions.cache[spellID] or ""
+					local spellDesc = GetSpellDescription(spellID)
 					local extra = "\n\n|cffffd700".."Spell ID".."|r "..spellID
 					return spellDesc .. extra
 				end,
