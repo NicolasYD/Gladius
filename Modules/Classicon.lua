@@ -222,7 +222,7 @@ function ClassIcon:UNIT_AURA(event, unit)
 end
 
 
-function ClassIcon:COMBAT_LOG_EVENT_UNFILTERED(event) -- Need to handle stuff like Concentration Aura
+function ClassIcon:COMBAT_LOG_EVENT_UNFILTERED(event)
 	local _, subEvent, _, _, _, _, _, destGUID, _, _, _, spellID, _, _, _, _, _, _ = CombatLogGetCurrentEventInfo()
 
 	local function DisplayInterrupt(unit, spellID)
@@ -234,12 +234,33 @@ function ClassIcon:COMBAT_LOG_EVENT_UNFILTERED(event) -- Need to handle stuff li
 			geterrorhandler()("Error: Interrupt with spellID [" .. spellID .. "] not found in Gladius.db.classIconAuras")
 			return
 		end
+
+		-- Handle lockout duration reducing buffs
+		local lockoutMultiplier = 1
+		local interruptModifiers = {
+			[317920] = 0.7, -- Concentration Aura
+		}
+
+		for i = 1, 255 do
+			local auraType = 'HELPFUL'
+			local auraData = UnitAura(unit, i, auraType)
+
+			if not auraData then
+				break
+			end
+
+			-- Ensures if multiple modifiers are active, you use the most significant reduction (lowest multiplier)
+			if interruptModifiers[auraData.spellId] then
+				lockoutMultiplier = math.min(lockoutMultiplier, interruptModifiers[auraData.spellId])
+			end
+		end
+
 		local time = GetTime()
 		local aura = {
 			name = spellInfo.name,
 			icon = spellInfo.originalIconID,
-			duration = config.duration or (config.parent and auraList[config.parent].duration) or 0,
-			expires = (config.duration and time + config.duration) or (config.parent and time + auraList[config.parent].duration) or 0,
+			duration = lockoutMultiplier * (config.duration or (config.parent and auraList[config.parent].duration) or 0),
+			expires = (config.duration and time + (lockoutMultiplier * config.duration)) or (config.parent and time + (lockoutMultiplier * auraList[config.parent].duration)) or 0,
 			spellid = spellID,
 			priority = config.priority or (config.parent and auraList[config.parent].priority) or 0,
 			timeApplied = time,
