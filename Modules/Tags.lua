@@ -289,6 +289,13 @@ function Tags:Reset(unit)
 	end
 end
 
+
+function Tags:ResetModule()
+	local newOptions = self:GetOptions()
+	Gladius.options.args[self.name].args.textList.args = newOptions.textList.args
+end
+
+
 function Tags:Test(unit)
 	-- test
 end
