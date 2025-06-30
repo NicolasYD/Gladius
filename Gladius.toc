@@ -6,6 +6,7 @@
 ## SavedVariables: Gladius2DB
 ## OptionalDeps: Ace3, LibStub, LibSharedMedia-3.0
 ## IconTexture: Interface/Icons/INV_Sword_04
+## X-Curse-Project-ID: 1295689
 
 Embeds.xml
 

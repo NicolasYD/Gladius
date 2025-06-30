@@ -1,0 +1,19 @@
+on:
+  push:
+    branches:
+      - Pharmac1st_Version
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Pharmac1st_Version branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Create and deploy packages
+        uses: BigWigsMods/packager@v2
+        env:
+          CF_API_KEY: ${{ secrets.CF_API_KEY }}
