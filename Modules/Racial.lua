@@ -26,6 +26,7 @@ local string = string
 local CreateFrame = CreateFrame
 local GetSpellInfo = C_Spell.GetSpellInfo
 local GetSpellTexture = C_Spell.GetSpellTexture
+local GetSpellDescription = C_Spell.GetSpellDescription
 local GetTime = GetTime
 local IsInInstance = IsInInstance
 local UnitClass = UnitClass
@@ -78,7 +79,8 @@ local Racial = Gladius:NewModule("Racial", false, true, {
 	RacialCooldownReverse = false,
 	RacialCooldownSwipeAlpha = 0.8,
 	RacialCooldownEdge = true,
-	RacialDetached = false
+	RacialDetached = false,
+	trackedRacials = {}
 },
 {
 	"Racial icon", "Grid style health bar", "Grid style power bar"
@@ -346,12 +348,6 @@ function Racial:Show(unit)
 	local testing = Gladius.test
 	-- show frame
 	self.frame[unit]:SetAlpha(1)
-	local RacialIcon = nil
-	if not unitRaceCDs["SCOURGE"] == nil then
-		RacialIcon = C_Spell.GetSpellTexture(unitRaceCDs["SCOURGE"].spellID)
-	else
-		RacialIcon = GetSpellTexture(237274)
-	end
 	if testing then
 		local unitRace = string.upper(Gladius.testing[unit].unitRace)
 		local RacialIcon = C_Spell.GetSpellTexture(unitRaceCDs[unitRace].spellID)
@@ -428,12 +424,23 @@ function Racial:OptionsLoad()
 end
 
 function Racial:GetOptions()
-	return {
+	local options = {
 		general = {
 			type = "group",
 			name = L["General"],
 			order = 1,
 			args = {
+				trackedRacials = {
+					type = "group",
+					name = L["Racial Tracking"],
+					desc = L["Racial Tracking settings"],
+					inline = true,
+					hidden = function()
+						return not Gladius.db.advancedOptions
+					end,
+					order = 0,
+					args = {}
+				},
 				widget = {
 					type = "group",
 					name = L["Widget"],
@@ -701,4 +708,57 @@ function Racial:GetOptions()
 			},
 		},
 	}
+
+
+	function AddOrderBySpellName(spellTable)
+		-- Create a sortable list that will hold spellID and name
+		local sortable = {}
+		-- Populate the sortable table with spellID and name
+		for spellID, _ in pairs(spellTable) do
+			local spellInfo = GetSpellInfo(spellID)
+			if spellInfo and spellInfo.name then
+				table.insert(sortable, {spellID = spellID, name = spellInfo.name})
+			end
+		end
+		-- Sort the spells alphabetically by their name
+		table.sort(sortable, function(a, b)
+			return a.name < b.name
+		end)
+		-- Assign the order to each spell in the original table
+		for index, spell in ipairs(sortable) do
+			spellTable[spell.spellID]["order"] = index
+		end
+		-- Return the sorted table with the updated order fields
+		return spellTable
+	end
+
+
+	-- Dynamically populate racial tracking toggles
+	local sortedRacialList = AddOrderBySpellName(racialList)
+	for racial, data in pairs(sortedRacialList) do
+		Gladius.db.trackedRacials[racial] = Gladius.db.trackedRacials[racial]
+		local spellInfo = GetSpellInfo(racial)
+		local id = spellInfo.spellID
+		local name = spellInfo.name
+		local icon = spellInfo.originalIconID
+		options.general.args.trackedRacials.args[tostring(racial)] = {
+			type = "toggle",
+			name = "|T" .. icon .. ":20:20|t " .. L[name],
+			desc = function ()
+					local description = GetSpellDescription(id)
+					local extra = "\n\n|cffffd700".."Spell ID".."|r " .. id
+					return description .. extra
+				end,
+			order = data.order,
+			get = function()
+				return Gladius.db.trackedRacials[racial]
+			end,
+			set = function(_, value)
+				Gladius.db.trackedRacials[racial] = value
+				Gladius:UpdateFrame()
+			end
+		}
+	end
+
+	return options
 end
