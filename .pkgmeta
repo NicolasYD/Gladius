@@ -1,5 +1,4 @@
 package-as: Gladius
-enable-toc-creation: yes
 
 externals:
   Libs/CDList-1.0:
