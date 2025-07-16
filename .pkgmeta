@@ -8,3 +8,5 @@ externals:
 
 embedded-libraries:
   - drlist-1-0
+
+manual-changelog: CHANGELOG.txt
