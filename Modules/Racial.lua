@@ -211,7 +211,7 @@ function Racial:GetRacialCD(unit)
 end
 
 function Racial:UpdateRacial(unit, duration, spellID)
-	if Gladius.db.trackedRacials[spellID] then
+	if Gladius.db.trackedRacials[spellID] ~= false then
 		self.frame[unit]:Show()
 		-- announcement
 		if Gladius.db.announcements.Racial then
@@ -231,12 +231,14 @@ function Racial:UpdateRacial(unit, duration, spellID)
 				end
 			end)
 		end
-		-- cooldown
-		if not Gladius.db.modules["Timer"] then
-			self.frame[unit].cooldown:SetHideCountdownNumbers(false)
-			self.frame[unit].cooldown:SetCooldown(GetTime(), duration)
-		else
-			Gladius:Call(Gladius.modules.Timer, "SetTimer", self.frame[unit], duration)
+		if duration then
+			-- cooldown
+			if not Gladius.db.modules["Timer"] then
+				self.frame[unit].cooldown:SetHideCountdownNumbers(false)
+				self.frame[unit].cooldown:SetCooldown(GetTime(), duration)
+			else
+				Gladius:Call(Gladius.modules.Timer, "SetTimer", self.frame[unit], duration)
+			end
 		end
 	else
 		self.frame[unit]:Hide()
@@ -361,7 +363,7 @@ function Racial:Show(unit)
 		local unitRace = string.upper(Gladius.testing[unit].unitRace)
 		local spellID = unitRaceCDs[unitRace].spellID
 		local RacialIcon = C_Spell.GetSpellTexture(spellID)
-		if (not self.frame[unit].race) and Gladius.db.trackedRacials[spellID] then
+		if (not self.frame[unit].race) and Gladius.db.trackedRacials[spellID] ~= false then
 			self.frame[unit].texture:SetTexture(RacialIcon)
 		end
 		if Gladius.db.RacialIconCrop then
@@ -404,6 +406,11 @@ function Racial:ResetRacialShuffle()
 end
 
 
+function Racial:ResetModule()
+	Gladius.db.trackedRacials = {}
+end
+
+
 function Racial:Test(unit)
 	local unitRace = string.upper(Gladius.testing[unit].unitRace)
 	local spellID = unitRaceCDs[unitRace].spellID
@@ -412,7 +419,7 @@ function Racial:Test(unit)
 	elseif unit == "arena2" then
 		self:UpdateRacial(unit, 120, spellID)
 	elseif unit == "arena3" then
-		self:UpdateRacial(unit, 0, spellID)
+		self:UpdateRacial(unit, nil, spellID)
 	end
 end
 
@@ -755,6 +762,11 @@ function Racial:GetOptions()
 				end,
 			order = data.order,
 			get = function()
+				-- Set default value to true if no value assigned yet
+				if Gladius.db.trackedRacials[racial] == nil then
+					Gladius.db.trackedRacials[racial] = true
+				end
+
 				return Gladius.db.trackedRacials[racial]
 			end,
 			set = function(_, value)
