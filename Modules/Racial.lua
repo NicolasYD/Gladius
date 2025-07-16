@@ -116,6 +116,16 @@ function Racial:GetFrame(unit)
 	return self.frame[unit]
 end
 
+
+function Racial:HideUntracked(unit, spellID)
+	if Gladius.db.trackedRacials[spellID] ~= false then
+		self.frame[unit]:Show()
+	else
+		self.frame[unit]:Hide()
+	end
+end
+
+
 function Racial:UNIT_NAME_UPDATE(event, unit)
 	-- Find Unit Race
 	local _, instanceType = IsInInstance()
@@ -124,9 +134,11 @@ function Racial:UNIT_NAME_UPDATE(event, unit)
 	end
 	local _, race =  UnitRace(unit)
 	race = string.upper(race)
-	local spellTexture = GetSpellTexture(unitRaceCDs[race].spellID)
+	local spellID = unitRaceCDs[race].spellID
+	local spellTexture = GetSpellTexture(spellID)
 	self.frame[unit].race = race
 	self.frame[unit].texture:SetTexture(spellTexture)
+	self:HideUntracked(unit, spellID)
 end
 
 function Racial:AutoFixAll()
@@ -136,10 +148,12 @@ function Racial:AutoFixAll()
 		local unit = 'arena'..i
 		local _, race =  UnitRace(unit)
 		race = string.upper(race or 'HUMAN')
-		local spellTexture = GetSpellTexture(unitRaceCDs[race].spellID)
+		local spellID = unitRaceCDs[race].spellID
+		local spellTexture = GetSpellTexture(spellID)
 		if (self.frame[unit]) then
 			self.frame[unit].race = race
 			self.frame[unit].texture:SetTexture(spellTexture)
+			self:HideUntracked(unit, spellID)
 		end
 	end
 end
@@ -211,37 +225,33 @@ function Racial:GetRacialCD(unit)
 end
 
 function Racial:UpdateRacial(unit, duration, spellID)
-	if Gladius.db.trackedRacials[spellID] ~= false then
-		self.frame[unit]:Show()
-		-- announcement
-		if Gladius.db.announcements.Racial then
-			Gladius:Call(Gladius.modules.Announcements, "Send", format(L["Racial USED: %s (%s)"], UnitName(unit) or "test", UnitClass(unit) or "test"), 2, unit)
-		end
-		if Gladius.db.announcements.Racial then
-			self.frame[unit].timeleft = duration
-			self.frame[unit]:SetScript("OnUpdate", function(f, elapsed)
-				self.frame[unit].timeleft = self.frame[unit].timeleft - elapsed
-				if self.frame[unit].timeleft <= 0 then
-					self.frame[unit].timeleft = nil
-					-- announcement
-					if Gladius.db.announcements.Racial then
-						Gladius:Call(Gladius.modules.Announcements, "Send", format(L["Racial READY: %s (%s)"], UnitName(unit) or "", UnitClass(unit) or ""), 2, unit)
-					end
-					self.frame[unit]:SetScript("OnUpdate", nil)
+	self:HideUntracked(unit, spellID)
+	-- announcement
+	if Gladius.db.announcements.Racial then
+		Gladius:Call(Gladius.modules.Announcements, "Send", format(L["Racial USED: %s (%s)"], UnitName(unit) or "test", UnitClass(unit) or "test"), 2, unit)
+	end
+	if Gladius.db.announcements.Racial then
+		self.frame[unit].timeleft = duration
+		self.frame[unit]:SetScript("OnUpdate", function(f, elapsed)
+			self.frame[unit].timeleft = self.frame[unit].timeleft - elapsed
+			if self.frame[unit].timeleft <= 0 then
+				self.frame[unit].timeleft = nil
+				-- announcement
+				if Gladius.db.announcements.Racial then
+					Gladius:Call(Gladius.modules.Announcements, "Send", format(L["Racial READY: %s (%s)"], UnitName(unit) or "", UnitClass(unit) or ""), 2, unit)
 				end
-			end)
-		end
-		if duration then
-			-- cooldown
-			if not Gladius.db.modules["Timer"] then
-				self.frame[unit].cooldown:SetHideCountdownNumbers(false)
-				self.frame[unit].cooldown:SetCooldown(GetTime(), duration)
-			else
-				Gladius:Call(Gladius.modules.Timer, "SetTimer", self.frame[unit], duration)
+				self.frame[unit]:SetScript("OnUpdate", nil)
 			end
+		end)
+	end
+	if duration then
+		-- cooldown
+		if not Gladius.db.modules["Timer"] then
+			self.frame[unit].cooldown:SetHideCountdownNumbers(false)
+			self.frame[unit].cooldown:SetCooldown(GetTime(), duration)
+		else
+			Gladius:Call(Gladius.modules.Timer, "SetTimer", self.frame[unit], duration)
 		end
-	else
-		self.frame[unit]:Hide()
 	end
 end
 
