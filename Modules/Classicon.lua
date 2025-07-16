@@ -1,7 +1,7 @@
 -- @@@@@@@@@@@@@@@@@@@@@@@@@ Classicon Module @@@@@@@@@@@@@@@@@@@@@@@@@@@
 -- Originally written by: Resike and Firebunny. Original author: Proditor
 -- Modified by: Pharmac1st
--- Game Version: 11.1.5
+-- Game Version: 11.1.7
 -- @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
 local Gladius = _G.Gladius
@@ -225,12 +225,22 @@ end
 function ClassIcon:COMBAT_LOG_EVENT_UNFILTERED(event)
 	local _, subEvent, _, _, _, _, _, destGUID, _, _, _, spellID, _, _, _, _, _, _ = CombatLogGetCurrentEventInfo()
 
-	local function DisplayInterrupt(unit, spellID)
+
+	local function DisplayInterrupt(unit, spell)
 		local unitFrame = self.frame[unit]
-		local spellInfo = GetSpellInfo(spellID)
+		local spellInfo = GetSpellInfo(spell)
 		local auraList = Gladius.db.classIconAuras
-		local config = auraList[spellID]
+		local config = auraList[spell]
+
 		if not config then
+			return
+		end
+
+		local isInterrupt =
+			config.category == "interrupt" or
+			(config.parent and auraList[config.parent] and auraList[config.parent].category == "interrupt")
+
+		if not isInterrupt then
 			return
 		end
 
@@ -260,7 +270,7 @@ function ClassIcon:COMBAT_LOG_EVENT_UNFILTERED(event)
 			icon = spellInfo.originalIconID,
 			duration = lockoutMultiplier * (config.duration or (config.parent and auraList[config.parent].duration) or 0),
 			expires = (config.duration and time + (lockoutMultiplier * config.duration)) or (config.parent and time + (lockoutMultiplier * auraList[config.parent].duration)) or 0,
-			spellid = spellID,
+			spellid = spell,
 			priority = config.priority or (config.parent and auraList[config.parent].priority) or 0,
 			timeApplied = time,
 			enabled = config.enabled ~= false, -- Defaults to true, unless explicitly false
@@ -269,6 +279,7 @@ function ClassIcon:COMBAT_LOG_EVENT_UNFILTERED(event)
 		unitFrame.interruptAura = aura
 		self:UpdateAura(unit, aura)
 	end
+
 
 	if subEvent == "SPELL_CAST_SUCCESS" then
 		for i = 1, GetNumArenaOpponents() do

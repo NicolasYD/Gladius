@@ -1,14 +1,12 @@
 package-as: Gladius
 
-ignore:
-  - .github/
-  - .gitignore
-  - README.md
-
 externals:
   Libs/CDList-1.0:
     url: https://github.com/NicolasYD/CDList-1.0.git
   Libs/DRList-1.0:
     url: https://github.com/wardz/DRList-1.0.git
 
-prerelease: true
+embedded-libraries:
+  - drlist-1-0
+
+manual-changelog: CHANGELOG.txt
