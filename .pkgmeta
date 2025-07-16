@@ -1,14 +1,8 @@
 package-as: Gladius
-
-ignore:
-  - .github/
-  - .gitignore
-  - README.md
+enable-toc-creation: yes
 
 externals:
   Libs/CDList-1.0:
     url: https://github.com/NicolasYD/CDList-1.0.git
   Libs/DRList-1.0:
     url: https://github.com/wardz/DRList-1.0.git
-
-prerelease: true
