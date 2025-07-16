@@ -1,12 +1,11 @@
 ## Interface: 110107
 ## Title: Gladius (|cff00cc44Pharmac1st|r Version)
-## Version: 11.1.7.1
+## Version: @project-version@
 ## Notes: Arena enemy unit frames.
 ## Author: Resike and Firebunny. Original author: Proditor. Modified by Pharmac1st.
 ## SavedVariables: Gladius2DB
 ## OptionalDeps: Ace3, LibStub, LibSharedMedia-3.0
 ## IconTexture: Interface/Icons/INV_Sword_04
-## Version: @project-version@
 ## X-Curse-Project-ID: 1295689
 
 Embeds.xml
