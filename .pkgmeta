@@ -1,0 +1,12 @@
+package-as: Gladius
+
+externals:
+  Libs/CDList-1.0:
+    url: https://github.com/NicolasYD/CDList-1.0.git
+  Libs/DRList-1.0:
+    url: https://github.com/wardz/DRList-1.0.git
+
+embedded-libraries:
+  - drlist-1-0
+
+manual-changelog: CHANGELOG.txt
