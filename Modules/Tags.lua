@@ -1,3 +1,9 @@
+-- @@@@@@@@@@@@@@@@@@@@@@@@@@@@ Tags Module @@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+-- Originally written by: Resike and Firebunny. Original author: Proditor
+-- Modified by: Pharmac1st
+-- Game Version: 11.1.7
+-- @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
 local Gladius = _G.Gladius
 if not Gladius then
 	DEFAULT_CHAT_FRAME:AddMessage(format("Module %s requires Gladius", "Tags"))
