@@ -1,7 +1,7 @@
 -- @@@@@@@@@@@@@@@@@@@@@@@@@@@ Racial Module @@@@@@@@@@@@@@@@@@@@@@@@@@@@
 -- Originally written by: Resike and Firebunny. Original author: Proditor
 -- Modified by: Pharmac1st
--- Game Version: 11.1.5
+-- Game Version: 11.1.7
 -- @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
 local Gladius = _G.Gladius
@@ -26,6 +26,7 @@ local string = string
 local CreateFrame = CreateFrame
 local GetSpellInfo = C_Spell.GetSpellInfo
 local GetSpellTexture = C_Spell.GetSpellTexture
+local GetSpellDescription = C_Spell.GetSpellDescription
 local GetTime = GetTime
 local IsInInstance = IsInInstance
 local UnitClass = UnitClass
@@ -78,7 +79,8 @@ local Racial = Gladius:NewModule("Racial", false, true, {
 	RacialCooldownReverse = false,
 	RacialCooldownSwipeAlpha = 0.8,
 	RacialCooldownEdge = true,
-	RacialDetached = false
+	RacialDetached = false,
+	trackedRacials = {}
 },
 {
 	"Racial icon", "Grid style health bar", "Grid style power bar"
@@ -114,6 +116,16 @@ function Racial:GetFrame(unit)
 	return self.frame[unit]
 end
 
+
+function Racial:HideUntracked(unit, spellID)
+	if Gladius.db.trackedRacials[spellID] ~= false then
+		self.frame[unit]:Show()
+	else
+		self.frame[unit]:Hide()
+	end
+end
+
+
 function Racial:UNIT_NAME_UPDATE(event, unit)
 	-- Find Unit Race
 	local _, instanceType = IsInInstance()
@@ -122,9 +134,11 @@ function Racial:UNIT_NAME_UPDATE(event, unit)
 	end
 	local _, race =  UnitRace(unit)
 	race = string.upper(race)
-	local spellTexture = GetSpellTexture(unitRaceCDs[race].spellID)
+	local spellID = unitRaceCDs[race].spellID
+	local spellTexture = GetSpellTexture(spellID)
 	self.frame[unit].race = race
 	self.frame[unit].texture:SetTexture(spellTexture)
+	self:HideUntracked(unit, spellID)
 end
 
 function Racial:AutoFixAll()
@@ -134,10 +148,12 @@ function Racial:AutoFixAll()
 		local unit = 'arena'..i
 		local _, race =  UnitRace(unit)
 		race = string.upper(race or 'HUMAN')
-		local spellTexture = GetSpellTexture(unitRaceCDs[race].spellID)
+		local spellID = unitRaceCDs[race].spellID
+		local spellTexture = GetSpellTexture(spellID)
 		if (self.frame[unit]) then
 			self.frame[unit].race = race
 			self.frame[unit].texture:SetTexture(spellTexture)
+			self:HideUntracked(unit, spellID)
 		end
 	end
 end
@@ -154,7 +170,8 @@ function Racial:UNIT_AURA(event, unit)
 		local g = t - GetTime()
 		if g > 59 and unitRaceCDs[race].sharesCD then
 			local sharedCD = (race == 'HUMAN' and 90) or 30
-			self:UpdateRacial(unit, sharedCD)
+			local spellID = unitRaceCDs.spellID
+			self:UpdateRacial(unit, sharedCD, spellID)
 		end
 	end
 end
@@ -169,31 +186,34 @@ function Racial:UNIT_SPELLCAST_SUCCEEDED(event, unit, spellLineID, spell)
 	if unitRaceCDs[race].sharesCD then
 		local cd = self:GetRacialCD(unit)
 		local sharedCD = (race == 'HUMAN' and 90) or 30
+		local spellID = unitRaceCDs.spellID
 		if (cd < sharedCD) then
 			-- PVP Trinkets
 			if spell == 42292 then
-				self:UpdateRacial(unit, sharedCD)
+				self:UpdateRacial(unit, sharedCD, spellID)
 			end
 			-- Honorable Medallion
 			if spell == 195710 then
-				self:UpdateRacial(unit, sharedCD)
+				self:UpdateRacial(unit, sharedCD, spellID)
 			end
 			-- Gladiator's Medallion
 			if spell == 208683 then
-				self:UpdateRacial(unit, sharedCD)
+				self:UpdateRacial(unit, sharedCD, spellID)
 			end
 		end
 	end
 
 	-- all racials
 	if spell == unitRaceCDs[race].spellID then
-		self:UpdateRacial(unit, unitRaceCDs[race].cooldown)
+		local cooldown = unitRaceCDs[race].cooldown
+		local spellID = unitRaceCDs[race].spellID
+		self:UpdateRacial(unit, cooldown, spellID)
 	end
 end
 
 
 function Racial:GROUP_ROSTER_UPDATE()
-    Racial:ResetTrinketShuffle()
+    Racial:ResetRacialShuffle()
 end
 
 
@@ -204,7 +224,8 @@ function Racial:GetRacialCD(unit)
 	return cd
 end
 
-function Racial:UpdateRacial(unit, duration)
+function Racial:UpdateRacial(unit, duration, spellID)
+	self:HideUntracked(unit, spellID)
 	-- announcement
 	if Gladius.db.announcements.Racial then
 		Gladius:Call(Gladius.modules.Announcements, "Send", format(L["Racial USED: %s (%s)"], UnitName(unit) or "test", UnitClass(unit) or "test"), 2, unit)
@@ -223,12 +244,14 @@ function Racial:UpdateRacial(unit, duration)
 			end
 		end)
 	end
-	-- cooldown
-	if not Gladius.db.modules["Timer"] then
-		self.frame[unit].cooldown:SetHideCountdownNumbers(false)
-		self.frame[unit].cooldown:SetCooldown(GetTime(), duration)
-	else
-		Gladius:Call(Gladius.modules.Timer, "SetTimer", self.frame[unit], duration)
+	if duration then
+		-- cooldown
+		if not Gladius.db.modules["Timer"] then
+			self.frame[unit].cooldown:SetHideCountdownNumbers(false)
+			self.frame[unit].cooldown:SetCooldown(GetTime(), duration)
+		else
+			Gladius:Call(Gladius.modules.Timer, "SetTimer", self.frame[unit], duration)
+		end
 	end
 end
 
@@ -297,7 +320,7 @@ function Racial:Update(unit)
 		unitFrame:SetHeight(Gladius.db.RacialSize)
 	end
 	-- set frame mouse-interactable area
-	if self:GetAttachTo() == "Frame" and not self.IsDetached() then
+	if self:GetAttachTo() == "Frame" and not self:IsDetached() then
 		local left, right, top, bottom = Gladius.buttons[unit]:GetHitRectInsets()
 		if strfind(Gladius.db.RacialRelativePoint, "LEFT") then
 			left = - unitFrame:GetWidth() + Gladius.db.RacialOffsetX
@@ -329,7 +352,7 @@ function Racial:Update(unit)
 	Gladius:Call(Gladius.modules.Timer, "RegisterTimer", unitFrame, Gladius.db.RacialCooldown)
 
 	-- Secure frame
-	if self.IsDetached() then
+	if self:IsDetached() then
 		unitFrame.secure:SetAllPoints(unitFrame)
 		unitFrame.secure:SetHeight(unitFrame:GetHeight())
 		unitFrame.secure:SetWidth(unitFrame:GetWidth())
@@ -346,16 +369,11 @@ function Racial:Show(unit)
 	local testing = Gladius.test
 	-- show frame
 	self.frame[unit]:SetAlpha(1)
-	local RacialIcon = nil
-	if not unitRaceCDs["SCOURGE"] == nil then
-		RacialIcon = C_Spell.GetSpellTexture(unitRaceCDs["SCOURGE"].spellID)
-	else
-		RacialIcon = GetSpellTexture(237274)
-	end
 	if testing then
 		local unitRace = string.upper(Gladius.testing[unit].unitRace)
-		local RacialIcon = C_Spell.GetSpellTexture(unitRaceCDs[unitRace].spellID)
-		if (not self.frame[unit].race) then
+		local spellID = unitRaceCDs[unitRace].spellID
+		local RacialIcon = C_Spell.GetSpellTexture(spellID)
+		if (not self.frame[unit].race) and Gladius.db.trackedRacials[spellID] ~= false then
 			self.frame[unit].texture:SetTexture(RacialIcon)
 		end
 		if Gladius.db.RacialIconCrop then
@@ -372,15 +390,6 @@ function Racial:Reset(unit)
 	self.frame[unit].race = nil
 	self.frame[unit].texture:SetTexture(nil)
 	-- reset frame
-	local RacialIcon = nil
-	if not unitRaceCDs["SCOURGE"] == nil then
-		RacialIcon = GetSpellTexture(unitRaceCDs["SCOURGE"].spellID)
-	else
-		RacialIcon = GetSpellTexture(237274)
-	end
-	if (not self.frame[unit].race) then
-		self.frame[unit].texture:SetTexture(RacialIcon)
-	end
 	if Gladius.db.RacialIconCrop then
 		self.frame[unit].texture:SetTexCoord(0.07, 0.93, 0.07, 0.93)
 	end
@@ -393,7 +402,7 @@ function Racial:Reset(unit)
 end
 
 
-function Racial:ResetTrinketShuffle()
+function Racial:ResetRacialShuffle()
     for i = 1, 3 do
         local unit = "arena"..i
         local frame = self.frame[unit]
@@ -407,11 +416,20 @@ function Racial:ResetTrinketShuffle()
 end
 
 
+function Racial:ResetModule()
+	Gladius.db.trackedRacials = {}
+end
+
+
 function Racial:Test(unit)
+	local unitRace = string.upper(Gladius.testing[unit].unitRace)
+	local spellID = unitRaceCDs[unitRace].spellID
 	if unit == "arena1" then
-		self:UpdateRacial(unit, 180)
+		self:UpdateRacial(unit, 180, spellID)
 	elseif unit == "arena2" then
-		self:UpdateRacial(unit, 120)
+		self:UpdateRacial(unit, 120, spellID)
+	elseif unit == "arena3" then
+		self:UpdateRacial(unit, nil, spellID)
 	end
 end
 
@@ -428,12 +446,23 @@ function Racial:OptionsLoad()
 end
 
 function Racial:GetOptions()
-	return {
+	local options = {
 		general = {
 			type = "group",
 			name = L["General"],
 			order = 1,
 			args = {
+				trackedRacials = {
+					type = "group",
+					name = L["Racial Tracking"],
+					desc = L["Racial Tracking settings"],
+					inline = true,
+					hidden = function()
+						return not Gladius.db.advancedOptions
+					end,
+					order = 0,
+					args = {}
+				},
 				widget = {
 					type = "group",
 					name = L["Widget"],
@@ -701,4 +730,61 @@ function Racial:GetOptions()
 			},
 		},
 	}
+
+
+	function AddOrderBySpellName(spellTable)
+		-- Create a sortable list that will hold spellID and name
+		local sortable = {}
+		-- Populate the sortable table with spellID and name
+		for spellID, _ in pairs(spellTable) do
+			local spellInfo = GetSpellInfo(spellID)
+			if spellInfo and spellInfo.name then
+				table.insert(sortable, {spellID = spellID, name = spellInfo.name})
+			end
+		end
+		-- Sort the spells alphabetically by their name
+		table.sort(sortable, function(a, b)
+			return a.name < b.name
+		end)
+		-- Assign the order to each spell in the original table
+		for index, spell in ipairs(sortable) do
+			spellTable[spell.spellID]["order"] = index
+		end
+		-- Return the sorted table with the updated order fields
+		return spellTable
+	end
+
+
+	-- Dynamically populate racial tracking toggles
+	local sortedRacialList = AddOrderBySpellName(racialList)
+	for racial, data in pairs(sortedRacialList) do
+		local spellInfo = GetSpellInfo(racial)
+		local id = spellInfo.spellID
+		local name = spellInfo.name
+		local icon = spellInfo.originalIconID
+		options.general.args.trackedRacials.args[tostring(racial)] = {
+			type = "toggle",
+			name = "|T" .. icon .. ":20:20|t " .. L[name],
+			desc = function ()
+					local description = GetSpellDescription(id)
+					local extra = "\n\n|cffffd700".."Spell ID".."|r " .. id
+					return description .. extra
+				end,
+			order = data.order,
+			get = function()
+				-- Set default value to true if no value assigned yet
+				if Gladius.db.trackedRacials[racial] == nil then
+					Gladius.db.trackedRacials[racial] = true
+				end
+
+				return Gladius.db.trackedRacials[racial]
+			end,
+			set = function(_, value)
+				Gladius.db.trackedRacials[racial] = value
+				Gladius:UpdateFrame()
+			end
+		}
+	end
+
+	return options
 end

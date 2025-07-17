@@ -1,2 +1,5 @@
-**11.1.7.1**
-* Initial version.
+11.1.7.2
+- Added option to Racial module to choose which racials to show/hide.
+
+11.1.7.1
+- Initial version.
